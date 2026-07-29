@@ -29,7 +29,7 @@ async function createSale({ clientId, paymentMethodId, dueDate, paid, items, use
     for (const line of lines) {
       const lineTotal = ((line.unitCents * line.quantity) / 100).toFixed(2);
       await connection.execute('INSERT INTO itens_venda (produto, valor, quantidade, total, id_venda, funcionario, empresa, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [line.productId, (line.unitCents / 100).toFixed(2), line.quantity, lineTotal, sale.insertId, userId, companyId, 'produto']);
-      await connection.execute("UPDATE produtos SET estoque = estoque - ?, vendas = COALESCE(vendas, 0) + ? WHERE id = ? AND empresa = ? AND tem_estoque = 'Sim'", [line.quantity, line.quantity, line.productId, companyId]);
+      await connection.execute("UPDATE produtos SET estoque = CASE WHEN tem_estoque = 'Sim' THEN estoque - ? ELSE estoque END, vendas = COALESCE(vendas, 0) + ? WHERE id = ? AND empresa = ?", [line.quantity, line.quantity, line.productId, companyId]);
     }
     await connection.commit();
     return { id: sale.insertId, total };

@@ -5,6 +5,13 @@ const { findOverdueReceivables } = require('../src/jobs/overdue.job');
 test('job de vencimentos não contém credenciais nem dispara integração diretamente', async () => {
   let query;
   const db = { execute: async (sql) => { query = sql; return [[]]; } };
-  await findOverdueReceivables(db);
+  await findOverdueReceivables({}, db);
   assert.match(query, /vencimento < CURRENT_DATE/);
+});
+
+test('job seleciona tabela administrativa quando solicitado', async () => {
+  let query;
+  const db = { execute: async (sql) => { query = sql; return [[]]; } };
+  await findOverdueReceivables({ sas: true }, db);
+  assert.match(query, /FROM receber_sas/);
 });

@@ -19,7 +19,9 @@ async function authenticate({ email, password }) {
   if (user.empresa > 0) {
     const [companies] = await pool.execute('SELECT data_teste, ativo FROM empresas WHERE id = ? LIMIT 1', [user.empresa]);
     const company = companies[0];
-    if (!company || company.ativo !== 'Sim' || (company.data_teste && new Date(company.data_teste) < new Date())) {
+    const today = new Date().toISOString().slice(0, 10);
+    const trialExpired = company?.data_teste && String(company.data_teste).slice(0, 10) < today;
+    if (!company || company.ativo !== 'Sim' || trialExpired) {
       const error = new Error('A empresa não está ativa.');
       error.status = 403;
       throw error;

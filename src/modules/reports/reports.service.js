@@ -1,8 +1,10 @@
 const { pool } = require('../../config/database');
 
 async function financialSummary(companyId, db = pool) {
-  const [receivables] = await db.execute(`SELECT COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) recebido, COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) a_receber FROM receber WHERE empresa = ?`, [companyId]);
-  const [payables] = await db.execute(`SELECT COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) pago, COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) a_pagar FROM pagar WHERE empresa = ?`, [companyId]);
+  const receivablesTable = companyId > 0 ? 'receber' : 'receber_sas';
+  const payablesTable = companyId > 0 ? 'pagar' : 'pagar_sas';
+  const [receivables] = await db.execute(`SELECT COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) recebido, COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) a_receber FROM ${receivablesTable} WHERE empresa = ?`, [companyId]);
+  const [payables] = await db.execute(`SELECT COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) pago, COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) a_pagar FROM ${payablesTable} WHERE empresa = ?`, [companyId]);
   return { ...receivables[0], ...payables[0] };
 }
 
