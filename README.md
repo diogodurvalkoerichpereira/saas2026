@@ -1,43 +1,70 @@
-# SaaS 2026 — Node.js
+# SaaS 2026 — ERP em Node.js
 
-Base da migração do ERP legado em PHP para Node.js com Express e MySQL.
+Migração do núcleo operacional do ERP legado para Node.js, Express, MySQL e um frontend JavaScript modular, sem etapa de build.
 
-## Preparação
+## Teste local com Docker
+
+Pré-requisito: Docker Desktop em execução.
+
+```powershell
+docker compose -f compose.test.yml up --build -d
+```
+
+Acesse [http://localhost:3000](http://localhost:3000) e use somente a credencial local:
+
+- E-mail: `teste.local@saas2026.local`
+- Senha: `Teste@2026`
+
+O ambiente expõe o MySQL de teste em `127.0.0.1:3308`, contém apenas fixtures fictícias e não acessa produção. Para encerrar e remover os dados descartáveis:
+
+```powershell
+docker compose -f compose.test.yml down -v
+```
+
+## Desenvolvimento sem Docker
 
 1. Copie `.env.example` para `.env`.
-2. Preencha as variáveis de banco e uma chave JWT própria.
-3. Importe o backup MySQL legado antes de executar a API.
-4. Instale dependências com `npm.cmd install`.
-5. Inicie em desenvolvimento com `npm.cmd run dev`.
+2. Configure um MySQL local e uma chave JWT própria.
+3. Instale as dependências com `npm.cmd install`.
+4. Aplique `migrations/001_node_frontend_operations.sql` uma vez sobre uma cópia compatível do banco legado.
+5. Inicie com `npm.cmd run dev`.
 
-## Estrutura
+Nunca versione `.env`, backups, certificados, tokens ou chaves de API.
 
-- `src/config`: ambiente e pool MySQL.
-- `src/modules`: módulos de negócio migrados por domínio.
-- `src/middlewares`: tratamento consistente de erros.
+## Módulos disponíveis
 
-## Primeiro endpoint migrado
+- autenticação, usuários e permissões;
+- clientes, fornecedores, produtos e serviços;
+- estoque e movimentos compensatórios;
+- vendas/PDV com vários produtos;
+- contas a pagar e receber;
+- ordens de serviço e orçamentos com produtos, serviços e transições;
+- painel e resumos operacionais/financeiros.
 
-`POST /api/auth/login` recebe `email` e `password`, valida o usuário ativo e retorna um token temporário. O endpoint substitui o fluxo de `autenticar.php` sem gravar senhas no navegador.
+As telas possuem roteamento por hash, busca, filtros, paginação, formulários, estados vazios, mensagens de erro e layout responsivo.
 
-## Migração planejada
-
-1. Autenticação, usuários e configurações.
-2. Cadastros: clientes, fornecedores, produtos e serviços.
-3. Financeiro, cobranças, recorrências e relatórios.
-4. Carrinho, planos, assinaturas, integrações e jobs.
-
-## Rotas migradas
+## Rotas principais
 
 - `POST /api/auth/login`
-- `GET /api/users` e consulta/alteração de permissões
-- `GET`, `POST` e `PATCH /api/clients`
-- `GET`, `POST` e `PATCH /api/catalog/{suppliers|products|services}`
-- `GET /api/finance/{payables|receivables}`
-- `POST /api/finance/{payables|receivables}/:id/settle`
-- `POST /api/sales`
-- `GET` e `POST /api/inventory/movements`
-- `GET /api/work/{quotes|orders}` e alteração de status
-- `GET /api/reports/{financial|operational}`
+- CRUD e inativação em `/api/users`, `/api/clients` e `/api/catalog/{suppliers|products|services}`
+- permissões em `/api/users/:id/permissions`
+- estoque em `/api/inventory/movements`
+- vendas em `/api/sales`
+- financeiro em `/api/finance/{payables|receivables}`
+- formas de pagamento em `/api/finance/payment-methods`
+- ordens e orçamentos em `/api/work/{orders|quotes}`
+- relatórios em `/api/reports/{financial|operational}`
 
-O frontend inicial é servido pela própria aplicação na rota `/`.
+Listagens operacionais retornam `{ items, pagination }` e preservam o filtro pela empresa autenticada.
+
+## Validação
+
+```powershell
+npm.cmd test
+npm.cmd run test:integration
+npm.cmd run test:e2e
+npm.cmd run test:browser
+npm.cmd audit
+```
+
+O teste de navegador usa Microsoft Edge por padrão (`PLAYWRIGHT_CHANNEL=msedge`). Os testes integrados usam apenas bancos locais/de teste. Consulte `CONFIGURACAO_AMBIENTE.md`, `ENTREGAS.md` e `COBERTURA_MIGRACAO.md` para detalhes.

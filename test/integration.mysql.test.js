@@ -13,8 +13,8 @@ const enabled = process.env.INTEGRATION_DB === '1';
 
 test('backup legado contém as tabelas essenciais', { skip: !enabled }, async () => {
   const [rows] = await pool.query("SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = DATABASE()");
-  assert.equal(Number(rows[0].quantidade), 62);
-  for (const table of ['usuarios', 'clientes', 'produtos', 'receber', 'pagar', 'os', 'orcamentos']) {
+  assert.ok(Number(rows[0].quantidade) >= 62);
+  for (const table of ['usuarios', 'clientes', 'produtos', 'receber', 'pagar', 'os', 'orcamentos', 'node_audit_log']) {
     const [found] = await pool.query('SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?', [table]);
     assert.equal(Number(found[0].quantidade), 1, `Tabela ausente: ${table}`);
   }

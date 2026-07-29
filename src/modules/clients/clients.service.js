@@ -7,9 +7,15 @@ async function listClients(companyId, db = pool) {
   return rows;
 }
 
+async function getClient(id, companyId, db = pool) {
+  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa FROM clientes WHERE id = ? AND empresa = ? LIMIT 1`, [id, companyId]);
+  if (!rows[0]) throw Object.assign(new Error('Cliente não encontrado.'), { status: 404 });
+  return rows[0];
+}
+
 async function createClient(data, companyId, userId, db = pool) {
   const columns = [...fields, 'empresa', 'usuario', 'data_cad'];
-  const values = fields.map((field) => data[field] ?? null);
+  const values = fields.map((field) => field === 'ativo' ? data[field] ?? 'Sim' : data[field] ?? null);
   const placeholders = columns.map((column) => column === 'data_cad' ? 'CURRENT_DATE' : '?').join(', ');
   const [result] = await db.execute(`INSERT INTO clientes (${columns.join(', ')}) VALUES (${placeholders})`, [...values, companyId, userId]);
   return result.insertId;
@@ -24,4 +30,9 @@ async function updateClient(id, data, companyId, db = pool) {
   return true;
 }
 
-module.exports = { listClients, createClient, updateClient };
+async function setClientActive(id, active, companyId, db = pool) {
+  const [result] = await db.execute('UPDATE clientes SET ativo = ? WHERE id = ? AND empresa = ?', [active ? 'Sim' : 'Não', id, companyId]);
+  if (!result.affectedRows) throw Object.assign(new Error('Cliente não encontrado.'), { status: 404 });
+}
+
+module.exports = { listClients, getClient, createClient, updateClient, setClientActive };

@@ -1,16 +1,71 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SaaS 2026</title><link rel="stylesheet" href="/styles.css"></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#172f29">
+  <title>SaaS 2026</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/overrides.css">
+</head>
 <body>
-  <main class="shell">
-    <section class="card" id="login-view">
-      <p class="eyebrow">SaaS 2026</p><h1>Acesse o ERP</h1><p class="muted">Ambiente migrado para Node.js</p>
-      <form id="login-form"><label>E-mail<input name="email" type="email" required autocomplete="username"></label><label>Senha<input name="password" type="password" required autocomplete="current-password"></label><button>Entrar</button><p id="login-error" class="error" role="alert"></p></form>
-    </section>
-    <section id="dashboard-view" hidden>
-      <header><div><p class="eyebrow">Painel</p><h1 id="welcome">Visão geral</h1></div><button class="secondary" id="logout">Sair</button></header>
-      <div class="grid" id="metrics"><article class="card"><span>Carregando indicadores…</span></article></div>
-      <nav class="card links"><a href="#clients">Clientes</a><a href="#inventory">Estoque</a><a href="#finance">Financeiro</a><a href="#orders">Ordens de serviço</a></nav>
-    </section>
-  </main><script src="/app.js" defer></script>
-</body></html>
+  <section class="login-shell" id="login-view">
+    <div class="login-brand">
+      <span class="brand-mark">S26</span>
+      <div><strong>SaaS 2026</strong><small>Gestão empresarial</small></div>
+    </div>
+    <form class="login-card" id="login-form">
+      <p class="eyebrow">Acesso seguro</p>
+      <h1>Bem-vindo ao ERP</h1>
+      <p class="muted">Entre com sua conta para acessar os módulos da empresa.</p>
+      <label>E-mail<input name="email" type="email" required autocomplete="username" placeholder="seu@email.com"></label>
+      <label>Senha<input name="password" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="button primary" type="submit">Entrar no sistema</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+    </form>
+  </section>
+
+  <div class="app-shell" id="app-view" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand"><span class="brand-mark">S26</span><div><strong>SaaS 2026</strong><small>ERP em Node.js</small></div></div>
+      <nav class="sidebar-nav" aria-label="Módulos do sistema">
+        <a href="#/dashboard" data-route="dashboard"><span>⌂</span>Dashboard</a>
+        <p>Pessoas</p>
+        <a href="#/clients" data-route="clients"><span>◉</span>Clientes</a>
+        <a href="#/users" data-route="users"><span>♙</span>Usuários</a>
+        <a href="#/suppliers" data-route="suppliers"><span>◇</span>Fornecedores</a>
+        <p>Cadastros e estoque</p>
+        <a href="#/products" data-route="products"><span>□</span>Produtos</a>
+        <a href="#/services" data-route="services"><span>⌁</span>Serviços</a>
+        <a href="#/inventory" data-route="inventory"><span>⇄</span>Estoque</a>
+        <p>Operações</p>
+        <a href="#/sales" data-route="sales"><span>▣</span>Vendas / PDV</a>
+        <a href="#/quotes" data-route="quotes"><span>▤</span>Orçamentos</a>
+        <a href="#/orders" data-route="orders"><span>☷</span>Ordens de serviço</a>
+        <a href="#/finance" data-route="finance"><span>R$</span>Financeiro</a>
+      </nav>
+      <div class="sidebar-user"><span class="avatar" id="user-avatar">U</span><div><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-role">Perfil</small></div></div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="icon-button" id="menu-toggle" aria-label="Abrir ou fechar menu">☰</button>
+        <div><p class="breadcrumb">SaaS 2026 / <span id="breadcrumb-current">Dashboard</span></p><h1 id="page-title">Dashboard</h1></div>
+        <div class="topbar-actions"><span class="connection"><i></i>Banco local</span><button class="button ghost" id="logout">Sair</button></div>
+      </header>
+      <main class="content" id="page-root" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <dialog id="app-modal" class="modal">
+    <form class="modal-frame" id="modal-form">
+      <header><div><p class="eyebrow" id="modal-eyebrow">Cadastro</p><h2 id="modal-title">Novo registro</h2></div><button class="icon-button" type="button" data-modal-close aria-label="Fechar">×</button></header>
+      <div class="modal-body" id="modal-body"></div>
+      <p class="form-error" id="modal-error" role="alert"></p>
+      <footer><button class="button ghost" type="button" data-modal-close>Cancelar</button><button class="button primary" type="submit" id="modal-submit">Salvar</button></footer>
+    </form>
+  </dialog>
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

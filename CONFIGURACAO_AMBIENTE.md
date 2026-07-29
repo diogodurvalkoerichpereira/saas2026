@@ -2,6 +2,14 @@
 
 Crie um arquivo `.env` local a partir de `.env.example`. Nunca envie o `.env` ao Git.
 
+## Ambiente Docker descartável
+
+`compose.test.yml` inicia a aplicação e um MySQL 8.4 com fixtures fictícias. A aplicação fica disponível em `http://localhost:3000` e o banco em `127.0.0.1:3308`.
+
+Credencial exclusiva de teste: `teste.local@saas2026.local` / `Teste@2026`.
+
+Esse ambiente não lê o backup real e não deve ser reutilizado em produção.
+
 ## Aplicação
 
 | Variável | Uso |

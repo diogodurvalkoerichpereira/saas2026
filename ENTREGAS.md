@@ -1,6 +1,27 @@
 # Entregas
 
-**Última atualização:** 29 de julho de 2026, 15:42 (horário de Brasília).
+**Última atualização:** 29 de julho de 2026, 17:17 (horário de Brasília).
+
+## Entrega integrada — 29 de julho de 2026, 17:17
+
+- Frontend JavaScript modular concluído para todos os módulos atualmente disponíveis na API Node.js.
+- Roteamento por hash, menu agrupado/recolhível, tela ativa, busca, filtros, períodos, paginação, carregamento, estados vazios, confirmações e mensagens de sucesso/erro.
+- CRUD operacional de clientes, usuários, permissões, fornecedores, produtos e serviços, com inativação e reativação.
+- Vendas/PDV com vários produtos, validação de estoque e cancelamento transacional.
+- Estoque com movimentos imutáveis e correções compensatórias.
+- Financeiro com formas de pagamento por nome, baixa, reabertura, cancelamento motivado e auditoria.
+- Ordens de serviço e orçamentos com produtos, serviços, técnico, cliente e transições de status validadas.
+- Datas, dinheiro, valores vazios e sentinelas do legado formatados corretamente.
+- Proteções para senha/hash, isolamento por empresa, último administrador e auto-inativação.
+- Docker Compose local com Node.js, MySQL 8.4 e fixtures fictícias; nenhuma informação do backup real foi incluída.
+- Teste visual e funcional em desktop e celular concluído sem erros no console.
+- Sintaxe validada em 59 arquivos JavaScript.
+- Testes unitários: 35 aprovados e 8 cenários integrados separados/ignorados nessa execução.
+- Testes MySQL legado local: 4 aprovados.
+- Testes ponta a ponta de API/MySQL: 4 aprovados.
+- Testes reais de navegador: 4 aprovados, cobrindo login, todas as guias, cadastro/edição/inativação, formulários e responsividade.
+- Auditoria de dependências: zero vulnerabilidades conhecidas.
+- Varredura de padrões de segredo: nenhuma credencial real encontrada.
 
 ## Concluído — 29 de julho de 2026
 
@@ -24,16 +45,18 @@
 - Clientes de integração Asaas e WhatsApp configurados somente por ambiente.
 - Frontend inicial responsivo para login e indicadores do painel.
 
-## Em andamento — iniciado em 29 de julho de 2026
+## Fora do escopo Node.js atual
 
-- Detalhamento das telas operacionais, relatórios avançados e integrações em homologação.
+- Módulos do PHP ainda não expostos pela API Node.js, detalhados em `COBERTURA_MIGRACAO.md`.
+- Emissão fiscal e homologação de integrações externas.
+- Implantação em produção, que não foi realizada.
 
 ## Próximas entregas
 
 - Completar os fluxos operacionais ainda parciais e os módulos listados em `COBERTURA_MIGRACAO.md`.
 - Homologar integrações externas somente em ambientes de teste.
 - Sanear o backup legado antes de uma migração definitiva com modo estrito do MySQL.
-- Ampliar o frontend para todas as operações e concluir testes ponta a ponta.
+- Homologar a entrega com usuários do negócio antes de qualquer implantação.
 
 ## Observações
 
@@ -82,3 +105,11 @@
 - Varredura de segredos concluída; nenhuma credencial real foi encontrada nos arquivos versionados.
 - Limitação identificada: o backup legado contém valores vazios em campos numéricos ou de data e não importa diretamente com o modo estrito do MySQL.
 - Cobertura atual e trabalho restante documentados em `COBERTURA_MIGRACAO.md`.
+
+### 29 de julho de 2026 — 17:17 (horário de Brasília)
+
+- Frontend operacional reformulado e integrado a todos os módulos Node.js existentes.
+- APIs ampliadas para CRUD, paginação, filtros, relacionamentos, auditoria e regras críticas.
+- Vendas com múltiplos itens; OS e orçamentos com produtos/serviços e transições validadas.
+- Docker Compose de teste criado com fixtures fictícias e credencial local documentada.
+- Validação unitária, MySQL, ponta a ponta, navegador, desktop, celular, dependências e segredos concluída.

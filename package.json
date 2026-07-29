@@ -8,7 +8,11 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test",
-    "test:integration": "node --test test/integration.mysql.test.js"
+    "test:integration": "node --test test/integration.mysql.test.js",
+    "test:e2e": "node --test test/e2e.local.test.js",
+    "test:browser": "playwright test",
+    "docker:test:up": "docker compose -f compose.test.yml up --build -d",
+    "docker:test:down": "docker compose -f compose.test.yml down -v"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -19,5 +23,8 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.3",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1"
   }
 }

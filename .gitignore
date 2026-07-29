@@ -3,3 +3,8 @@ node_modules/
 uploads/
 coverage/
 npm-debug.log*
+test-results/
+playwright-report/
+*.sql
+!migrations/*.sql
+!docker/mysql/init/*.sql

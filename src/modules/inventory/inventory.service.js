@@ -2,9 +2,15 @@ const { pool } = require('../../config/database');
 
 async function listMovements(companyId, db = pool) {
   const [rows] = await db.execute(
-    `SELECT 'entrada' AS tipo, id, produto, quantidade, motivo, usuario, data FROM entradas WHERE empresa = ?
+    `SELECT 'entrada' AS tipo, id, produto, quantidade, motivo, usuario, data,
+            (SELECT nome FROM produtos p WHERE p.id = entradas.produto AND p.empresa = entradas.empresa LIMIT 1) AS produto_nome,
+            (SELECT nome FROM usuarios u WHERE u.id = entradas.usuario AND u.empresa = entradas.empresa LIMIT 1) AS usuario_nome
+       FROM entradas WHERE empresa = ?
      UNION ALL
-     SELECT 'saida' AS tipo, id, produto, quantidade, motivo, usuario, data FROM saidas WHERE empresa = ?
+     SELECT 'saida' AS tipo, id, produto, quantidade, motivo, usuario, data,
+            (SELECT nome FROM produtos p WHERE p.id = saidas.produto AND p.empresa = saidas.empresa LIMIT 1) AS produto_nome,
+            (SELECT nome FROM usuarios u WHERE u.id = saidas.usuario AND u.empresa = saidas.empresa LIMIT 1) AS usuario_nome
+       FROM saidas WHERE empresa = ?
      ORDER BY data DESC, id DESC`, [companyId, companyId]
   );
   return rows;
