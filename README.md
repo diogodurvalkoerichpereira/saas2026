@@ -26,3 +26,12 @@ Base da migração do ERP legado em PHP para Node.js com Express e MySQL.
 2. Cadastros: clientes, fornecedores, produtos e serviços.
 3. Financeiro, cobranças, recorrências e relatórios.
 4. Carrinho, planos, assinaturas, integrações e jobs.
+
+## Rotas migradas
+
+- `POST /api/auth/login`
+- `GET /api/users` e consulta/alteração de permissões
+- `GET`, `POST` e `PATCH /api/clients`
+- `GET`, `POST` e `PATCH /api/catalog/{suppliers|products|services}`
+- `GET /api/finance/{payables|receivables}`
+- `POST /api/finance/{payables|receivables}/:id/settle`
