@@ -1,6 +1,6 @@
 # Entregas
 
-**Última atualização:** 29 de julho de 2026, 12:30 (horário de Brasília).
+**Última atualização:** 29 de julho de 2026, 13:56 (horário de Brasília).
 
 ## Concluído — 29 de julho de 2026
 
@@ -16,10 +16,17 @@
 - Testes automatizados da separação por empresa e autorização.
 - Cadastro inicial de clientes, fornecedores, produtos e serviços com validação e isolamento por empresa.
 - Núcleo financeiro inicial para consulta e baixa controlada de contas a pagar e receber.
+- Vendas transacionais com recebível, itens e baixa de estoque no mesmo commit de banco.
+- Movimentação de estoque com bloqueio contra saldo negativo.
+- Consultas de ordens de serviço e orçamentos, com transições de status validadas.
+- Resumos financeiro e operacional para relatórios.
+- Job seguro para identificação de recebíveis vencidos.
+- Clientes de integração Asaas e WhatsApp configurados somente por ambiente.
+- Frontend inicial responsivo para login e indicadores do painel.
 
 ## Em andamento — iniciado em 29 de julho de 2026
 
-- Vendas, ordens de serviço e movimentação de estoque.
+- Detalhamento das telas operacionais, relatórios avançados e integrações em homologação.
 
 ## Próximas entregas
 
@@ -53,3 +60,12 @@
 - Consultas e baixa financeira adicionadas com proteção contra duplicidade.
 - Suíte ampliada e aprovada; aplicação continua carregando corretamente.
 - Validação integrada com MySQL pendente porque não há servidor MySQL ativo neste ambiente.
+
+### 29 de julho de 2026 — 13:56 (horário de Brasília)
+
+- Branch de usuários, cadastros e financeiro publicada para revisão sem alterar `main`.
+- Vendas e estoque migrados com operações transacionais.
+- Ordens de serviço, orçamentos, relatórios e job de vencimentos adicionados.
+- Infraestrutura de integrações sem segredos no código.
+- Frontend inicial entregue e resposta HTTP local validada.
+- Suíte ampliada para 23 testes, todos aprovados.

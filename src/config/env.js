@@ -18,6 +18,13 @@ module.exports = {
     port: Number(process.env.PORT || 3000),
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     jwtSecret: process.env.JWT_SECRET,
+    integrations: {
+      asaasUrl: process.env.ASAAS_API_URL || 'https://api.asaas.com/v3',
+      asaasKey: process.env.ASAAS_API_KEY,
+      whatsappUrl: process.env.WHATSAPP_API_URL,
+      whatsappToken: process.env.WHATSAPP_API_TOKEN,
+      whatsappInstanceId: process.env.WHATSAPP_INSTANCE_ID
+    },
     database: {
       host: process.env.DATABASE_HOST,
       port: Number(process.env.DATABASE_PORT || 3306),

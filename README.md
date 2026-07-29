@@ -35,3 +35,9 @@ Base da migração do ERP legado em PHP para Node.js com Express e MySQL.
 - `GET`, `POST` e `PATCH /api/catalog/{suppliers|products|services}`
 - `GET /api/finance/{payables|receivables}`
 - `POST /api/finance/{payables|receivables}/:id/settle`
+- `POST /api/sales`
+- `GET` e `POST /api/inventory/movements`
+- `GET /api/work/{quotes|orders}` e alteração de status
+- `GET /api/reports/{financial|operational}`
+
+O frontend inicial é servido pela própria aplicação na rota `/`.
