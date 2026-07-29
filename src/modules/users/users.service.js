@@ -5,7 +5,7 @@ function tenantClause(companyId) {
   return companyId > 0 ? { sql: 'empresa = ?', params: [companyId] } : { sql: '(empresa = 0 OR empresa IS NULL)', params: [] };
 }
 
-const publicFields = 'id, nome, email, nivel, ativo, empresa, telefone, endereco, data_nasc, numero, bairro, cidade, estado, cep, acessar_painel, cpf, mostrar_registros, complemento';
+const publicFields = 'id, nome, email, nivel, ativo, empresa, telefone, endereco, data_nasc, numero, bairro, cidade, estado, cep, acessar_painel, cpf, mostrar_registros, complemento, comissao, pix, tipo_chave, salario, valor_hora, hora_entrada, hora_saida, jornada_horas';
 
 async function listUsers(companyId, db = pool) {
   const tenant = tenantClause(companyId);
@@ -32,16 +32,25 @@ async function createUser(data, companyId, db = pool) {
   const hash = await bcrypt.hash(data.password, 12);
   const [result] = await db.execute(
     `INSERT INTO usuarios
-      (nome, email, senha, senha_crip, nivel, ativo, telefone, endereco, data, acessar_painel, mostrar_registros, empresa)
-     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, ?)`,
-    [data.nome, data.email, hash, data.nivel, data.ativo ?? 'Sim', data.telefone ?? '', data.endereco ?? '', data.acessar_painel ?? 'Sim', data.mostrar_registros ?? 'Sim', companyId]
+      (nome, email, senha, senha_crip, nivel, ativo, telefone, endereco, data, acessar_painel, mostrar_registros,
+       comissao, pix, tipo_chave, salario, valor_hora, hora_entrada, hora_saida, jornada_horas, empresa)
+     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.nome, data.email, hash, data.nivel, data.ativo ?? 'Sim', data.telefone ?? '', data.endereco ?? '',
+      data.acessar_painel ?? 'Sim', data.mostrar_registros ?? 'Sim', data.comissao ?? 0, data.pix ?? '',
+      data.tipo_chave ?? '', data.salario ?? 0, data.valor_hora ?? 0, data.hora_entrada ?? null,
+      data.hora_saida ?? null, data.jornada_horas ?? null, companyId
+    ]
   );
   return result.insertId;
 }
 
 async function updateUser(userId, data, companyId, db = pool) {
   await assertUserInTenant(userId, companyId, db);
-  const allowed = ['nome', 'email', 'nivel', 'telefone', 'endereco', 'acessar_painel', 'mostrar_registros'];
+  const allowed = [
+    'nome', 'email', 'nivel', 'telefone', 'endereco', 'acessar_painel', 'mostrar_registros',
+    'comissao', 'pix', 'tipo_chave', 'salario', 'valor_hora', 'hora_entrada', 'hora_saida', 'jornada_horas'
+  ];
   const changed = allowed.filter((field) => data[field] !== undefined);
   const assignments = changed.map((field) => `${field} = ?`);
   const values = changed.map((field) => data[field]);
@@ -65,8 +74,9 @@ async function setUserActive(userId, active, actorId, companyId, db = pool) {
   await db.execute(`UPDATE usuarios SET ativo = ? WHERE id = ? AND ${tenant.sql}`, [active ? 'Sim' : 'Não', userId, ...tenant.params]);
 }
 
-async function listPermissionOptions(db = pool) {
-  const [rows] = await db.execute('SELECT id, nome, chave, grupo FROM acessos ORDER BY grupo, nome');
+async function listPermissionOptions(companyId, db = pool) {
+  const table = companyId > 0 ? 'acessos' : 'acessos_sas';
+  const [rows] = await db.execute(`SELECT id, nome, chave, grupo FROM ${table} ORDER BY grupo, nome`);
   return rows;
 }
 

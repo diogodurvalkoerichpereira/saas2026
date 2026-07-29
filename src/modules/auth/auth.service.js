@@ -28,9 +28,33 @@ async function authenticate({ email, password }) {
     }
   }
 
-  const payload = { sub: user.id, companyId: user.empresa || 0, role: user.nivel };
+  const isTenantUser = Number(user.empresa) > 0;
+  const permissionTable = isTenantUser ? 'usuarios_permissoes' : 'usuarios_permissoes_sas';
+  const accessTable = isTenantUser ? 'acessos' : 'acessos_sas';
+  const [permissionRows] = user.nivel === 'Administrador'
+    ? await pool.execute(`SELECT chave FROM ${accessTable} ORDER BY chave`)
+    : await pool.execute(
+      `SELECT DISTINCT a.chave
+         FROM ${permissionTable} up
+         JOIN ${accessTable} a ON a.id = up.permissao
+        WHERE up.usuario = ?
+        ORDER BY a.chave`,
+      [user.id]
+    );
+  const permissions = permissionRows.map((row) => row.chave);
+  const payload = { sub: user.id, companyId: user.empresa || 0, role: user.nivel, kind: 'staff' };
   const token = jwt.sign(payload, env.jwtSecret, { expiresIn: '8h' });
-  return { token, user: { id: user.id, name: user.nome, email: user.email, role: user.nivel, companyId: user.empresa || 0 } };
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.nome,
+      email: user.email,
+      role: user.nivel,
+      companyId: user.empresa || 0,
+      permissions
+    }
+  };
 }
 
 module.exports = { authenticate };

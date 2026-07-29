@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
+const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { configFor, listWork, getWork, createWork, updateWork, updateStatus } = require('./work.service');
@@ -34,11 +35,21 @@ const workSchema = z.object({
   marca: z.string().max(255).optional(),
   modelo: z.string().max(255).optional(),
   defeito: z.string().max(1000).optional(),
+  condicoes: z.string().max(2000).optional(),
+  acessorios: z.string().max(1000).optional(),
+  laudo: z.string().max(2000).optional(),
+  senha_ap: z.string().max(50).optional(),
+  mao_obra: z.number().nonnegative().optional(),
+  vall: z.number().nonnegative().optional(),
+  val_entrada: z.number().nonnegative().optional(),
+  dias_garantia: z.string().max(50).optional(),
+  forma_pgto: z.string().max(20).optional(),
+  orcamento: z.number().int().nonnegative().optional(),
   pago: z.enum(['Sim', 'Não']).optional(),
   items: z.array(workItemSchema).max(100).optional()
 });
 
-router.use(authenticate);
+router.use(authenticate, permit('orcamentos', 'os'));
 router.get('/:type', async (req, res, next) => {
   try {
     const type = typeSchema.parse(req.params.type);

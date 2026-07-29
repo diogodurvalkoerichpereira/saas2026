@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
+const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { listPaymentMethods, listEntries, getEntry, createEntry, updateEntry, settleEntry, reopenEntry, cancelEntry } = require('./finance.service');
@@ -22,8 +23,12 @@ const entrySchema = z.object({
   pago: z.enum(['Sim', 'Não']).optional()
 });
 const reasonSchema = z.object({ reason: z.string().trim().min(3).max(255) });
+const settlementSchema = z.object({
+  paymentDate: dateSchema,
+  cashRegisterId: z.number().int().positive().nullable().optional()
+});
 
-router.use(authenticate, authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'));
+router.use(authenticate, permit('financeiro', 'receber', 'pagar'), authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'));
 router.get('/payment-methods', async (req, res, next) => {
   try {
     const rows = await listPaymentMethods(Number(req.auth.companyId));
@@ -62,8 +67,11 @@ router.post('/:type/:id/settle', async (req, res, next) => {
   try {
     const type = typeSchema.parse(req.params.type);
     const id = idSchema.parse(req.params.id);
-    const paymentDate = dateSchema.parse(req.body.paymentDate);
-    await settleEntry(type, id, Number(req.auth.companyId), Number(req.auth.sub), paymentDate);
+    const settlement = settlementSchema.parse(req.body);
+    await settleEntry(type, id, Number(req.auth.companyId), Number(req.auth.sub), settlement.paymentDate, pool, settlement.cashRegisterId ?? null);
+    if (type === 'receivables') {
+      await pool.execute(`UPDATE node_store_orders SET status = 'Pago', atualizado_em = CURRENT_TIMESTAMP WHERE recebivel = ? AND empresa = ? AND status = 'Aguardando pagamento'`, [id, Number(req.auth.companyId)]);
+    }
     await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'baixar', entity: type, entityId: id });
     res.status(204).end();
   } catch (error) { next(error); }
@@ -73,6 +81,9 @@ router.post('/:type/:id/reopen', authorize('Administrador', 'Gerente'), async (r
     const type = typeSchema.parse(req.params.type);
     const id = idSchema.parse(req.params.id);
     await reopenEntry(type, id, Number(req.auth.companyId));
+    if (type === 'receivables') {
+      await pool.execute(`UPDATE node_store_orders SET status = 'Aguardando pagamento', atualizado_em = CURRENT_TIMESTAMP WHERE recebivel = ? AND empresa = ? AND status = 'Pago'`, [id, Number(req.auth.companyId)]);
+    }
     await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'reabrir', entity: type, entityId: id, reason: reasonSchema.parse(req.body).reason });
     res.status(204).end();
   } catch (error) { next(error); }
@@ -82,6 +93,10 @@ router.delete('/:type/:id', authorize('Administrador', 'Gerente'), async (req, r
     const type = typeSchema.parse(req.params.type);
     const id = idSchema.parse(req.params.id);
     const { reason } = reasonSchema.parse(req.body);
+    if (type === 'receivables') {
+      const [storeOrders] = await pool.execute(`SELECT id FROM node_store_orders WHERE recebivel = ? AND empresa = ? AND status <> 'Cancelado'`, [id, Number(req.auth.companyId)]);
+      if (storeOrders[0]) throw Object.assign(new Error('Cancele este lançamento pela tela de pedidos online para restaurar o estoque.'), { status: 409 });
+    }
     await cancelEntry(type, id, Number(req.auth.companyId), Number(req.auth.sub), reason);
     await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'cancelar', entity: type, entityId: id, reason });
     res.status(204).end();

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Portal do cliente · SaaS 2026</title>
+  <link rel="stylesheet" href="/standalone.css">
+</head>
+<body>
+  <section class="auth-shell" id="portal-login">
+    <form class="auth-card" id="portal-login-form">
+      <div class="brand"><span class="brand-mark">S26</span><div><strong>Portal do cliente</strong><div class="muted">Acompanhe seus serviços e cobranças</div></div></div>
+      <label class="field">E-mail<input name="email" type="email" required autocomplete="username" value="cliente@exemplo.local"></label>
+      <label class="field">Código da empresa<input name="companyId" type="number" min="1" value="1" required></label>
+      <label class="field">Senha<input name="password" type="password" required autocomplete="current-password" value="Teste@2026"></label>
+      <button class="button primary" type="submit">Entrar no portal</button>
+      <p class="error" id="portal-login-error"></p>
+      <a href="/">Voltar ao ERP</a>
+    </form>
+  </section>
+  <div class="shell" id="portal-app" hidden>
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">S26</span><div><strong>Área do cliente</strong><small id="portal-company"></small></div></div>
+      <nav>
+        <a href="#/dashboard" data-route="dashboard">Visão geral</a>
+        <a href="#/orders" data-route="orders">Ordens de serviço</a>
+        <a href="#/quotes" data-route="quotes">Orçamentos</a>
+        <a href="#/contracts" data-route="contracts">Contratos</a>
+        <a href="#/billing" data-route="billing">Financeiro</a>
+        <a href="#/profile" data-route="profile">Meu cadastro</a>
+      </nav>
+      <footer><strong id="portal-name"></strong><button class="button ghost" id="portal-logout">Sair</button></footer>
+    </aside>
+    <div class="workspace"><header class="topbar"><h1 id="portal-title">Visão geral</h1><span class="muted">Portal seguro</span></header><main class="content" id="portal-root"></main></div>
+  </div>
+  <dialog class="modal" id="portal-modal"><form method="dialog"><header><h2 id="portal-modal-title"></h2><button class="button ghost" value="cancel">Fechar</button></header><div id="portal-modal-body"></div></form></dialog>
+  <script type="module" src="/portal.js"></script>
+</body>
+</html>

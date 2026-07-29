@@ -2,6 +2,8 @@ import { api } from './api.js';
 import { money, number, date, text, escapeHtml, badge } from './format.mjs';
 import { icon } from './icons.mjs';
 import { loading, pageHeader, table, pagination, openForm, confirmAction, toast } from './ui.js';
+import { renderExtraRoute } from './extra-pages.js';
+import { attachmentButton, openAttachments } from './attachments.js';
 
 const root = () => document.querySelector('#page-root');
 const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">${icon('edit')}Editar</button>`;
@@ -12,6 +14,7 @@ const activeButtons = (item) => item.ativo === 'Não'
 const entityConfigs = {
   clients: {
     title: 'Clientes', singular: 'cliente', path: '/api/clients', subtitle: 'Cadastro e dados de contato dos clientes da empresa.',
+    attachmentEntity: 'clients',
     columns: [
       { key: 'nome', label: 'Nome' }, { key: 'telefone', label: 'Telefone', render: text }, { key: 'email', label: 'E-mail', render: text },
       { key: 'cidade', label: 'Cidade', render: text }, { key: 'tipo_pessoa', label: 'Tipo', render: text }, { key: 'ativo', label: 'Situação', render: badge }
@@ -24,11 +27,13 @@ const entityConfigs = {
       { name: 'bairro', label: 'Bairro', optional: true, max: 50 }, { name: 'cidade', label: 'Cidade', optional: true, max: 50 },
       { name: 'estado', label: 'Estado', optional: true, max: 50 }, { name: 'cep', label: 'CEP', optional: true, max: 20 },
       { name: 'complemento', label: 'Complemento', optional: true, max: 100, full: true },
-      { name: 'marketing', label: 'Aceita marketing', type: 'select', optional: true, options: [{ value: '', label: 'Não informado' }, { value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }] }
+      { name: 'marketing', label: 'Aceita marketing', type: 'select', optional: true, options: [{ value: '', label: 'Não informado' }, { value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }] },
+      { name: 'password', label: 'Senha do portal (opcional)', type: 'password', optional: true, max: 72, full: true }
     ]
   },
   suppliers: {
     title: 'Fornecedores', singular: 'fornecedor', path: '/api/catalog/suppliers', subtitle: 'Parceiros de compra e dados de pagamento.',
+    attachmentEntity: 'suppliers',
     columns: [
       { key: 'nome', label: 'Nome' }, { key: 'telefone', label: 'Telefone', render: text }, { key: 'email', label: 'E-mail', render: text },
       { key: 'cnpj', label: 'CNPJ', render: text }, { key: 'cidade', label: 'Cidade', render: text }, { key: 'ativo', label: 'Situação', render: badge }
@@ -49,14 +54,18 @@ const entityConfigs = {
       { key: 'estoque', label: 'Estoque', render: number }, { key: 'fornecedor_nome', label: 'Fornecedor', render: text }, { key: 'ativo', label: 'Situação', render: badge }
     ],
     async fields() {
-      const suppliers = await allItems('/api/catalog/suppliers');
+      const [suppliers, categories, subcategories] = await Promise.all([
+        allItems('/api/catalog/suppliers'), allItems('/api/reference/categories'), allItems('/api/reference/subcategories')
+      ]);
       return [
         { name: 'codigo', label: 'Código', required: true, max: 50 }, { name: 'nome', label: 'Nome', required: true, max: 50 },
         { name: 'valor_compra', label: 'Valor de compra', type: 'number', step: '.01', min: 0, numeric: true, required: true },
         { name: 'valor_venda', label: 'Valor de venda', type: 'number', step: '.01', min: 0, numeric: true, required: true },
+        { name: 'valor_promocional', label: 'Valor promocional', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
         { name: 'estoque', label: 'Estoque atual', type: 'number', step: '1', numeric: true, required: true },
         { name: 'nivel_estoque', label: 'Alerta de estoque', type: 'number', step: '1', min: 0, numeric: true, required: true },
-        { name: 'categoria', label: 'Código da categoria', type: 'number', step: '1', min: 0, numeric: true, required: true },
+        { name: 'categoria', label: 'Categoria', type: 'select', numeric: true, options: [{ value: 0, label: 'Sem categoria' }, ...categories.map((item) => ({ value: item.id, label: item.nome }))] },
+        { name: 'sub_categoria', label: 'Subcategoria', type: 'select', optional: true, options: [{ value: '', label: 'Sem subcategoria' }, ...subcategories.map((item) => ({ value: item.nome, label: item.nome }))] },
         { name: 'fornecedor', label: 'Fornecedor', type: 'select', numeric: true, options: [{ value: 0, label: 'Sem fornecedor' }, ...suppliers.map((item) => ({ value: item.id, label: item.nome }))] },
         { name: 'tem_estoque', label: 'Controla estoque', type: 'select', options: yesNoOptions() },
         { name: 'mostrar_site', label: 'Mostrar no site', type: 'select', options: yesNoOptions() },
@@ -87,10 +96,18 @@ const entityConfigs = {
     fields: [
       { name: 'nome', label: 'Nome', required: true, max: 50 }, { name: 'email', label: 'E-mail', type: 'email', required: true, max: 50 },
       { name: 'password', label: 'Senha (mínimo 8 caracteres)', type: 'password', optional: true, max: 72 },
-      { name: 'nivel', label: 'Perfil', type: 'select', required: true, options: ['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro'].map((value) => ({ value, label: value })) },
+      { name: 'nivel', label: 'Perfil', type: 'select', required: true, options: ['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro', 'Financeiro'].map((value) => ({ value, label: value })) },
       { name: 'telefone', label: 'Telefone', optional: true, max: 20 }, { name: 'endereco', label: 'Endereço', optional: true, max: 150 },
       { name: 'acessar_painel', label: 'Acessar painel', type: 'select', options: yesNoOptions() },
-      { name: 'mostrar_registros', label: 'Mostrar registros', type: 'select', options: yesNoOptions() }
+      { name: 'mostrar_registros', label: 'Mostrar registros', type: 'select', options: yesNoOptions() },
+      { name: 'comissao', label: 'Comissão (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+      { name: 'salario', label: 'Salário base', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+      { name: 'valor_hora', label: 'Valor da hora', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+      { name: 'hora_entrada', label: 'Horário de entrada', type: 'time', optional: true },
+      { name: 'hora_saida', label: 'Horário de saída', type: 'time', optional: true },
+      { name: 'jornada_horas', label: 'Jornada diária', type: 'time', optional: true },
+      { name: 'pix', label: 'Chave Pix', optional: true, max: 100 },
+      { name: 'tipo_chave', label: 'Tipo da chave Pix', optional: true, max: 100 }
     ],
     extraActions: (item) => `<button class="button ghost small" data-action="permissions" data-id="${item.id}">${icon('shield')}Permissões</button>`
   }
@@ -112,7 +129,7 @@ async function renderCrud(config) {
     const result = await api(`${config.path}?${params}`);
     root().innerHTML = `${pageHeader(config.title, config.subtitle, `<button class="button primary" data-action="new">${icon('plus')}Novo ${escapeHtml(config.singular)}</button>`)}
       <section class="panel"><form class="toolbar" id="list-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar por nome, código ou contato"><select name="status"><option value="">Todas as situações</option><option value="Sim" ${state.status === 'Sim' ? 'selected' : ''}>Ativos</option><option value="Não" ${state.status === 'Não' ? 'selected' : ''}>Inativos</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
-      ${table(config.columns, result.items, (item) => `${editButton(item.id)}${config.extraActions?.(item) || ''}${activeButtons(item)}`)}${pagination(result.pagination)}</section>`;
+      ${table(config.columns, result.items, (item) => `${editButton(item.id)}${config.extraActions?.(item) || ''}${config.attachmentEntity ? attachmentButton(config.attachmentEntity, item.id) : ''}${activeButtons(item)}`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     root().querySelector('#list-filter').addEventListener('submit', (event) => {
       event.preventDefault();
@@ -126,10 +143,18 @@ async function renderCrud(config) {
     root().querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', async () => {
       const action = button.dataset.action;
       const item = byId.get(button.dataset.id);
+      if (action === 'attachments') {
+        await openAttachments({ entity: button.dataset.attachments, id: Number(button.dataset.attachmentId), title: item?.nome || `${config.singular} #${button.dataset.attachmentId}` });
+        return;
+      }
       if (action === 'new' || action === 'edit') {
         const fields = await formFields(config);
         const edit = action === 'edit';
-        const normalizedFields = fields.map((field) => field.name === 'password' && !edit ? { ...field, required: true, optional: false } : field);
+        const normalizedFields = fields.map((field) =>
+          field.name === 'password' && !edit && config === entityConfigs.users
+            ? { ...field, required: true, optional: false }
+            : field
+        );
         openForm({
           title: edit ? `Editar ${config.singular}` : `Novo ${config.singular}`,
           fields: normalizedFields,
@@ -376,10 +401,23 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
     <label class="field">Situação<select name="status">${allowedStatuses.map((status) => `<option value="${escapeHtml(status)}" ${status === currentStatus ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select></label>
     <label class="field">Valor sem itens<input name="valor" type="number" step=".01" min="0" value="${escapeHtml(record.valor ?? record.subtotal ?? 0)}" required></label>
     ${type === 'orders' ? `<label class="field">Técnico<select name="tecnico"><option value="0">Não informado</option>${users.map((user) => `<option value="${user.id}" ${String(user.id) === String(record.tecnico) ? 'selected' : ''}>${escapeHtml(user.nome)}</option>`).join('')}</select></label>` : ''}
+    <label class="field">Validade (dias)<input name="dias_validade" type="number" step="1" min="0" value="${escapeHtml(record.dias_validade ?? 0)}"></label>
+    <label class="field">Desconto<input name="desconto" type="number" step=".01" min="0" value="${escapeHtml(record.desconto ?? 0)}"></label>
+    <label class="field">Tipo do desconto<select name="tipo_desconto"><option value="Valor" ${record.tipo_desconto === 'Valor' ? 'selected' : ''}>Valor</option><option value="Percentual" ${record.tipo_desconto === 'Percentual' ? 'selected' : ''}>Percentual</option></select></label>
+    <label class="field">Frete<input name="frete" type="number" step=".01" min="0" value="${escapeHtml(record.frete ?? 0)}"></label>
+    <label class="field">Mão de obra<input name="mao_obra" type="number" step=".01" min="0" value="${escapeHtml(record.mao_obra ?? 0)}"></label>
     <label class="field">Equipamento<input name="equipamento" maxlength="255" value="${escapeHtml(record.equipamento)}"></label>
     <label class="field">Marca<input name="marca" maxlength="255" value="${escapeHtml(record.marca)}"></label>
     <label class="field">Modelo<input name="modelo" maxlength="255" value="${escapeHtml(record.modelo)}"></label>
+    <label class="field">Senha do aparelho<input name="senha_ap" maxlength="50" value="${escapeHtml(record.senha_ap)}"></label>
     <label class="field full">Defeito ou solicitação<textarea name="defeito" maxlength="1000">${escapeHtml(record.defeito)}</textarea></label>
+    <label class="field full">Condições ou avarias<textarea name="condicoes" maxlength="2000">${escapeHtml(record.condicoes)}</textarea></label>
+    <label class="field full">Acessórios entregues<textarea name="acessorios" maxlength="1000">${escapeHtml(record.acessorios)}</textarea></label>
+    <label class="field full">Laudo técnico<textarea name="laudo" maxlength="2000">${escapeHtml(record.laudo)}</textarea></label>
+    ${type === 'orders' ? `<label class="field">Valor de entrada<input name="val_entrada" type="number" step=".01" min="0" value="${escapeHtml(record.val_entrada ?? 0)}"></label>
+    <label class="field">Garantia<input name="dias_garantia" maxlength="50" value="${escapeHtml(record.dias_garantia)}"></label>
+    <label class="field">Pagamento<select name="pago"><option value="Não" ${record.pago !== 'Sim' ? 'selected' : ''}>Não</option><option value="Sim" ${record.pago === 'Sim' ? 'selected' : ''}>Sim</option></select></label>
+    <label class="field">Forma de pagamento<input name="forma_pgto" maxlength="20" value="${escapeHtml(record.forma_pgto)}"></label>` : ''}
     <label class="field full">Observações<textarea name="obs" maxlength="255">${escapeHtml(record.obs)}</textarea></label>
     <div class="full line-items-header"><strong>Produtos e serviços</strong><span><button class="button ghost small" type="button" data-add-work-line="product">${icon('plus')}Produto</button> <button class="button ghost small" type="button" data-add-work-line="service">${icon('plus')}Serviço</button></span></div>
     <div class="full" id="work-lines"></div>
@@ -428,12 +466,27 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
         data_entrega: values.data_entrega,
         status: values.status,
         valor: Number(values.valor),
+        dias_validade: Number(values.dias_validade || 0),
+        desconto: Number(values.desconto || 0),
+        tipo_desconto: values.tipo_desconto,
+        frete: Number(values.frete || 0),
+        mao_obra: Number(values.mao_obra || 0),
         equipamento: values.equipamento,
         marca: values.marca,
         modelo: values.modelo,
+        senha_ap: values.senha_ap,
         defeito: values.defeito,
+        condicoes: values.condicoes,
+        acessorios: values.acessorios,
+        laudo: values.laudo,
         obs: values.obs,
-        ...(type === 'orders' ? { tecnico: Number(values.tecnico) } : {})
+        ...(type === 'orders' ? {
+          tecnico: Number(values.tecnico),
+          val_entrada: Number(values.val_entrada || 0),
+          dias_garantia: values.dias_garantia,
+          pago: values.pago,
+          forma_pgto: values.forma_pgto
+        } : {})
       };
       if (itemsTouched) {
         payload.items = [...form.querySelectorAll('[data-work-line]')].map((row) => ({
@@ -489,7 +542,7 @@ async function renderWork(type) {
     const result = await api(`/api/work/${type}?${params}`);
     root().innerHTML = `${pageHeader(config.title, 'Acompanhamento por cliente, equipamento, data e situação.', `<button class="button primary" data-new-work>${icon('plus')}${config.newLabel}</button>`)}
       <section class="panel"><form class="toolbar" id="work-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, equipamento ou responsável"><select name="status"><option value="">Todas as situações</option>${config.statuses.map((status) => `<option value="${escapeHtml(status)}" ${state.status === status ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select><button class="button ghost">${icon('filter')}Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }], result.items, (item) => `${editButton(item.id)}${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
+      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }], result.items, (item) => `${editButton(item.id)}${attachmentButton(type, item.id)}${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     const showForm = async (item) => {
       const fullItem = item ? await api(`/api/work/${type}/${item.id}`) : null;
@@ -506,6 +559,10 @@ async function renderWork(type) {
     root().querySelector('[data-new-work]').addEventListener('click', () => showForm(null));
     root().querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', async () => {
       const item = byId.get(button.dataset.id);
+      if (button.dataset.action === 'attachments') {
+        await openAttachments({ entity: type, id: Number(button.dataset.attachmentId), title: `${config.singular} #${button.dataset.attachmentId}` });
+        return;
+      }
       if (button.dataset.action === 'edit') await showForm(item);
       if (button.dataset.action === 'cancel') await confirmAction(`Cancelar este ${config.singular}?`, async () => { await api(`/api/work/${type}/${item.id}`, { method: 'DELETE', body: { reason: 'Cancelamento pela interface' } }); toast('Registro cancelado.'); await load(); });
     }));
@@ -514,6 +571,7 @@ async function renderWork(type) {
 }
 
 export async function renderRoute(route) {
+  if (await renderExtraRoute(route)) return;
   if (route.name === 'dashboard') return renderDashboard();
   if (entityConfigs[route.name]) return renderCrud(entityConfigs[route.name]);
   if (route.name === 'inventory') return renderInventory();

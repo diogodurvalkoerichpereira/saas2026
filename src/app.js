@@ -14,6 +14,17 @@ const inventoryRoutes = require('./modules/inventory/inventory.routes');
 const workRoutes = require('./modules/work/work.routes');
 const reportsRoutes = require('./modules/reports/reports.routes');
 const salesRoutes = require('./modules/sales/sales.routes');
+const referenceRoutes = require('./modules/reference/reference.routes');
+const collaborationRoutes = require('./modules/collaboration/collaboration.routes');
+const marketingRoutes = require('./modules/marketing/marketing.routes');
+const operationsRoutes = require('./modules/operations/operations.routes');
+const hrRoutes = require('./modules/hr/hr.routes');
+const contentRoutes = require('./modules/content/content.routes');
+const fileRoutes = require('./modules/files/files.routes');
+const portalRoutes = require('./modules/portal/portal.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
+const publicRoutes = require('./modules/public/public.routes');
+const storeRoutes = require('./modules/store/store.routes');
 
 const app = express();
 
@@ -31,6 +42,17 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/work', workRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/reference', referenceRoutes);
+app.use('/api/collaboration', collaborationRoutes);
+app.use('/api/marketing', marketingRoutes);
+app.use('/api/operations', operationsRoutes);
+app.use('/api/hr', hrRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/client', portalRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/store', storeRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

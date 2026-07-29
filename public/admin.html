@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Administração SaaS · SaaS 2026</title>
+  <link rel="stylesheet" href="/standalone.css">
+</head>
+<body>
+  <section class="auth-shell" id="admin-login">
+    <form class="auth-card" id="admin-login-form">
+      <div class="brand"><span class="brand-mark">S26</span><div><strong>Administração SaaS</strong><div class="muted">Empresas, planos e recursos</div></div></div>
+      <label class="field">E-mail<input name="email" type="email" required value="sas.local@saas2026.local"></label>
+      <label class="field">Senha<input name="password" type="password" required value="Teste@2026"></label>
+      <button class="button primary">Entrar na administração</button>
+      <p class="error" id="admin-login-error"></p><a href="/">Voltar ao ERP</a>
+    </form>
+  </section>
+  <div class="shell" id="admin-app" hidden>
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">S26</span><div><strong>Admin SaaS</strong><small>Ambiente local</small></div></div>
+      <nav>
+        <a href="#/dashboard" data-route="dashboard">Visão geral</a>
+        <a href="#/companies" data-route="companies">Empresas</a>
+        <a href="#/plans" data-route="plans">Planos</a>
+        <a href="#/resources" data-route="resources">Recursos</a>
+        <a href="#/billing" data-route="billing">Mensalidades</a>
+        <a href="#/alerts" data-route="alerts">Alertas</a>
+        <a href="#/users" data-route="users">Usuários SaaS</a>
+      </nav>
+      <footer><strong id="admin-name"></strong><button class="button ghost" id="admin-logout">Sair</button></footer>
+    </aside>
+    <div class="workspace"><header class="topbar"><h1 id="admin-title">Visão geral</h1><span class="muted">Administração global</span></header><main class="content" id="admin-root"></main></div>
+  </div>
+  <dialog class="modal" id="admin-modal"><form id="admin-modal-form"><header><h2 id="admin-modal-title"></h2><button class="button ghost" type="button" data-close>Fechar</button></header><div id="admin-modal-body"></div><p class="error" id="admin-modal-error"></p><footer><button class="button ghost" type="button" data-close>Cancelar</button><button class="button primary">Salvar</button></footer></form></dialog>
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>

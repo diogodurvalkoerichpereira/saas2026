@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
+const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { listUsers, getUser, createUser, updateUser, setUserActive, listPermissionOptions, listPermissions, replacePermissions } = require('./users.service');
@@ -13,17 +14,25 @@ const userSchema = z.object({
   nome: z.string().trim().min(2).max(50),
   email: z.string().email().max(50),
   password: z.string().min(8).max(72).optional(),
-  nivel: z.enum(['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro']),
+  nivel: z.enum(['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro', 'Financeiro']),
   ativo: z.enum(['Sim', 'Não']).optional(),
   telefone: z.string().max(20).optional(),
   endereco: z.string().max(150).optional(),
   acessar_painel: z.enum(['Sim', 'Não']).optional(),
-  mostrar_registros: z.enum(['Sim', 'Não']).optional()
+  mostrar_registros: z.enum(['Sim', 'Não']).optional(),
+  comissao: z.number().nonnegative().max(100).optional(),
+  pix: z.string().max(100).optional(),
+  tipo_chave: z.string().max(100).optional(),
+  salario: z.number().nonnegative().optional(),
+  valor_hora: z.number().nonnegative().optional(),
+  hora_entrada: z.string().regex(/^\d{2}:\d{2}(?::\d{2})?$/).nullable().optional(),
+  hora_saida: z.string().regex(/^\d{2}:\d{2}(?::\d{2})?$/).nullable().optional(),
+  jornada_horas: z.string().regex(/^\d{2}:\d{2}(?::\d{2})?$/).nullable().optional()
 });
 
-router.use(authenticate);
-router.get('/permissions/options', authorize('Administrador', 'Gerente'), async (_req, res, next) => {
-  try { res.json(await listPermissionOptions()); } catch (error) { next(error); }
+router.use(authenticate, permit('usuarios'));
+router.get('/permissions/options', authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try { res.json(await listPermissionOptions(Number(req.auth.companyId || 0))); } catch (error) { next(error); }
 });
 router.get('/', async (req, res, next) => {
   try {

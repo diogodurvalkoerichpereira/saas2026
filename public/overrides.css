@@ -107,6 +107,140 @@
   margin-bottom: 17px;
 }
 
+.integration-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.integration-state strong {
+  color: var(--ink);
+}
+
+.integration-state.enabled {
+  border-color: #a9ddc5;
+  background: #eefaf4;
+}
+
+.integration-state.disabled {
+  border-color: #ead9aa;
+  background: #fffaf0;
+}
+
+.ticket-thread {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ticket-thread article {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8faf9;
+}
+
+.ticket-thread article p {
+  margin: 7px 0 0;
+  white-space: pre-wrap;
+}
+
+.check-list {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.check-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.check-list span {
+  display: grid;
+  gap: 3px;
+}
+
+.check-list small {
+  color: var(--muted);
+}
+
+.contract-preview {
+  min-height: 380px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #202a27;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.65;
+}
+
+.settings-summary,
+.site-preview {
+  padding: 20px;
+}
+
+.site-hero {
+  margin-bottom: 18px;
+  padding: 28px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #18342d, #247854);
+  color: #fff;
+}
+
+.site-hero h2 {
+  margin: 0 0 8px;
+}
+
+.site-hero p:last-child {
+  margin: 0;
+  opacity: .8;
+}
+
+.compact-metrics {
+  margin-bottom: 14px;
+}
+
+.compact-metrics .metric-card {
+  grid-column: span 1;
+}
+
+.data-table a {
+  color: var(--brand);
+  font-weight: 750;
+}
+
+.modal-body .data-table {
+  min-width: 620px;
+}
+
+.login-links {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: .82rem;
+}
+
+.login-links a {
+  color: var(--brand);
+  font-weight: 750;
+  text-decoration: none;
+}
+
 @media (max-width: 700px) {
   .sidebar-nav a {
     font-size: .89rem;
@@ -132,5 +266,15 @@
 
   .line-item > .button {
     margin-bottom: 0;
+  }
+
+  .integration-state {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .contract-preview {
+    min-height: 280px;
+    padding: 18px;
   }
 }

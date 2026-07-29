@@ -11,7 +11,8 @@ const configs = {
       Cancelado: []
     },
     select: `id, cliente, data, data_entrega, dias_validade, valor, desconto, tipo_desconto, subtotal, obs, status,
-      total_produtos, total_servicos, funcionario, frete, equipamento, marca, modelo, defeito, empresa,
+      total_produtos, total_servicos, funcionario, frete, equipamento, marca, modelo, defeito, condicoes,
+      acessorios, laudo, senha_ap, mao_obra, vall, empresa,
       (SELECT nome FROM clientes c WHERE c.id = orcamentos.cliente AND c.empresa = orcamentos.empresa LIMIT 1) AS cliente_nome,
       (SELECT nome FROM usuarios u WHERE u.id = orcamentos.funcionario AND u.empresa = orcamentos.empresa LIMIT 1) AS funcionario_nome`
   },
@@ -31,7 +32,8 @@ const configs = {
       Cancelada: []
     },
     select: `id, cliente, data, data_entrega, dias_validade, valor, desconto, tipo_desconto, subtotal, obs, status,
-      total_produtos, total_servicos, funcionario, frete, tecnico, equipamento, marca, modelo, defeito, pago, empresa,
+      total_produtos, total_servicos, funcionario, frete, tecnico, equipamento, marca, modelo, defeito, condicoes,
+      acessorios, laudo, senha_ap, mao_obra, val_entrada, vall, dias_garantia, forma_pgto, orcamento, pago, empresa,
       (SELECT nome FROM clientes c WHERE c.id = os.cliente AND c.empresa = os.empresa LIMIT 1) AS cliente_nome,
       (SELECT nome FROM usuarios u WHERE u.id = os.funcionario AND u.empresa = os.empresa LIMIT 1) AS funcionario_nome,
       (SELECT nome FROM usuarios u WHERE u.id = os.tecnico AND u.empresa = os.empresa LIMIT 1) AS tecnico_nome`
@@ -141,11 +143,11 @@ async function createWork(type, data, companyId, userId, db = pool) {
     const totalServices = totals.filter((item) => item.kind === 'service').reduce((sum, item) => sum + item.total, 0);
     const itemTotal = totalProducts + totalServices;
     const value = data.items?.length ? itemTotal : data.valor ?? 0;
-    const baseColumns = ['cliente', 'data', 'data_entrega', 'dias_validade', 'valor', 'desconto', 'tipo_desconto', 'subtotal', 'obs', 'status', 'total_produtos', 'total_servicos', 'funcionario', 'frete', 'equipamento', 'marca', 'modelo', 'defeito', 'empresa'];
-    const values = [data.cliente, data.data, data.data_entrega, data.dias_validade ?? 0, value, data.desconto ?? 0, data.tipo_desconto ?? 'Valor', value, data.obs ?? '', data.status, totalProducts, totalServices, userId, data.frete ?? 0, data.equipamento ?? '', data.marca ?? '', data.modelo ?? '', data.defeito ?? '', companyId];
+    const baseColumns = ['cliente', 'data', 'data_entrega', 'dias_validade', 'valor', 'desconto', 'tipo_desconto', 'subtotal', 'obs', 'status', 'total_produtos', 'total_servicos', 'funcionario', 'frete', 'equipamento', 'marca', 'modelo', 'defeito', 'condicoes', 'acessorios', 'laudo', 'senha_ap', 'mao_obra', 'vall', 'empresa'];
+    const values = [data.cliente, data.data, data.data_entrega, data.dias_validade ?? 0, value, data.desconto ?? 0, data.tipo_desconto ?? 'Valor', value, data.obs ?? '', data.status, totalProducts, totalServices, userId, data.frete ?? 0, data.equipamento ?? '', data.marca ?? '', data.modelo ?? '', data.defeito ?? '', data.condicoes ?? '', data.acessorios ?? '', data.laudo ?? '', data.senha_ap ?? '', data.mao_obra ?? 0, data.vall ?? 0, companyId];
     if (type === 'orders') {
-      baseColumns.splice(14, 0, 'tecnico');
-      values.splice(14, 0, data.tecnico ?? 0);
+      baseColumns.push('tecnico', 'val_entrada', 'dias_garantia', 'forma_pgto', 'orcamento', 'pago');
+      values.push(data.tecnico ?? 0, data.val_entrada ?? 0, data.dias_garantia ?? '', data.forma_pgto ?? '', data.orcamento ?? 0, data.pago ?? 'Não');
     }
     const [result] = await connection.execute(`INSERT INTO ${config.table} (${baseColumns.join(', ')}) VALUES (${baseColumns.map(() => '?').join(', ')})`, values);
     await replaceWorkItems(type, result.insertId, data.items || [], companyId, userId, connection);
@@ -172,7 +174,12 @@ async function updateWork(type, id, data, companyId, userId = 0, db = pool) {
     const itemTotal = itemTotals ? itemTotals.total_produtos + itemTotals.total_servicos : null;
     const merged = itemTotals ? { ...data, ...itemTotals, valor: itemTotal, subtotal: itemTotal } : data;
     delete merged.items;
-    const allowed = ['cliente', 'data_entrega', 'dias_validade', 'valor', 'desconto', 'tipo_desconto', 'subtotal', 'obs', 'status', 'total_produtos', 'total_servicos', 'frete', 'equipamento', 'marca', 'modelo', 'defeito', ...(type === 'orders' ? ['tecnico', 'pago'] : [])];
+    const allowed = [
+      'cliente', 'data_entrega', 'dias_validade', 'valor', 'desconto', 'tipo_desconto', 'subtotal', 'obs', 'status',
+      'total_produtos', 'total_servicos', 'frete', 'equipamento', 'marca', 'modelo', 'defeito', 'condicoes',
+      'acessorios', 'laudo', 'senha_ap', 'mao_obra', 'vall',
+      ...(type === 'orders' ? ['tecnico', 'pago', 'val_entrada', 'dias_garantia', 'forma_pgto', 'orcamento'] : [])
+    ];
     const changed = allowed.filter((field) => merged[field] !== undefined);
     if (changed.length) {
       await connection.execute(`UPDATE ${config.table} SET ${changed.map((field) => `${field} = ?`).join(', ')} WHERE id = ? AND empresa = ?`, [...changed.map((field) => merged[field]), id, companyId]);

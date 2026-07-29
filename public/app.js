@@ -16,6 +16,11 @@ function showApp() {
   document.querySelector('#sidebar-user-name').textContent = user?.name || 'Usuário';
   document.querySelector('#sidebar-user-role').textContent = user?.role || 'Perfil';
   document.querySelector('#user-avatar').textContent = (user?.name || 'U').trim().charAt(0).toUpperCase();
+  const permissions = new Set(user?.permissions || []);
+  document.querySelectorAll('[data-permission]').forEach((element) => {
+    const accepted = element.dataset.permission.split(',').map((value) => value.trim());
+    element.hidden = user?.role !== 'Administrador' && !accepted.some((key) => permissions.has(key));
+  });
   if (!location.hash || location.hash === '#') location.hash = '#/dashboard';
   startRouter(async (route) => {
     document.querySelectorAll('[data-route]').forEach((link) => link.classList.toggle('active', link.dataset.route === route.name));
@@ -35,6 +40,11 @@ loginForm.addEventListener('submit', async (event) => {
   try {
     const data = Object.fromEntries(new FormData(loginForm));
     const result = await api('/api/auth/login', { method: 'POST', body: data, authenticated: false });
+    if (Number(result.user.companyId) === 0) {
+      sessionStorage.setItem('admin_session', JSON.stringify(result));
+      location.assign('/admin.html');
+      return;
+    }
     session.set(result);
     showApp();
   } catch (error) {

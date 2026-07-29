@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
+const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { pool } = require('../../config/database');
@@ -12,11 +13,12 @@ const clientSchema = z.object({
   email: z.union([z.string().email().max(50), z.literal('')]).optional(), endereco: z.string().max(100).optional(), numero: z.string().max(10).optional(),
   bairro: z.string().max(50).optional(), cidade: z.string().max(50).optional(), estado: z.string().max(50).optional(), cep: z.string().max(20).optional(),
   tipo_pessoa: z.enum(['Física', 'Jurídica']).optional(), data_nasc: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), complemento: z.string().max(100).optional(),
-  marketing: z.enum(['Sim', 'Não']).optional(), ativo: z.enum(['Sim', 'Não']).optional()
+  marketing: z.enum(['Sim', 'Não']).optional(), ativo: z.enum(['Sim', 'Não']).optional(),
+  password: z.string().min(8).max(72).optional()
 });
 const idSchema = z.coerce.number().int().positive();
 
-router.use(authenticate);
+router.use(authenticate, permit('clientes'));
 router.get('/', async (req, res, next) => {
   try {
     const rows = await listClients(Number(req.auth.companyId));
@@ -38,7 +40,7 @@ router.patch('/:id', authorize('Administrador', 'Gerente', 'Comum'), async (req,
     const id = idSchema.parse(req.params.id);
     const data = clientSchema.partial().parse(req.body);
     await updateClient(id, data, Number(req.auth.companyId));
-    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'editar', entity: 'cliente', entityId: id, details: Object.keys(data) });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'editar', entity: 'cliente', entityId: id, details: Object.keys(data).filter((field) => field !== 'password') });
     res.status(204).end();
   } catch (error) { next(error); }
 });

@@ -25,6 +25,16 @@ module.exports = {
       whatsappToken: process.env.WHATSAPP_API_TOKEN,
       whatsappInstanceId: process.env.WHATSAPP_INSTANCE_ID
     },
+    marketing: {
+      dispatchEnabled: process.env.WHATSAPP_DISPATCH_ENABLED === 'true',
+      batchSize: Math.min(Math.max(Number(process.env.WHATSAPP_BATCH_SIZE || 20), 1), 100),
+      maxAttempts: Math.min(Math.max(Number(process.env.WHATSAPP_MAX_ATTEMPTS || 3), 1), 10),
+      retryMinutes: Math.min(Math.max(Number(process.env.WHATSAPP_RETRY_MINUTES || 15), 1), 1440)
+    },
+    jobs: {
+      enabled: process.env.JOBS_ENABLED === 'true',
+      intervalMinutes: Math.min(Math.max(Number(process.env.JOBS_INTERVAL_MINUTES || 5), 1), 1440)
+    },
     database: {
       host: process.env.DATABASE_HOST,
       port: Number(process.env.DATABASE_PORT || 3306),

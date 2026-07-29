@@ -82,15 +82,19 @@ async function updateEntry(type, id, data, companyId, db = pool) {
   if (!result.affectedRows) throw Object.assign(new Error('Somente lançamentos ativos e não pagos podem ser editados.'), { status: 409 });
 }
 
-async function settleEntry(type, id, companyId, userId, paymentDate, db = pool) {
+async function settleEntry(type, id, companyId, userId, paymentDate, db = pool, cashRegisterId = null) {
   const table = tableFor(type, companyId);
-  const [result] = await db.execute(`UPDATE ${table} SET pago = 'Sim', data_pgto = ?, usuario_pgto = ? WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim')`, [paymentDate, userId, id, companyId]);
+  if (cashRegisterId) {
+    const [cash] = await db.execute('SELECT id FROM caixas WHERE id = ? AND empresa = ? AND data_fechamento IS NULL', [cashRegisterId, companyId]);
+    if (!cash[0]) throw Object.assign(new Error('O caixa informado não existe ou já foi fechado.'), { status: 409 });
+  }
+  const [result] = await db.execute(`UPDATE ${table} SET pago = 'Sim', data_pgto = ?, usuario_pgto = ?, caixa = ? WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim')`, [paymentDate, userId, cashRegisterId, id, companyId]);
   if (!result.affectedRows) throw Object.assign(new Error('Lançamento não encontrado, cancelado ou já baixado.'), { status: 409 });
 }
 
 async function reopenEntry(type, id, companyId, db = pool) {
   const table = tableFor(type, companyId);
-  const [result] = await db.execute(`UPDATE ${table} SET pago = 'Não', data_pgto = NULL, usuario_pgto = 0 WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND pago = 'Sim'`, [id, companyId]);
+  const [result] = await db.execute(`UPDATE ${table} SET pago = 'Não', data_pgto = NULL, usuario_pgto = 0, caixa = NULL WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND pago = 'Sim'`, [id, companyId]);
   if (!result.affectedRows) throw Object.assign(new Error('Somente lançamentos pagos e ativos podem ser reabertos.'), { status: 409 });
 }
 

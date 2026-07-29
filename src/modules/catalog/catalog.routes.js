@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
+const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { createRepository } = require('./catalog.repository');
@@ -14,11 +15,11 @@ const resources = {
     repository: createRepository({ table: 'fornecedores', fields: ['nome', 'telefone', 'email', 'endereco', 'pix', 'data', 'numero', 'bairro', 'cidade', 'estado', 'cep', 'cnpj', 'complemento', 'tipo_chave', 'ativo'], defaults: { data: () => new Date().toISOString().slice(0, 10), ativo: 'Sim' } })
   },
   products: {
-    schema: z.object({ ...common, codigo: z.string().max(50), valor_compra: z.number().nonnegative(), valor_venda: z.number().nonnegative(), estoque: z.number().int(), nivel_estoque: z.number().int().nonnegative(), categoria: z.number().int().nonnegative(), fornecedor: z.number().int().nonnegative(), descricao: z.string().max(255).optional(), tem_estoque: z.enum(['Sim', 'Não']).optional(), mostrar_site: z.enum(['Sim', 'Não']).optional() }),
+    schema: z.object({ ...common, codigo: z.string().max(50), valor_compra: z.number().nonnegative(), valor_venda: z.number().nonnegative(), valor_promocional: z.number().nonnegative().optional(), estoque: z.number().int(), nivel_estoque: z.number().int().nonnegative(), categoria: z.number().int().nonnegative(), sub_categoria: z.string().max(50).optional(), fornecedor: z.number().int().nonnegative(), descricao: z.string().max(255).optional(), tem_estoque: z.enum(['Sim', 'Não']).optional(), mostrar_site: z.enum(['Sim', 'Não']).optional() }),
     repository: createRepository({
       table: 'produtos',
-      fields: ['codigo', 'nome', 'valor_compra', 'valor_venda', 'estoque', 'foto', 'ativo', 'nivel_estoque', 'categoria', 'fornecedor', 'descricao', 'tem_estoque', 'mostrar_site'],
-      defaults: { foto: 'sem-foto.jpg', ativo: 'Sim', tem_estoque: 'Sim', mostrar_site: 'Não' },
+      fields: ['codigo', 'nome', 'valor_compra', 'valor_venda', 'valor_promocional', 'estoque', 'foto', 'ativo', 'nivel_estoque', 'categoria', 'sub_categoria', 'fornecedor', 'descricao', 'tem_estoque', 'mostrar_site'],
+      defaults: { foto: 'sem-foto.jpg', ativo: 'Sim', tem_estoque: 'Sim', mostrar_site: 'Não', valor_promocional: 0, sub_categoria: '' },
       selectExtras: '(SELECT nome FROM fornecedores f WHERE f.id = produtos.fornecedor AND f.empresa = produtos.empresa LIMIT 1) AS fornecedor_nome, (SELECT nome FROM categorias c WHERE c.id = produtos.categoria AND c.empresa = produtos.empresa LIMIT 1) AS categoria_nome'
     })
   },
@@ -29,7 +30,7 @@ const resources = {
 };
 const idSchema = z.coerce.number().int().positive();
 
-router.use(authenticate);
+router.use(authenticate, permit('fornecedores', 'produtos', 'servicos'));
 router.param('resource', (req, res, next, value) => {
   if (!resources[value]) return res.status(404).json({ error: 'Recurso não encontrado.' });
   req.resource = resources[value];

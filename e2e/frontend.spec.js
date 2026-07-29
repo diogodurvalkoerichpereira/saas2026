@@ -11,11 +11,8 @@ async function login(page) {
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
 }
 
-test.beforeEach(async ({ page }) => {
-  await login(page);
-});
-
 test('login e todas as guias abrem o módulo correto', async ({ page }) => {
+  await login(page);
   const routes = [
     ['dashboard', 'Visão geral'],
     ['clients', 'Clientes'],
@@ -27,15 +24,44 @@ test('login e todas as guias abrem o módulo correto', async ({ page }) => {
     ['sales', 'Vendas / PDV'],
     ['quotes', 'Orçamentos'],
     ['orders', 'Ordens de serviço'],
-    ['finance', 'Financeiro']
+    ['online-orders', 'Pedidos online'],
+    ['finance', 'Financeiro'],
+    ['categories', 'Categorias'],
+    ['subcategories', 'Subcategorias'],
+    ['brands', 'Marcas'],
+    ['equipment', 'Equipamentos'],
+    ['models', 'Modelos'],
+    ['payment-methods', 'Formas de pagamento'],
+    ['positions', 'Cargos'],
+    ['frequencies', 'Frequências'],
+    ['account-plans', 'Plano de contas'],
+    ['coupons', 'Cupons'],
+    ['contract-templates', 'Modelos de contrato'],
+    ['notes', 'Anotações'],
+    ['tasks', 'Tarefas'],
+    ['tickets', 'Chamados'],
+    ['marketing', 'WhatsApp e campanhas'],
+    ['cash', 'Caixas'],
+    ['purchases', 'Compras'],
+    ['recurring', 'Cobranças recorrentes'],
+    ['contracts', 'Contratos'],
+    ['commissions', 'Comissões'],
+    ['hr', 'Recursos humanos'],
+    ['settings', 'Configurações'],
+    ['subscription', 'Assinatura'],
+    ['site', 'Dados do site'],
+    ['tutorials', 'Tutoriais'],
+    ['reports', 'Relatórios']
   ];
   for (const [route, heading] of routes) {
-    await page.locator(`[data-route="${route}"]`).click();
-    await expect(page.locator('main h2')).toHaveText(heading);
+    await page.goto(`/#/${route}`);
+    await expect(page.locator('main h2')).toContainText(heading);
+    await expect(page.getByText('Não foi possível abrir este módulo.')).toHaveCount(0);
   }
 });
 
 test('cadastro, edição e inativação de cliente funcionam pela interface', async ({ page }) => {
+  await login(page);
   await page.locator('[data-route="clients"]').click();
   await page.getByRole('button', { name: 'Novo cliente' }).click();
   await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(testClientName);
@@ -56,6 +82,7 @@ test('cadastro, edição e inativação de cliente funcionam pela interface', as
 });
 
 test('formulários operacionais principais abrem sem erro', async ({ page }) => {
+  await login(page);
   const forms = [
     ['products', 'Novo produto', 'Novo produto'],
     ['inventory', 'Movimentar estoque', 'Movimentar estoque'],
@@ -73,6 +100,7 @@ test('formulários operacionais principais abrem sem erro', async ({ page }) => 
 });
 
 test('menu, tabela e modal permanecem utilizáveis no celular', async ({ page }) => {
+  await login(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Abrir ou fechar menu' }).click();
   await expect(page.locator('#sidebar')).toHaveClass(/open/);
@@ -84,6 +112,48 @@ test('menu, tabela e modal permanecem utilizáveis no celular', async ({ page })
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.width).toBeLessThanOrEqual(390);
   await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+});
+
+test('portal do cliente autentica e abre todos os dados isolados', async ({ page }) => {
+  await page.goto('/portal.html');
+  await page.getByRole('button', { name: 'Entrar no portal' }).click();
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+  const tabs = [
+    ['orders', 'Minhas ordens'],
+    ['quotes', 'Meus orçamentos'],
+    ['contracts', 'Meus contratos'],
+    ['billing', 'Financeiro'],
+    ['profile', 'Meu cadastro']
+  ];
+  for (const [route, heading] of tabs) {
+    await page.locator(`[data-route="${route}"]`).click();
+    await expect(page.locator('#portal-root h2')).toHaveText(heading);
+  }
+});
+
+test('administração SaaS autentica e abre os módulos globais', async ({ page }) => {
+  await page.goto('/admin.html');
+  await page.getByRole('button', { name: 'Entrar na administração' }).click();
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+  const tabs = [
+    ['companies', 'Empresas'],
+    ['plans', 'Planos'],
+    ['resources', 'Recursos'],
+    ['alerts', 'Alertas'],
+    ['billing', 'Financeiro SaaS']
+  ];
+  for (const [route, heading] of tabs) {
+    await page.locator(`[data-route="${route}"]`).click();
+    await expect(page.locator('#admin-root h2')).toHaveText(heading);
+  }
+});
+
+test('loja pública carrega catálogo e carrinho sem pagamento externo', async ({ page }) => {
+  await page.goto('/store.html?company=1');
+  await expect(page.getByRole('heading', { name: 'Catálogo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Adicionar ao carrinho' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Seu carrinho' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Registrar pedido' })).toBeVisible();
 });
 
 test.afterAll(async () => {

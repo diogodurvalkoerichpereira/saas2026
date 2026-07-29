@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Catálogo online">
+  <title>Loja · SaaS 2026</title>
+  <link rel="stylesheet" href="/standalone.css">
+</head>
+<body>
+  <header class="store-header"><div class="brand" style="margin:0"><span class="brand-mark">S26</span><div><strong id="store-name">Loja</strong><div class="muted" id="store-phone"></div></div></div><a href="/portal.html">Portal do cliente</a></header>
+  <main class="store-main" id="store-root"><div class="empty">Carregando catálogo…</div></main>
+  <button class="button primary cart" id="cart-button" hidden>Carrinho · <span id="cart-count">0</span></button>
+  <aside class="cart-drawer" id="cart-drawer" hidden>
+    <div class="page-header"><div><h2>Seu carrinho</h2><p>Revise os itens antes de finalizar.</p></div><button class="button ghost" id="cart-close">Fechar</button></div>
+    <div id="cart-lines"></div><div class="cart-total" id="cart-total"></div>
+    <form id="checkout-form">
+      <h3>Dados do pedido</h3>
+      <label class="field">Nome<input name="name" required maxlength="50"></label>
+      <label class="field">E-mail<input name="email" type="email" required maxlength="50"></label>
+      <label class="field">Telefone<input name="phone" required minlength="8" maxlength="20"></label>
+      <div class="form-grid"><label class="field">CPF/CNPJ<input name="document" maxlength="25"></label><label class="field">CEP<input name="zipCode" maxlength="20"></label></div>
+      <label class="field">Endereço<input name="address" maxlength="100"></label>
+      <div class="form-grid"><label class="field">Número<input name="number" maxlength="10"></label><label class="field">Cidade<input name="city" maxlength="50"></label></div>
+      <label class="field">Estado<input name="state" maxlength="50"></label>
+      <label class="field">Forma de pagamento<select name="paymentMethodId" id="store-payment" required></select></label>
+      <label class="field">Cupom<input name="coupon" maxlength="50" placeholder="Opcional"></label>
+      <label class="field">Observações<textarea name="notes" maxlength="500"></textarea></label>
+      <button class="button primary" type="submit">Registrar pedido</button><p class="error" id="checkout-error"></p>
+    </form>
+  </aside>
+  <dialog class="modal" id="order-modal"><form method="dialog"><header><h2>Pedido registrado</h2><button class="button ghost" value="cancel">Fechar</button></header><div id="order-result"></div></form></dialog>
+  <script type="module" src="/store.js"></script>
+</body>
+</html>

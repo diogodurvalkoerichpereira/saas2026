@@ -22,6 +22,7 @@
       <label>Senha<input name="password" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
       <button class="button primary" type="submit">Entrar no sistema</button>
       <p id="login-error" class="form-error" role="alert"></p>
+      <div class="login-links"><a href="/portal.html">Portal do cliente</a><a href="/store.html?company=1">Loja de demonstração</a><a href="/admin.html">Administração SaaS</a></div>
     </form>
   </section>
 
@@ -29,20 +30,50 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand"><span class="brand-mark">S26</span><div><strong>SaaS 2026</strong><small>ERP em Node.js</small></div></div>
       <nav class="sidebar-nav" aria-label="Módulos do sistema">
-        <a href="#/dashboard" data-route="dashboard" title="Dashboard"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>Dashboard</a>
+        <a href="#/dashboard" data-route="dashboard" data-permission="home" title="Dashboard"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>Dashboard</a>
         <p>Pessoas</p>
-        <a href="#/clients" data-route="clients" title="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clients"></use></svg>Clientes</a>
-        <a href="#/users" data-route="users" title="Usuários"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#user"></use></svg>Usuários</a>
-        <a href="#/suppliers" data-route="suppliers" title="Fornecedores"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Fornecedores</a>
+        <a href="#/clients" data-route="clients" data-permission="clientes" title="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clients"></use></svg>Clientes</a>
+        <a href="#/users" data-route="users" data-permission="usuarios" title="Usuários"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#user"></use></svg>Usuários</a>
+        <a href="#/suppliers" data-route="suppliers" data-permission="fornecedores" title="Fornecedores"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Fornecedores</a>
+        <a href="#/tasks" data-route="tasks" data-permission="tarefas,tarefas_clientes" title="Tarefas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#calendar"></use></svg>Tarefas</a>
+        <a href="#/notes" data-route="notes" data-permission="anotacoes,home" title="Anotações"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Anotações</a>
+        <a href="#/tickets" data-route="tickets" data-permission="chamados" title="Chamados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>Chamados</a>
         <p>Cadastros e estoque</p>
-        <a href="#/products" data-route="products" title="Produtos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#box"></use></svg>Produtos</a>
-        <a href="#/services" data-route="services" title="Serviços"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wrench"></use></svg>Serviços</a>
-        <a href="#/inventory" data-route="inventory" title="Estoque"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#inventory"></use></svg>Estoque</a>
+        <a href="#/categories" data-route="categories" data-permission="categorias" title="Categorias"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>Categorias</a>
+        <a href="#/subcategories" data-route="subcategories" data-permission="sub_categorias" title="Subcategorias"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Subcategorias</a>
+        <a href="#/brands" data-route="brands" data-permission="marcas" title="Marcas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#tag"></use></svg>Marcas</a>
+        <a href="#/equipment" data-route="equipment" data-permission="equipamentos" title="Equipamentos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wrench"></use></svg>Equipamentos</a>
+        <a href="#/models" data-route="models" data-permission="modelos" title="Modelos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#box"></use></svg>Modelos</a>
+        <a href="#/products" data-route="products" data-permission="produtos" title="Produtos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#box"></use></svg>Produtos</a>
+        <a href="#/services" data-route="services" data-permission="servicos" title="Serviços"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wrench"></use></svg>Serviços</a>
+        <a href="#/inventory" data-route="inventory" data-permission="estoque,entradas,saidas,produtos" title="Estoque"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#inventory"></use></svg>Estoque</a>
+        <a href="#/purchases" data-route="purchases" data-permission="compras" title="Compras"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Compras</a>
+        <a href="#/coupons" data-route="coupons" data-permission="cupom" title="Cupons"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#tag"></use></svg>Cupons</a>
         <p>Operações</p>
-        <a href="#/sales" data-route="sales" title="Vendas / PDV"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Vendas / PDV</a>
-        <a href="#/quotes" data-route="quotes" title="Orçamentos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Orçamentos</a>
-        <a href="#/orders" data-route="orders" title="Ordens de serviço"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg>Ordens de serviço</a>
-        <a href="#/finance" data-route="finance" title="Financeiro"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>Financeiro</a>
+        <a href="#/sales" data-route="sales" data-permission="vendas" title="Vendas / PDV"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Vendas / PDV</a>
+        <a href="#/online-orders" data-route="online-orders" data-permission="vendas" title="Pedidos online"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Pedidos online</a>
+        <a href="#/quotes" data-route="quotes" data-permission="orcamentos" title="Orçamentos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Orçamentos</a>
+        <a href="#/orders" data-route="orders" data-permission="os" title="Ordens de serviço"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg>Ordens de serviço</a>
+        <a href="#/contract-templates" data-route="contract-templates" data-permission="modelos_contratos" title="Modelos de contrato"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Modelos de contrato</a>
+        <a href="#/contracts" data-route="contracts" data-permission="listar_contratos,rel_contratos" title="Contratos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Contratos</a>
+        <a href="#/marketing" data-route="marketing" data-permission="marketing,grupos_disparos,dispositivos" title="WhatsApp e campanhas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#megaphone"></use></svg>WhatsApp e campanhas</a>
+        <p>Financeiro</p>
+        <a href="#/finance" data-route="finance" data-permission="financeiro,receber,pagar" title="Financeiro"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>Contas a pagar e receber</a>
+        <a href="#/recurring" data-route="recurring" data-permission="cobrancas" title="Cobranças recorrentes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#repeat"></use></svg>Cobranças recorrentes</a>
+        <a href="#/cash" data-route="cash" data-permission="caixas" title="Caixas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cashbox"></use></svg>Caixas</a>
+        <a href="#/commissions" data-route="commissions" data-permission="comissoes,minhas_comissoes" title="Comissões"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Comissões</a>
+        <a href="#/payment-methods" data-route="payment-methods" data-permission="formas_pgto" title="Formas de pagamento"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>Formas de pagamento</a>
+        <a href="#/account-plans" data-route="account-plans" data-permission="plano_contas" title="Plano de contas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Plano de contas</a>
+        <a href="#/reports" data-route="reports" data-permission="rel_financeiro,rel_vendas,home" title="Relatórios"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>Relatórios</a>
+        <p>Equipe</p>
+        <a href="#/hr" data-route="hr" data-permission="rh,funcionarios" title="Recursos humanos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Recursos humanos</a>
+        <a href="#/positions" data-route="positions" data-permission="cargos" title="Cargos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#user"></use></svg>Cargos</a>
+        <a href="#/frequencies" data-route="frequencies" data-permission="frequencias" title="Frequências"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#repeat"></use></svg>Frequências</a>
+        <p>Site e sistema</p>
+        <a href="#/site" data-route="site" data-permission="site" title="Dados do site"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#building"></use></svg>Dados do site</a>
+        <a href="#/tutorials" data-route="tutorials" title="Tutoriais"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>Tutoriais</a>
+        <a href="#/subscription" data-route="subscription" data-permission="home" title="Assinatura"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Assinatura</a>
+        <a href="#/settings" data-route="settings" data-permission="configuracoes,home" title="Configurações"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>Configurações</a>
       </nav>
       <div class="sidebar-user"><span class="avatar" id="user-avatar">U</span><div><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-role">Perfil</small></div></div>
     </aside>

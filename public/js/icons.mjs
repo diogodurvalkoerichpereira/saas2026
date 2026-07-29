@@ -2,7 +2,9 @@ const allowed = new Set([
   'menu', 'dashboard', 'clients', 'user', 'truck', 'box', 'wrench', 'inventory',
   'cart', 'clipboard', 'clipboard-check', 'wallet', 'logout', 'close', 'plus',
   'edit', 'power', 'refresh', 'shield', 'filter', 'chevron-left',
-  'chevron-right', 'check', 'trash'
+  'chevron-right', 'check', 'trash', 'calendar', 'list', 'file-text', 'help',
+  'layers', 'tag', 'megaphone', 'repeat', 'cashbox', 'briefcase', 'building',
+  'settings', 'download'
 ]);
 
 export function icon(name, className = 'ui-icon') {

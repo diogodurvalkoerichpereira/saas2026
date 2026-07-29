@@ -14,4 +14,74 @@ async function operationalSummary(companyId, db = pool) {
   return { orders, stock: stock[0] };
 }
 
-module.exports = { financialSummary, operationalSummary };
+async function salesReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT r.id, r.data_lanc AS data, r.total_venda AS total, r.valor_custo AS custo,
+            (COALESCE(r.total_venda, r.subtotal, 0) - COALESCE(r.valor_custo, 0)) AS lucro,
+            r.pago, r.node_status, c.nome AS cliente_nome, u.nome AS vendedor_nome
+       FROM receber r
+       LEFT JOIN clientes c ON c.id = r.cliente AND c.empresa = r.empresa
+       LEFT JOIN usuarios u ON u.id = r.usuario_lanc AND u.empresa = r.empresa
+      WHERE r.empresa = ? AND r.referencia = 'Venda' AND r.data_lanc BETWEEN ? AND ?
+      ORDER BY r.data_lanc DESC, r.id DESC`,
+    [companyId, from, to]
+  );
+  return rows;
+}
+
+async function cashFlowReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT data_pgto AS data, 'Receita' AS tipo, descricao, subtotal AS valor, pago, node_status
+       FROM receber WHERE empresa = ? AND pago = 'Sim' AND data_pgto BETWEEN ? AND ?
+      UNION ALL
+     SELECT data_pgto AS data, 'Despesa' AS tipo, descricao, -subtotal AS valor, pago, node_status
+       FROM pagar WHERE empresa = ? AND pago = 'Sim' AND data_pgto BETWEEN ? AND ?
+      ORDER BY data DESC`,
+    [companyId, from, to, companyId, from, to]
+  );
+  return rows;
+}
+
+async function inventoryReport(companyId, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT p.id, p.codigo, p.nome, p.estoque, p.nivel_estoque, p.valor_compra, p.valor_venda,
+            p.tem_estoque, p.ativo, c.nome AS categoria_nome, f.nome AS fornecedor_nome,
+            ROUND(COALESCE(p.estoque, 0) * COALESCE(p.valor_compra, 0), 2) AS valor_estoque,
+            CASE WHEN p.tem_estoque = 'Sim' AND p.estoque <= p.nivel_estoque THEN 'Sim' ELSE 'Não' END AS estoque_baixo
+       FROM produtos p
+       LEFT JOIN categorias c ON c.id = p.categoria AND c.empresa = p.empresa
+       LEFT JOIN fornecedores f ON f.id = p.fornecedor AND f.empresa = p.empresa
+      WHERE p.empresa = ? ORDER BY estoque_baixo DESC, p.nome`,
+    [companyId]
+  );
+  return rows;
+}
+
+async function delinquencyReport(companyId, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT r.id, r.descricao, r.vencimento, r.subtotal AS valor, r.pago, r.node_status,
+            DATEDIFF(CURRENT_DATE, r.vencimento) AS dias_atraso, c.nome AS cliente_nome,
+            c.telefone, c.email
+       FROM receber r
+       LEFT JOIN clientes c ON c.id = r.cliente AND c.empresa = r.empresa
+      WHERE r.empresa = ? AND r.node_status = 'ativo' AND (r.pago IS NULL OR r.pago <> 'Sim')
+        AND r.vencimento < CURRENT_DATE
+      ORDER BY r.vencimento, r.id`,
+    [companyId]
+  );
+  return rows;
+}
+
+async function cashReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT c.id, c.data_abertura, c.data_fechamento, c.valor_abertura, c.valor_fechamento, c.quebra,
+            c.sangrias, c.obs, u.nome AS operador_nome
+       FROM caixas c LEFT JOIN usuarios u ON u.id = c.operador AND u.empresa = c.empresa
+      WHERE c.empresa = ? AND c.data_abertura BETWEEN ? AND ?
+      ORDER BY c.data_abertura DESC, c.id DESC`,
+    [companyId, from, to]
+  );
+  return rows;
+}
+
+module.exports = { financialSummary, operationalSummary, salesReport, cashFlowReport, inventoryReport, delinquencyReport, cashReport };
