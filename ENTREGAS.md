@@ -1,6 +1,6 @@
 # Entregas
 
-**Última atualização:** 29 de julho de 2026, 17:17 (horário de Brasília).
+**Última atualização:** 29 de julho de 2026, 17:25 (horário de Brasília).
 
 ## Entrega integrada — 29 de julho de 2026, 17:17
 
@@ -113,3 +113,10 @@
 - Vendas com múltiplos itens; OS e orçamentos com produtos/serviços e transições validadas.
 - Docker Compose de teste criado com fixtures fictícias e credencial local documentada.
 - Validação unitária, MySQL, ponta a ponta, navegador, desktop, celular, dependências e segredos concluída.
+
+### 29 de julho de 2026 — 17:25 (horário de Brasília)
+
+- Símbolos tipográficos substituídos por uma família própria de ícones SVG, sem dependência externa.
+- Ícones aplicados ao menu, cabeçalho, modais, filtros, paginação e ações operacionais.
+- Alinhamento, contraste, estados ativo/hover e comportamento do menu recolhido ajustados.
+- Renderização conferida em desktop e celular, preservando nomes acessíveis dos controles.

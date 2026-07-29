@@ -1,3 +1,70 @@
+.ui-icon,
+.nav-icon {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.ui-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: #8fd5b8;
+  transition: color .18s, transform .18s;
+}
+
+.sidebar-nav a:hover .nav-icon,
+.sidebar-nav a.active .nav-icon {
+  color: #c4f5df;
+  transform: scale(1.06);
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  transition: background .18s, color .18s, transform .18s;
+}
+
+.icon-button:hover {
+  background: #dfeae5;
+  color: var(--brand);
+}
+
+.icon-button:active {
+  transform: scale(.94);
+}
+
+.icon-button .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.button .ui-icon {
+  transition: transform .18s;
+}
+
+.button:hover .ui-icon {
+  transform: translateY(-1px);
+}
+
+.sidebar-collapsed .sidebar-nav a {
+  font-size: 0;
+}
+
+.sidebar-collapsed .sidebar-nav .nav-icon {
+  width: 21px;
+  height: 21px;
+}
+
 .compact-field {
   display: flex;
   align-items: center;
@@ -41,6 +108,10 @@
 }
 
 @media (max-width: 700px) {
+  .sidebar-nav a {
+    font-size: .89rem;
+  }
+
   .compact-field {
     display: grid;
   }

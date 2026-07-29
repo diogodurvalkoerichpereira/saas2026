@@ -29,29 +29,29 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand"><span class="brand-mark">S26</span><div><strong>SaaS 2026</strong><small>ERP em Node.js</small></div></div>
       <nav class="sidebar-nav" aria-label="Módulos do sistema">
-        <a href="#/dashboard" data-route="dashboard"><span>⌂</span>Dashboard</a>
+        <a href="#/dashboard" data-route="dashboard" title="Dashboard"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>Dashboard</a>
         <p>Pessoas</p>
-        <a href="#/clients" data-route="clients"><span>◉</span>Clientes</a>
-        <a href="#/users" data-route="users"><span>♙</span>Usuários</a>
-        <a href="#/suppliers" data-route="suppliers"><span>◇</span>Fornecedores</a>
+        <a href="#/clients" data-route="clients" title="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clients"></use></svg>Clientes</a>
+        <a href="#/users" data-route="users" title="Usuários"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#user"></use></svg>Usuários</a>
+        <a href="#/suppliers" data-route="suppliers" title="Fornecedores"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Fornecedores</a>
         <p>Cadastros e estoque</p>
-        <a href="#/products" data-route="products"><span>□</span>Produtos</a>
-        <a href="#/services" data-route="services"><span>⌁</span>Serviços</a>
-        <a href="#/inventory" data-route="inventory"><span>⇄</span>Estoque</a>
+        <a href="#/products" data-route="products" title="Produtos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#box"></use></svg>Produtos</a>
+        <a href="#/services" data-route="services" title="Serviços"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wrench"></use></svg>Serviços</a>
+        <a href="#/inventory" data-route="inventory" title="Estoque"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#inventory"></use></svg>Estoque</a>
         <p>Operações</p>
-        <a href="#/sales" data-route="sales"><span>▣</span>Vendas / PDV</a>
-        <a href="#/quotes" data-route="quotes"><span>▤</span>Orçamentos</a>
-        <a href="#/orders" data-route="orders"><span>☷</span>Ordens de serviço</a>
-        <a href="#/finance" data-route="finance"><span>R$</span>Financeiro</a>
+        <a href="#/sales" data-route="sales" title="Vendas / PDV"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Vendas / PDV</a>
+        <a href="#/quotes" data-route="quotes" title="Orçamentos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Orçamentos</a>
+        <a href="#/orders" data-route="orders" title="Ordens de serviço"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg>Ordens de serviço</a>
+        <a href="#/finance" data-route="finance" title="Financeiro"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>Financeiro</a>
       </nav>
       <div class="sidebar-user"><span class="avatar" id="user-avatar">U</span><div><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-role">Perfil</small></div></div>
     </aside>
 
     <div class="workspace">
       <header class="topbar">
-        <button class="icon-button" id="menu-toggle" aria-label="Abrir ou fechar menu">☰</button>
+        <button class="icon-button" id="menu-toggle" aria-label="Abrir ou fechar menu"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#menu"></use></svg></button>
         <div><p class="breadcrumb">SaaS 2026 / <span id="breadcrumb-current">Dashboard</span></p><h1 id="page-title">Dashboard</h1></div>
-        <div class="topbar-actions"><span class="connection"><i></i>Banco local</span><button class="button ghost" id="logout">Sair</button></div>
+        <div class="topbar-actions"><span class="connection"><i></i>Banco local</span><button class="button ghost" id="logout"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>Sair</button></div>
       </header>
       <main class="content" id="page-root" tabindex="-1"></main>
     </div>
@@ -59,10 +59,10 @@
 
   <dialog id="app-modal" class="modal">
     <form class="modal-frame" id="modal-form">
-      <header><div><p class="eyebrow" id="modal-eyebrow">Cadastro</p><h2 id="modal-title">Novo registro</h2></div><button class="icon-button" type="button" data-modal-close aria-label="Fechar">×</button></header>
+      <header><div><p class="eyebrow" id="modal-eyebrow">Cadastro</p><h2 id="modal-title">Novo registro</h2></div><button class="icon-button" type="button" data-modal-close aria-label="Fechar"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg></button></header>
       <div class="modal-body" id="modal-body"></div>
       <p class="form-error" id="modal-error" role="alert"></p>
-      <footer><button class="button ghost" type="button" data-modal-close>Cancelar</button><button class="button primary" type="submit" id="modal-submit">Salvar</button></footer>
+      <footer><button class="button ghost" type="button" data-modal-close><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>Cancelar</button><button class="button primary" type="submit" id="modal-submit"><svg class="ui-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg><span id="modal-submit-label">Salvar</span></button></footer>
     </form>
   </dialog>
   <div class="toast-region" id="toast-region" aria-live="polite"></div>

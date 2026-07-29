@@ -37,7 +37,7 @@ test('login e todas as guias abrem o módulo correto', async ({ page }) => {
 
 test('cadastro, edição e inativação de cliente funcionam pela interface', async ({ page }) => {
   await page.locator('[data-route="clients"]').click();
-  await page.getByRole('button', { name: '+ Novo cliente' }).click();
+  await page.getByRole('button', { name: 'Novo cliente' }).click();
   await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(testClientName);
   await page.getByRole('textbox', { name: 'Cidade', exact: true }).fill('Cidade Browser');
   await page.getByRole('button', { name: 'Salvar', exact: true }).click();
@@ -57,12 +57,12 @@ test('cadastro, edição e inativação de cliente funcionam pela interface', as
 
 test('formulários operacionais principais abrem sem erro', async ({ page }) => {
   const forms = [
-    ['products', '+ Novo produto', 'Novo produto'],
-    ['inventory', '+ Movimentar estoque', 'Movimentar estoque'],
-    ['sales', '+ Nova venda', 'Nova venda'],
-    ['orders', '+ Nova ordem de serviço', 'Nova ordem de serviço'],
-    ['quotes', '+ Novo orçamento', 'Novo orçamento'],
-    ['finance', '+ Novo lançamento', 'Novo lançamento']
+    ['products', 'Novo produto', 'Novo produto'],
+    ['inventory', 'Movimentar estoque', 'Movimentar estoque'],
+    ['sales', 'Nova venda', 'Nova venda'],
+    ['orders', 'Nova ordem de serviço', 'Nova ordem de serviço'],
+    ['quotes', 'Novo orçamento', 'Novo orçamento'],
+    ['finance', 'Novo lançamento', 'Novo lançamento']
   ];
   for (const [route, button, dialogTitle] of forms) {
     await page.locator(`[data-route="${route}"]`).click();
@@ -79,7 +79,7 @@ test('menu, tabela e modal permanecem utilizáveis no celular', async ({ page })
   await page.locator('[data-route="clients"]').click();
   await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
   await expect(page.locator('.table-wrap')).toBeVisible();
-  await page.getByRole('button', { name: '+ Novo cliente' }).click();
+  await page.getByRole('button', { name: 'Novo cliente' }).click();
   const box = await page.getByRole('dialog').boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.width).toBeLessThanOrEqual(390);

@@ -1,5 +1,6 @@
 import { escapeHtml } from './format.mjs';
 import { normalizeFormValues, validateFormValues } from './form-values.mjs';
+import { icon } from './icons.mjs';
 
 export function toast(message, type = 'success') {
   const region = document.querySelector('#toast-region');
@@ -24,7 +25,7 @@ export function table(columns, items, actions = () => '') {
 }
 
 export function pagination(meta) {
-  return `<div class="pagination"><span>Página ${meta.page} de ${meta.pages} · ${meta.total} registros</span><button class="button ghost small" data-page="${meta.page - 1}" ${meta.page <= 1 ? 'disabled' : ''}>Anterior</button><button class="button ghost small" data-page="${meta.page + 1}" ${meta.page >= meta.pages ? 'disabled' : ''}>Próxima</button></div>`;
+  return `<div class="pagination"><span>Página ${meta.page} de ${meta.pages} · ${meta.total} registros</span><button class="button ghost small" data-page="${meta.page - 1}" ${meta.page <= 1 ? 'disabled' : ''}>${icon('chevron-left')}Anterior</button><button class="button ghost small" data-page="${meta.page + 1}" ${meta.page >= meta.pages ? 'disabled' : ''}>Próxima${icon('chevron-right')}</button></div>`;
 }
 
 function fieldMarkup(field, value) {
@@ -45,7 +46,7 @@ export function openForm({ title, eyebrow = 'Cadastro', fields, record = {}, sub
   document.querySelector('#modal-eyebrow').textContent = eyebrow;
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">${fields.map((field) => fieldMarkup(field, record[field.name])).join('')}</div>`;
   document.querySelector('#modal-error').textContent = '';
-  document.querySelector('#modal-submit').textContent = submitLabel;
+  document.querySelector('#modal-submit-label').textContent = submitLabel;
   const handler = async (event) => {
     event.preventDefault();
     const submit = document.querySelector('#modal-submit');

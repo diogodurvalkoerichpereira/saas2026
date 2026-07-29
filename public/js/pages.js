@@ -1,12 +1,13 @@
 import { api } from './api.js';
 import { money, number, date, text, escapeHtml, badge } from './format.mjs';
+import { icon } from './icons.mjs';
 import { loading, pageHeader, table, pagination, openForm, confirmAction, toast } from './ui.js';
 
 const root = () => document.querySelector('#page-root');
-const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">Editar</button>`;
+const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">${icon('edit')}Editar</button>`;
 const activeButtons = (item) => item.ativo === 'Não'
-  ? `<button class="button ghost small" data-action="restore" data-id="${item.id}">Reativar</button>`
-  : `<button class="button danger small" data-action="disable" data-id="${item.id}">Inativar</button>`;
+  ? `<button class="button ghost small" data-action="restore" data-id="${item.id}">${icon('refresh')}Reativar</button>`
+  : `<button class="button danger small" data-action="disable" data-id="${item.id}">${icon('power')}Inativar</button>`;
 
 const entityConfigs = {
   clients: {
@@ -91,7 +92,7 @@ const entityConfigs = {
       { name: 'acessar_painel', label: 'Acessar painel', type: 'select', options: yesNoOptions() },
       { name: 'mostrar_registros', label: 'Mostrar registros', type: 'select', options: yesNoOptions() }
     ],
-    extraActions: (item) => `<button class="button ghost small" data-action="permissions" data-id="${item.id}">Permissões</button>`
+    extraActions: (item) => `<button class="button ghost small" data-action="permissions" data-id="${item.id}">${icon('shield')}Permissões</button>`
   }
 };
 
@@ -109,8 +110,8 @@ async function renderCrud(config) {
     const params = new URLSearchParams({ page: state.page, pageSize: 25, search: state.search });
     if (state.status) params.set('status', state.status);
     const result = await api(`${config.path}?${params}`);
-    root().innerHTML = `${pageHeader(config.title, config.subtitle, `<button class="button primary" data-action="new">+ Novo ${escapeHtml(config.singular)}</button>`)}
-      <section class="panel"><form class="toolbar" id="list-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar por nome, código ou contato"><select name="status"><option value="">Todas as situações</option><option value="Sim" ${state.status === 'Sim' ? 'selected' : ''}>Ativos</option><option value="Não" ${state.status === 'Não' ? 'selected' : ''}>Inativos</option></select><button class="button ghost">Filtrar</button></form>
+    root().innerHTML = `${pageHeader(config.title, config.subtitle, `<button class="button primary" data-action="new">${icon('plus')}Novo ${escapeHtml(config.singular)}</button>`)}
+      <section class="panel"><form class="toolbar" id="list-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar por nome, código ou contato"><select name="status"><option value="">Todas as situações</option><option value="Sim" ${state.status === 'Sim' ? 'selected' : ''}>Ativos</option><option value="Não" ${state.status === 'Não' ? 'selected' : ''}>Inativos</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
       ${table(config.columns, result.items, (item) => `${editButton(item.id)}${config.extraActions?.(item) || ''}${activeButtons(item)}`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     root().querySelector('#list-filter').addEventListener('submit', (event) => {
@@ -200,8 +201,8 @@ async function renderInventory() {
   const state = { page: 1, search: '', status: '' };
   const load = async () => {
     const result = await api(`/api/inventory/movements?page=${state.page}&pageSize=25&search=${encodeURIComponent(state.search)}${state.status ? `&status=${state.status}` : ''}`);
-    root().innerHTML = `${pageHeader('Estoque', 'Entradas e saídas são imutáveis; correções usam um movimento compensatório.', '<button class="button primary" data-new-movement>+ Movimentar estoque</button>')}
-      <section class="panel"><form class="toolbar" id="inventory-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar produto, motivo ou usuário"><select name="status"><option value="">Entradas e saídas</option><option value="entrada" ${state.status === 'entrada' ? 'selected' : ''}>Entradas</option><option value="saida" ${state.status === 'saida' ? 'selected' : ''}>Saídas</option></select><button class="button ghost">Filtrar</button></form>
+    root().innerHTML = `${pageHeader('Estoque', 'Entradas e saídas são imutáveis; correções usam um movimento compensatório.', `<button class="button primary" data-new-movement>${icon('inventory')}Movimentar estoque</button>`)}
+      <section class="panel"><form class="toolbar" id="inventory-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar produto, motivo ou usuário"><select name="status"><option value="">Entradas e saídas</option><option value="entrada" ${state.status === 'entrada' ? 'selected' : ''}>Entradas</option><option value="saida" ${state.status === 'saida' ? 'selected' : ''}>Saídas</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
       ${table([{ key: 'data', label: 'Data', render: date }, { key: 'tipo', label: 'Movimento', render: badge }, { key: 'produto_nome', label: 'Produto', render: text }, { key: 'quantidade', label: 'Quantidade', render: number }, { key: 'motivo', label: 'Motivo' }, { key: 'usuario_nome', label: 'Usuário', render: text }], result.items)}${pagination(result.pagination)}</section>`;
     root().querySelector('#inventory-filter').addEventListener('submit', (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); state.search = data.search; state.status = data.status; state.page = 1; load(); });
     root().querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => { state.page = Number(button.dataset.page); load(); }));
@@ -233,9 +234,9 @@ async function renderFinance(route) {
     if (state.to) params.set('to', state.to);
     const result = await api(`/api/finance/${type}?${params}`);
     const label = type === 'payables' ? 'Contas a pagar' : 'Contas a receber';
-    root().innerHTML = `${pageHeader('Financeiro', 'Controle de vencimentos, baixas, reaberturas e cancelamentos.', '<button class="button primary" data-new-entry>+ Novo lançamento</button>')}
+    root().innerHTML = `${pageHeader('Financeiro', 'Controle de vencimentos, baixas, reaberturas e cancelamentos.', `<button class="button primary" data-new-entry>${icon('plus')}Novo lançamento</button>`)}
       <div class="split-tabs"><a class="${type === 'receivables' ? 'active' : ''}" href="#/finance?type=receivables">Contas a receber</a><a class="${type === 'payables' ? 'active' : ''}" href="#/finance?type=payables">Contas a pagar</a></div>
-      <section class="panel"><form class="toolbar" id="finance-filter"><strong>${label}</strong><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar descrição ou pessoa"><select name="paid"><option value="">Todas</option><option value="Não" ${state.paid === 'Não' ? 'selected' : ''}>Pendentes</option><option value="Sim" ${state.paid === 'Sim' ? 'selected' : ''}>Pagas</option></select><label class="compact-field">De <input name="from" type="date" value="${escapeHtml(state.from)}"></label><label class="compact-field">Até <input name="to" type="date" value="${escapeHtml(state.to)}"></label><button class="button ghost">Filtrar</button></form>
+      <section class="panel"><form class="toolbar" id="finance-filter"><strong>${label}</strong><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar descrição ou pessoa"><select name="paid"><option value="">Todas</option><option value="Não" ${state.paid === 'Não' ? 'selected' : ''}>Pendentes</option><option value="Sim" ${state.paid === 'Sim' ? 'selected' : ''}>Pagas</option></select><label class="compact-field">De <input name="from" type="date" value="${escapeHtml(state.from)}"></label><label class="compact-field">Até <input name="to" type="date" value="${escapeHtml(state.to)}"></label><button class="button ghost">${icon('filter')}Filtrar</button></form>
       ${table([{ key: 'vencimento', label: 'Vencimento', render: date }, { key: 'descricao', label: 'Descrição' }, { key: 'pessoa_nome', label: type === 'payables' ? 'Fornecedor' : 'Cliente', render: text }, { key: 'subtotal', label: 'Valor', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => financeActions(item))}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     root().querySelector('#finance-filter').addEventListener('submit', (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); state.search = data.search; state.paid = data.paid; state.from = data.from; state.to = data.to; state.page = 1; load(); });
@@ -253,7 +254,7 @@ async function renderFinance(route) {
 }
 function financeActions(item) {
   if (item.node_status === 'cancelado') return '';
-  return `${item.pago === 'Sim' ? '<button class="button ghost small" data-action="reopen" data-id="' + item.id + '">Reabrir</button>' : editButton(item.id) + '<button class="button ghost small" data-action="settle" data-id="' + item.id + '">Baixar</button>'}<button class="button danger small" data-action="cancel" data-id="${item.id}">Cancelar</button>`;
+  return `${item.pago === 'Sim' ? `<button class="button ghost small" data-action="reopen" data-id="${item.id}">${icon('refresh')}Reabrir</button>` : editButton(item.id) + `<button class="button ghost small" data-action="settle" data-id="${item.id}">${icon('check')}Baixar</button>`}<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`;
 }
 async function openFinanceForm(type, item, reload) {
   const [people, paymentMethods] = await Promise.all([
@@ -282,9 +283,9 @@ async function renderSales() {
     const params = new URLSearchParams({ page: state.page, pageSize: 25, search: state.search });
     if (state.status) params.set('status', state.status);
     const result = await api(`/api/sales?${params}`);
-    root().innerHTML = `${pageHeader('Vendas / PDV', 'Vendas integradas ao financeiro e ao estoque.', '<button class="button primary" data-new-sale>+ Nova venda</button>')}
-      <section class="panel"><form class="toolbar" id="sales-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, venda ou forma de pagamento"><select name="status"><option value="">Ativas e canceladas</option><option value="ativo" ${state.status === 'ativo' ? 'selected' : ''}>Ativas</option><option value="cancelado" ${state.status === 'cancelado' ? 'selected' : ''}>Canceladas</option></select><button class="button ghost">Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => item.node_status === 'cancelado' ? '' : `<button class="button danger small" data-cancel-sale="${item.id}">Cancelar</button>`)}${pagination(result.pagination)}</section>`;
+    root().innerHTML = `${pageHeader('Vendas / PDV', 'Vendas integradas ao financeiro e ao estoque.', `<button class="button primary" data-new-sale>${icon('plus')}Nova venda</button>`)}
+      <section class="panel"><form class="toolbar" id="sales-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, venda ou forma de pagamento"><select name="status"><option value="">Ativas e canceladas</option><option value="ativo" ${state.status === 'ativo' ? 'selected' : ''}>Ativas</option><option value="cancelado" ${state.status === 'cancelado' ? 'selected' : ''}>Canceladas</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
+      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => item.node_status === 'cancelado' ? '' : `<button class="button danger small" data-cancel-sale="${item.id}">${icon('close')}Cancelar</button>`)}${pagination(result.pagination)}</section>`;
     root().querySelector('#sales-filter').addEventListener('submit', (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); state.search = data.search; state.status = data.status; state.page = 1; load(); });
     root().querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => { state.page = Number(button.dataset.page); load(); }));
     root().querySelector('[data-new-sale]').addEventListener('click', async () => {
@@ -306,14 +307,14 @@ function openSaleForm(clients, products, paymentMethods, reload) {
   const lines = [{ productId: products[0].id, quantity: 1 }];
   document.querySelector('#modal-title').textContent = 'Nova venda';
   document.querySelector('#modal-eyebrow').textContent = 'PDV';
-  document.querySelector('#modal-submit').textContent = 'Concluir venda';
+  document.querySelector('#modal-submit-label').textContent = 'Concluir venda';
   document.querySelector('#modal-error').textContent = '';
   const renderLines = () => {
     const container = form.querySelector('#sale-lines');
     container.innerHTML = lines.map((line, index) => `<div class="line-item" data-sale-line="${index}">
       <label class="field">Produto<select data-line-product required>${products.map((product) => `<option value="${product.id}" ${String(product.id) === String(line.productId) ? 'selected' : ''}>${escapeHtml(product.nome)} · ${money(product.valor_venda)} · saldo ${number(product.estoque)}</option>`).join('')}</select></label>
       <label class="field quantity">Quantidade<input data-line-quantity type="number" min="1" step="1" value="${line.quantity}" required></label>
-      <button class="button danger small" type="button" data-remove-line="${index}" ${lines.length === 1 ? 'disabled' : ''}>Remover</button>
+      <button class="button danger small" type="button" data-remove-line="${index}" ${lines.length === 1 ? 'disabled' : ''}>${icon('trash')}Remover</button>
     </div>`).join('');
     container.querySelectorAll('[data-remove-line]').forEach((button) => button.addEventListener('click', () => { lines.splice(Number(button.dataset.removeLine), 1); renderLines(); }));
   };
@@ -322,7 +323,7 @@ function openSaleForm(clients, products, paymentMethods, reload) {
     <label class="field">Vencimento<input name="dueDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
     <label class="field">Pagamento imediato<select name="paid"><option value="false">Não</option><option value="true">Sim</option></select></label>
     <label class="field full">Forma de pagamento<select name="paymentMethodId"><option value="0">Não informado</option>${paymentMethods.map((method) => `<option value="${method.id}">${escapeHtml(method.nome)}</option>`).join('')}</select></label>
-    <div class="full line-items-header"><strong>Itens da venda</strong><button class="button ghost small" type="button" id="add-sale-line">+ Adicionar produto</button></div>
+    <div class="full line-items-header"><strong>Itens da venda</strong><button class="button ghost small" type="button" id="add-sale-line">${icon('plus')}Adicionar produto</button></div>
     <div class="full" id="sale-lines"></div>
   </div>`;
   renderLines();
@@ -367,7 +368,7 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
   const record = item || { cliente: clients[0].id, data_entrega: new Date().toISOString().slice(0, 10), valor: 0, status: currentStatus };
   document.querySelector('#modal-title').textContent = item ? `Editar ${config.singular}` : config.newLabel;
   document.querySelector('#modal-eyebrow').textContent = config.title;
-  document.querySelector('#modal-submit').textContent = 'Salvar';
+  document.querySelector('#modal-submit-label').textContent = 'Salvar';
   document.querySelector('#modal-error').textContent = '';
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">
     <label class="field">Cliente<select name="cliente" required>${clients.map((client) => `<option value="${client.id}" ${String(client.id) === String(record.cliente) ? 'selected' : ''}>${escapeHtml(client.nome)}</option>`).join('')}</select></label>
@@ -380,7 +381,7 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
     <label class="field">Modelo<input name="modelo" maxlength="255" value="${escapeHtml(record.modelo)}"></label>
     <label class="field full">Defeito ou solicitação<textarea name="defeito" maxlength="1000">${escapeHtml(record.defeito)}</textarea></label>
     <label class="field full">Observações<textarea name="obs" maxlength="255">${escapeHtml(record.obs)}</textarea></label>
-    <div class="full line-items-header"><strong>Produtos e serviços</strong><span><button class="button ghost small" type="button" data-add-work-line="product">+ Produto</button> <button class="button ghost small" type="button" data-add-work-line="service">+ Serviço</button></span></div>
+    <div class="full line-items-header"><strong>Produtos e serviços</strong><span><button class="button ghost small" type="button" data-add-work-line="product">${icon('plus')}Produto</button> <button class="button ghost small" type="button" data-add-work-line="service">${icon('plus')}Serviço</button></span></div>
     <div class="full" id="work-lines"></div>
   </div>`;
   const renderLines = () => {
@@ -394,7 +395,7 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
       return `<div class="line-item" data-work-line="${index}" data-kind="${line.kind}">
         <label class="field">${line.kind === 'product' ? 'Produto' : 'Serviço'}<select data-work-item required>${catalog.map((entry) => `<option value="${entry.id}" ${String(entry.id) === String(line.itemId) ? 'selected' : ''}>${escapeHtml(entry.nome)} · ${money(line.kind === 'product' ? entry.valor_venda : entry.valor)}</option>`).join('')}</select></label>
         <label class="field quantity">Quantidade<input data-work-quantity type="number" min="1" step="1" value="${line.quantity}" required></label>
-        <button class="button danger small" type="button" data-remove-work-line="${index}">Remover</button>
+        <button class="button danger small" type="button" data-remove-work-line="${index}">${icon('trash')}Remover</button>
       </div>`;
     }).join('');
     container.querySelectorAll('[data-remove-work-line]').forEach((button) => button.addEventListener('click', () => {
@@ -486,9 +487,9 @@ async function renderWork(type) {
     const params = new URLSearchParams({ page: state.page, pageSize: 25, search: state.search });
     if (state.status) params.set('status', state.status);
     const result = await api(`/api/work/${type}?${params}`);
-    root().innerHTML = `${pageHeader(config.title, 'Acompanhamento por cliente, equipamento, data e situação.', `<button class="button primary" data-new-work>+ ${config.newLabel}</button>`)}
-      <section class="panel"><form class="toolbar" id="work-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, equipamento ou responsável"><select name="status"><option value="">Todas as situações</option>${config.statuses.map((status) => `<option value="${escapeHtml(status)}" ${state.status === status ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select><button class="button ghost">Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }], result.items, (item) => `${editButton(item.id)}${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
+    root().innerHTML = `${pageHeader(config.title, 'Acompanhamento por cliente, equipamento, data e situação.', `<button class="button primary" data-new-work>${icon('plus')}${config.newLabel}</button>`)}
+      <section class="panel"><form class="toolbar" id="work-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, equipamento ou responsável"><select name="status"><option value="">Todas as situações</option>${config.statuses.map((status) => `<option value="${escapeHtml(status)}" ${state.status === status ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select><button class="button ghost">${icon('filter')}Filtrar</button></form>
+      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }], result.items, (item) => `${editButton(item.id)}${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     const showForm = async (item) => {
       const fullItem = item ? await api(`/api/work/${type}/${item.id}`) : null;
