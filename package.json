@@ -1,0 +1,22 @@
+{
+  "name": "saas2026-node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Migração do ERP legado em PHP para Node.js.",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.3",
+    "zod": "^3.25.76"
+  }
+}
