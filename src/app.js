@@ -25,6 +25,7 @@ const portalRoutes = require('./modules/portal/portal.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const publicRoutes = require('./modules/public/public.routes');
 const storeRoutes = require('./modules/store/store.routes');
+const fiscalRoutes = require('./modules/fiscal/fiscal.routes');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/client', portalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/store', storeRoutes);
+app.use('/api/fiscal', fiscalRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

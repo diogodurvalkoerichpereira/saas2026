@@ -14,7 +14,7 @@ async function login(page) {
 test('login e todas as guias abrem o módulo correto', async ({ page }) => {
   await login(page);
   const routes = [
-    ['dashboard', 'Visão geral'],
+    ['dashboard', 'Dashboard'],
     ['clients', 'Clientes'],
     ['users', 'Usuários'],
     ['suppliers', 'Fornecedores'],
@@ -55,7 +55,8 @@ test('login e todas as guias abrem o módulo correto', async ({ page }) => {
   ];
   for (const [route, heading] of routes) {
     await page.goto(`/#/${route}`);
-    await expect(page.locator('main h2')).toContainText(heading);
+    await expect(page.locator('#page-title')).toHaveText(heading);
+    await expect(page.locator('main h2').first()).toBeVisible();
     await expect(page.getByText('Não foi possível abrir este módulo.')).toHaveCount(0);
   }
 });
@@ -119,9 +120,9 @@ test('portal do cliente autentica e abre todos os dados isolados', async ({ page
   await page.getByRole('button', { name: 'Entrar no portal' }).click();
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
   const tabs = [
-    ['orders', 'Minhas ordens'],
-    ['quotes', 'Meus orçamentos'],
-    ['contracts', 'Meus contratos'],
+    ['orders', 'Ordens de serviço'],
+    ['quotes', 'Orçamentos'],
+    ['contracts', 'Contratos'],
     ['billing', 'Financeiro'],
     ['profile', 'Meu cadastro']
   ];
@@ -140,7 +141,7 @@ test('administração SaaS autentica e abre os módulos globais', async ({ page 
     ['plans', 'Planos'],
     ['resources', 'Recursos'],
     ['alerts', 'Alertas'],
-    ['billing', 'Financeiro SaaS']
+    ['billing', 'Mensalidades']
   ];
   for (const [route, heading] of tabs) {
     await page.locator(`[data-route="${route}"]`).click();

@@ -992,11 +992,12 @@ async function renderReports(route) {
   if (config.yearFilter) query.set('year', state.year);
   const result = await api(`${config.path}?${query}`);
   const tabs = `<div class="split-tabs report-tabs">${Object.entries(configs).map(([key, item]) => `<a class="${selected === key ? 'active' : ''}" href="#/reports?tab=${key}">${item.label}</a>`).join('')}</div>`;
-  root().innerHTML = `${pageHeader('Relatórios', 'Consultas consolidadas com exportação CSV segura.', `<button class="button ghost" data-export>${icon('file-text')}Exportar CSV</button>`)}${tabs}
+  root().innerHTML = `${pageHeader('Relatórios', 'Consultas consolidadas com exportação CSV segura.', `<span class="actions"><button class="button ghost" data-print>${icon('file-text')}Imprimir / PDF</button><button class="button ghost" data-export>${icon('download')}Exportar CSV</button></span>`)}${tabs}
     ${config.period ? `<section class="panel report-filter"><form class="toolbar" data-filter><label class="compact-field">De <input name="from" type="date" value="${state.from}"></label><label class="compact-field">Até <input name="to" type="date" value="${state.to}"></label><button class="button ghost">${icon('filter')}Aplicar</button></form></section>` : ''}
     ${config.yearFilter ? `<section class="panel report-filter"><form class="toolbar" data-year-filter><label class="compact-field">Ano <input name="year" type="number" min="2000" max="2100" value="${state.year}"></label><button class="button ghost">${icon('filter')}Aplicar</button></form></section>` : ''}
     <section class="panel">${table(config.columns, result.items)}</section>`;
   root().querySelector('[data-export]').addEventListener('click', () => downloadCsv(`relatorio-${selected}-${today()}.csv`, config.columns, result.items));
+  root().querySelector('[data-print]').addEventListener('click', () => window.print());
   root().querySelector('[data-filter]')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));

@@ -13,7 +13,9 @@ const uploadRoot = path.resolve(__dirname, '..', '..', '..', 'uploads');
 const id = z.coerce.number().int().positive();
 const entities = {
   clients: { table: 'clientes', permissions: ['clientes'] },
+  users: { table: 'usuarios', permissions: ['usuarios'] },
   suppliers: { table: 'fornecedores', permissions: ['fornecedores'] },
+  sales: { table: 'receber', permissions: ['vendas'] },
   purchases: { table: 'node_purchases', permissions: ['compras'] },
   contracts: { table: 'node_contracts', permissions: ['listar_contratos', 'rel_contratos'] },
   orders: { table: 'os', permissions: ['os'] },

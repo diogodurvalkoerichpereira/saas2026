@@ -89,6 +89,7 @@ const entityConfigs = {
   },
   users: {
     title: 'Usuários', singular: 'usuário', path: '/api/users', subtitle: 'Acesso ao sistema, perfis e situação dos usuários.',
+    attachmentEntity: 'users',
     columns: [
       { key: 'nome', label: 'Nome' }, { key: 'email', label: 'E-mail' }, { key: 'nivel', label: 'Perfil', render: badge },
       { key: 'telefone', label: 'Telefone', render: text }, { key: 'ativo', label: 'Situação', render: badge }
@@ -310,14 +311,35 @@ async function renderSales() {
     const result = await api(`/api/sales?${params}`);
     root().innerHTML = `${pageHeader('Vendas / PDV', 'Vendas integradas ao financeiro e ao estoque.', `<button class="button primary" data-new-sale>${icon('plus')}Nova venda</button>`)}
       <section class="panel"><form class="toolbar" id="sales-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, venda ou forma de pagamento"><select name="status"><option value="">Ativas e canceladas</option><option value="ativo" ${state.status === 'ativo' ? 'selected' : ''}>Ativas</option><option value="cancelado" ${state.status === 'cancelado' ? 'selected' : ''}>Canceladas</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => item.node_status === 'cancelado' ? '' : `<button class="button danger small" data-cancel-sale="${item.id}">${icon('close')}Cancelar</button>`)}${pagination(result.pagination)}</section>`;
+      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => `${attachmentButton('sales', item.id)}${item.node_status === 'cancelado' ? '' : `<button class="button ghost small" data-nfse="${item.id}">${icon('file-text')}NFS-e</button><button class="button ghost small" data-nfe="${item.id}">${icon('file-text')}NF-e</button><button class="button danger small" data-cancel-sale="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
     root().querySelector('#sales-filter').addEventListener('submit', (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); state.search = data.search; state.status = data.status; state.page = 1; load(); });
     root().querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => { state.page = Number(button.dataset.page); load(); }));
+    root().querySelectorAll('[data-action="attachments"]').forEach((button) => button.addEventListener('click', () => openAttachments({ entity: 'sales', id: Number(button.dataset.attachmentId), title: `venda #${button.dataset.attachmentId}` })));
     root().querySelector('[data-new-sale]').addEventListener('click', async () => {
       const [clients, products, paymentMethods] = await Promise.all([allItems('/api/clients'), allItems('/api/catalog/products'), allItems('/api/finance/payment-methods', false)]);
       openSaleForm(clients, products.filter((item) => item.ativo === 'Sim'), paymentMethods, load);
     });
     root().querySelectorAll('[data-cancel-sale]').forEach((button) => button.addEventListener('click', async () => { const reason = prompt('Informe o motivo do cancelamento da venda:'); if (reason) { await api(`/api/sales/${button.dataset.cancelSale}`, { method: 'DELETE', body: { reason } }); toast('Venda cancelada e estoque restaurado.'); await load(); } }));
+    root().querySelectorAll('[data-nfse]').forEach((button) => button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const doc = await api(`/api/fiscal/nfse/from-sale/${button.dataset.nfse}`, { method: 'POST' });
+        if (doc.status === 'autorizado') { toast(`NFS-e ${doc.numero} autorizada.`); printFiscalDocument(doc); }
+        else if (doc.status === 'pendente') { toast('NFS-e registrada como pendente: configure o certificado no módulo de notas para transmitir.', 'error'); printFiscalDocument(doc); }
+        else { toast(`NFS-e ${doc.status}. Veja o motivo no módulo de notas.`, 'error'); }
+        await load();
+      } catch (error) { toast(error.message, 'error'); } finally { button.disabled = false; }
+    }));
+    root().querySelectorAll('[data-nfe]').forEach((button) => button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const doc = await api(`/api/fiscal/nfe/from-sale/${button.dataset.nfe}`, { method: 'POST' });
+        if (doc.status === 'autorizado') { toast(`NF-e ${doc.numero} autorizada.`); printFiscalDocument(doc); }
+        else if (doc.status === 'pendente') { toast('NF-e registrada como pendente: configure o certificado no módulo de notas para transmitir.', 'error'); printFiscalDocument(doc); }
+        else { toast(`NF-e ${doc.status}. Veja o motivo no módulo de notas.`, 'error'); }
+        await load();
+      } catch (error) { toast(error.message, 'error'); } finally { button.disabled = false; }
+    }));
   };
   await load();
 }
@@ -570,6 +592,46 @@ async function renderWork(type) {
   await load();
 }
 
+async function renderFiscal() {
+  loading();
+  const result = await api('/api/fiscal');
+  root().innerHTML = `${pageHeader('Notas fiscais', 'Documentos emitidos a partir das vendas. NFS-e pelo Padrão Nacional; homologação antes de produção.')}
+    <section class="panel">${table([
+      { key: 'id', label: 'Doc' },
+      { key: 'modelo', label: 'Modelo', render: (value) => value ? String(value).toUpperCase() : '' },
+      { key: 'numero', label: 'Número', render: text },
+      { key: 'venda', label: 'Venda', render: text },
+      { key: 'valor_total', label: 'Valor', render: (value) => `<span class="money">${money(value)}</span>` },
+      { key: 'ambiente', label: 'Ambiente', render: badge },
+      { key: 'status', label: 'Situação', render: badge },
+      { key: 'criado_em', label: 'Emitido', render: date }
+    ], result.items, (item) => `<button class="button ghost small" data-print-fiscal="${item.id}">${icon('file-text')}Imprimir</button>`)}</section>`;
+  root().querySelectorAll('[data-print-fiscal]').forEach((button) => button.addEventListener('click', async () => {
+    try { printFiscalDocument(await api(`/api/fiscal/${button.dataset.printFiscal}`)); } catch (error) { toast(error.message, 'error'); }
+  }));
+}
+
+function printFiscalDocument(doc) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('Habilite pop-ups para imprimir a nota.', 'error'); return; }
+  const itens = (doc.itens || []).map((item) => `<tr><td>${escapeHtml(item.descricao || '')}</td><td class="r">${money(item.valor_total)}</td></tr>`).join('');
+  const semValor = doc.status !== 'autorizado';
+  const rotulo = String(doc.modelo || 'nfse').toUpperCase();
+  win.document.write(`<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>${rotulo} ${doc.numero || ''}</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}small{color:#555}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #ddd;padding:6px;font-size:13px;text-align:left}.r{text-align:right}.tot{text-align:right;font-weight:bold;margin-top:12px}.tag{display:inline-block;padding:2px 8px;border:1px solid #999;border-radius:4px;font-size:11px}.aviso{background:#fff4e5;border:1px solid #f0c36d;padding:8px;border-radius:4px;margin:12px 0;font-size:12px}</style>
+    </head><body>
+    <h1>${rotulo} ${doc.numero ? 'nº ' + doc.numero : '(sem número)'} · série ${doc.serie || '-'}</h1>
+    <small>Modelo ${String(doc.modelo || '').toUpperCase()} · Ambiente ${escapeHtml(String(doc.ambiente || ''))} · Situação <span class="tag">${escapeHtml(String(doc.status || ''))}</span></small>
+    ${doc.chave_acesso ? `<p><small>Chave de acesso: ${escapeHtml(String(doc.chave_acesso))}</small></p>` : ''}
+    ${semValor ? `<div class="aviso"><strong>Documento sem autorização fiscal.</strong> Representação interna para conferência, sem valor fiscal enquanto não autorizado pelo fisco.</div>` : ''}
+    <table><thead><tr><th>Serviço</th><th class="r">Valor</th></tr></thead><tbody>${itens}</tbody></table>
+    <p class="tot">Total: ${money(doc.valor_total)}</p>
+    ${doc.motivo_rejeicao ? `<p><small>Retorno do fisco: ${escapeHtml(String(doc.motivo_rejeicao))}</small></p>` : ''}
+    <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
 export async function renderRoute(route) {
   if (await renderExtraRoute(route)) return;
   if (route.name === 'dashboard') return renderDashboard();
@@ -577,6 +639,7 @@ export async function renderRoute(route) {
   if (route.name === 'inventory') return renderInventory();
   if (route.name === 'finance') return renderFinance(route);
   if (route.name === 'sales') return renderSales();
+  if (route.name === 'fiscal') return renderFiscal();
   if (route.name === 'orders' || route.name === 'quotes') return renderWork(route.name);
   return renderDashboard();
 }

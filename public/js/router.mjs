@@ -7,6 +7,7 @@ const routes = {
   services: 'Serviços',
   inventory: 'Estoque',
   sales: 'Vendas / PDV',
+  fiscal: 'Notas fiscais',
   quotes: 'Orçamentos',
   orders: 'Ordens de serviço',
   'online-orders': 'Pedidos online',
