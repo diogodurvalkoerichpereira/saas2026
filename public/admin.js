@@ -122,6 +122,16 @@ function showApp() {
 document.querySelector('#admin-login-form').addEventListener('submit', async (event) => {
   event.preventDefault(); try { current = await api('/api/auth/login', { method: 'POST', body: Object.fromEntries(new FormData(event.currentTarget)) }); if (Number(current.user.companyId) !== 0) throw new Error('Esta conta pertence a uma empresa, não à administração SaaS.'); sessionStorage.setItem('admin_session', JSON.stringify(current)); showApp(); } catch (error) { document.querySelector('#admin-login-error').textContent = error.message; }
 });
+document.querySelector('#admin-change-password').addEventListener('click', () => {
+  openForm({
+    title: 'Alterar senha',
+    fields: [
+      { name: 'currentPassword', label: 'Senha atual', type: 'password', required: true, full: true },
+      { name: 'newPassword', label: 'Nova senha (mínimo 8 caracteres)', type: 'password', required: true, full: true }
+    ],
+    submit: (values) => api('/api/users/me/password', { method: 'PATCH', body: values })
+  });
+});
 document.querySelector('#admin-logout').addEventListener('click', () => { sessionStorage.removeItem('admin_session'); location.reload(); });
 document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => modal.close()));
 window.addEventListener('hashchange', () => render().catch((error) => { root.innerHTML = `<div class="empty error">${esc(error.message)}</div>`; }));

@@ -23,7 +23,7 @@ A análise cruza três fontes:
 |---|---|
 | **Telas operacionais (tenant)** | ✅ ~45 de 55 permissões fatoradas; 3 parciais; 7 ausentes |
 | **Administração SaaS** | ⚠️ núcleo fatorado; gestão de usuários/permissões SaaS ausente ou só-leitura |
-| **Senha** | ❌ pilar mais incompleto (recuperação, reset, troca self-service do staff, MFA, rate limiting ausentes) |
+| **Senha** | ⚠️ P0 corrigido nesta entrega (troca self-service do staff, rate limiting, credenciais hardcoded); recuperação/reset por e-mail e MFA seguem ausentes |
 | **Perfis de acesso** | ⚠️ modelo sólido, mas `acessar_painel`/`mostrar_registros` sem enforcement |
 | **Configurações / Relatórios** | ⚠️ Configurações ~18 de ~60 campos; 4 relatórios legados ausentes |
 
@@ -80,16 +80,16 @@ home, usuarios, funcionarios (RH), fornecedores, formas_pgto, cargos, frequencia
 | Hash bcrypt (custo 12) e hash nunca retornado nas respostas | ✅ |
 | Isolamento cruzado staff ↔ cliente (middlewares) | ✅ |
 | Troca de senha self-service do **cliente** (`PATCH /api/client/me`) | ✅ |
-| **Troca de senha self-service do staff** | ❌ ausente — só admin/gerente altera a de terceiros via `PATCH /api/users/:id`; usuário Comum/Técnico não muda a própria senha |
-| **Recuperação de senha** ("esqueci minha senha") | ❌ ausente em todos os frontends |
-| **Redefinição por token / e-mail** | ❌ ausente (não há cliente de e-mail no projeto) |
+| Troca de senha self-service do **staff** | ✅ **corrigido** — `PATCH /api/users/me/password` (exige senha atual), com tela em `index.html`/`admin.html` ("Alterar senha") |
+| Rate limiting de login / bloqueio por tentativas | ✅ **corrigido** — `src/middlewares/login-rate-limit.js`, aplicado a `/api/auth/login` e `/api/client/login` |
+| Credenciais de demonstração hardcoded nos formulários de login | ✅ **corrigido** — removidas de `admin.html` e `portal.html` |
+| **Recuperação de senha** ("esqueci minha senha") | ❌ ausente em todos os frontends (requer decisão sobre provedor de e-mail) |
+| **Redefinição por token / e-mail** | ❌ ausente |
 | **Primeiro acesso / convite / senha temporária** | ❌ ausente — cliente criado no checkout fica sem `senha_crip` e sem caminho para ativar o portal |
 | **MFA / 2FA** | ❌ ausente |
-| **Rate limiting de login / bloqueio por tentativas** | ❌ ausente |
 | **Logout / revogação server-side de token** | ❌ ausente (só client-side; token válido até expirar em 8h) |
-| Credenciais de demonstração hardcoded nos formulários de login | ⚠️ `admin.html:14` e `portal.html:15` (`value="Teste@2026"`) |
 
-`MEMORIA_PROJETO.md` lista explicitamente "Autenticação, **recuperação e alteração de senha**" como módulo a migrar — recuperação e alteração (staff) permanecem não fatoradas.
+`MEMORIA_PROJETO.md` lista explicitamente "Autenticação, **recuperação e alteração de senha**" como módulo a migrar — a alteração (staff) foi corrigida nesta entrega; a recuperação por e-mail permanece não fatorada.
 
 ---
 
@@ -159,7 +159,7 @@ De 9 relatórios legados, **5 têm equivalente** e **4 estão ausentes**. O Node
 
 ## H. Backlog priorizado de remediação
 
-- **P0 — Senha/segurança:** troca de senha self-service do staff (`PATCH /api/users/me` + tela); rate limiting nos logins (`express-rate-limit`); remover credenciais demo hardcoded dos HTML. *(Recuperação por e-mail exige decidir provedor de e-mail antes.)*
+- **P0 — Senha/segurança — ✅ concluído em 31/07/2026:** troca de senha self-service do staff (`PATCH /api/users/me/password` + tela "Alterar senha" em `index.html`/`admin.html`); rate limiting em memória nos logins (`src/middlewares/login-rate-limit.js`, 20 tentativas/15min por IP+e-mail); credenciais demo hardcoded removidas de `admin.html`/`portal.html`. *(Recuperação de senha por e-mail continua pendente — exige decidir provedor de e-mail antes.)*
 - **P1 — Perfis:** aplicar `mostrar_registros` (escopar listagens ao `usuario`) e `acessar_painel` (bloquear login no painel); CRUD + atribuição de permissões de usuários SaaS.
 - **P2 — Configurações/Relatórios:** ampliar `settingsSchema` para os campos de negócio faltantes (multa/juros, textos padrão de OS/orçamento, `dias_lembrete`) e aplicá-los; relatórios `rel_balanco`, `rel_prod_vendidos` e sintéticos.
 - **P3 — Módulos amplos:** fiscal/NF-e, PDF/impressão, conciliação bancária, folha completa, webhooks (esforço maior, fora do "core de fatoração").

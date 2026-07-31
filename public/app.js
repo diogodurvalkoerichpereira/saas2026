@@ -2,7 +2,7 @@ import { api } from './js/api.js';
 import { session } from './js/session.js';
 import { startRouter } from './js/router.mjs';
 import { renderRoute } from './js/pages.js';
-import { toast } from './js/ui.js';
+import { toast, openForm } from './js/ui.js';
 
 const loginView = document.querySelector('#login-view');
 const appView = document.querySelector('#app-view');
@@ -54,6 +54,21 @@ loginForm.addEventListener('submit', async (event) => {
   }
 });
 
+document.querySelector('#change-password').addEventListener('click', () => {
+  openForm({
+    title: 'Alterar senha',
+    eyebrow: 'Segurança',
+    fields: [
+      { name: 'currentPassword', label: 'Senha atual', type: 'password', required: true, full: true },
+      { name: 'newPassword', label: 'Nova senha (mínimo 8 caracteres)', type: 'password', required: true, full: true }
+    ],
+    submitLabel: 'Salvar nova senha',
+    onSubmit: async (values) => {
+      await api('/api/users/me/password', { method: 'PATCH', body: values });
+      toast('Senha alterada com sucesso.');
+    }
+  });
+});
 document.querySelector('#logout').addEventListener('click', () => {
   session.clear();
   location.hash = '';

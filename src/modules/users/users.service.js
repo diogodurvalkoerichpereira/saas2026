@@ -62,6 +62,17 @@ async function updateUser(userId, data, companyId, db = pool) {
   await db.execute(`UPDATE usuarios SET ${assignments.join(', ')} WHERE id = ? AND ${tenantClause(companyId).sql}`, [...values, userId, ...tenantClause(companyId).params]);
 }
 
+async function changeOwnPassword(userId, companyId, currentPassword, newPassword, db = pool) {
+  const tenant = tenantClause(companyId);
+  const [rows] = await db.execute(`SELECT senha_crip FROM usuarios WHERE id = ? AND ${tenant.sql} LIMIT 1`, [userId, ...tenant.params]);
+  const user = rows[0];
+  if (!user || !(await bcrypt.compare(currentPassword, user.senha_crip))) {
+    throw Object.assign(new Error('Senha atual incorreta.'), { status: 401 });
+  }
+  const hash = await bcrypt.hash(newPassword, 12);
+  await db.execute(`UPDATE usuarios SET senha = NULL, senha_crip = ? WHERE id = ? AND ${tenant.sql}`, [hash, userId, ...tenant.params]);
+}
+
 async function setUserActive(userId, active, actorId, companyId, db = pool) {
   if (!active && userId === actorId) throw Object.assign(new Error('Você não pode inativar o próprio usuário.'), { status: 409 });
   const user = await getUser(userId, companyId, db);
@@ -102,4 +113,4 @@ async function replacePermissions(userId, permissionIds, companyId, db = pool) {
   } finally { connection.release(); }
 }
 
-module.exports = { listUsers, getUser, createUser, updateUser, setUserActive, listPermissionOptions, listPermissions, replacePermissions, tenantClause };
+module.exports = { listUsers, getUser, createUser, updateUser, setUserActive, changeOwnPassword, listPermissionOptions, listPermissions, replacePermissions, tenantClause };

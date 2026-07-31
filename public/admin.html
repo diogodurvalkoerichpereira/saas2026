@@ -10,8 +10,8 @@
   <section class="auth-shell" id="admin-login">
     <form class="auth-card" id="admin-login-form">
       <div class="brand"><span class="brand-mark">S26</span><div><strong>Administração SaaS</strong><div class="muted">Empresas, planos e recursos</div></div></div>
-      <label class="field">E-mail<input name="email" type="email" required value="sas.local@saas2026.local"></label>
-      <label class="field">Senha<input name="password" type="password" required value="Teste@2026"></label>
+      <label class="field">E-mail<input name="email" type="email" required autocomplete="username" placeholder="seu@email.com"></label>
+      <label class="field">Senha<input name="password" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
       <button class="button primary">Entrar na administração</button>
       <p class="error" id="admin-login-error"></p><a href="/">Voltar ao ERP</a>
     </form>
@@ -28,7 +28,7 @@
         <a href="#/alerts" data-route="alerts">Alertas</a>
         <a href="#/users" data-route="users">Usuários SaaS</a>
       </nav>
-      <footer><strong id="admin-name"></strong><button class="button ghost" id="admin-logout">Sair</button></footer>
+      <footer><strong id="admin-name"></strong><button class="button ghost" id="admin-change-password">Alterar senha</button><button class="button ghost" id="admin-logout">Sair</button></footer>
     </aside>
     <div class="workspace"><header class="topbar"><h1 id="admin-title">Visão geral</h1><span class="muted">Administração global</span></header><main class="content" id="admin-root"></main></div>
   </div>

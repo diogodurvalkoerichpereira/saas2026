@@ -1,6 +1,15 @@
 # Entregas
 
-**Última atualização:** 29 de julho de 2026, 17:25 (horário de Brasília).
+**Última atualização:** 31 de julho de 2026 (horário de Brasília).
+
+## Análise de fatoração e correção de senha (P0) — 31 de julho de 2026
+
+- Publicado `ANALISE_FATORACAO.md`: cruzamento do catálogo canônico do banco legado (`acessos`, `acessos_sas`, `grupo_acessos`, `usuarios`, `config`) com o código Node atual, identificando lacunas em telas, perfis e senha.
+- Corrigido o item P0 do backlog (senha/segurança):
+  - Troca de senha self-service para usuários internos (`PATCH /api/users/me/password`, exige senha atual), com tela "Alterar senha" no ERP e na administração SaaS.
+  - Rate limiting em memória nos logins (`/api/auth/login` e `/api/client/login`) contra força bruta.
+  - Remoção de credenciais de demonstração hardcoded dos formulários de login (`admin.html`, `portal.html`).
+- Testes automatizados adicionados para `changeOwnPassword` e para o middleware de rate limiting.
 
 ## Entrega integrada — 29 de julho de 2026, 17:17
 

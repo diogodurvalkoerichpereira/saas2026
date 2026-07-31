@@ -5,6 +5,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { env } = require('../../config/env');
 const { clientAuthenticate } = require('../../middlewares/client-authenticate');
+const { loginRateLimit } = require('../../middlewares/login-rate-limit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 
 const id = z.coerce.number().int().positive();
@@ -27,7 +28,7 @@ const profileSchema = z.object({
   password: z.string().min(8).max(72).optional()
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', loginRateLimit, async (req, res, next) => {
   try {
     const data = credentials.parse(req.body);
     const params = [data.email];

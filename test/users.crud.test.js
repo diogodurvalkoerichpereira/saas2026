@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const bcrypt = require('bcryptjs');
-const { createUser, setUserActive } = require('../src/modules/users/users.service');
+const { createUser, setUserActive, changeOwnPassword } = require('../src/modules/users/users.service');
 
 test('createUser grava somente senha criptografada', async () => {
   const calls = [];
@@ -21,4 +21,30 @@ test('createUser grava somente senha criptografada', async () => {
 
 test('setUserActive impede que o usuário inative a si mesmo', async () => {
   await assert.rejects(() => setUserActive(5, false, 5, 1, {}), (error) => error.status === 409);
+});
+
+test('changeOwnPassword rejeita senha atual incorreta', async () => {
+  const hash = await bcrypt.hash('SenhaCorreta1', 12);
+  const db = { execute: async () => [[{ senha_crip: hash }]] };
+  await assert.rejects(
+    () => changeOwnPassword(9, 1, 'SenhaErrada1', 'NovaSenha1', db),
+    (error) => error.status === 401
+  );
+});
+
+test('changeOwnPassword atualiza o hash quando a senha atual confere', async () => {
+  const hash = await bcrypt.hash('SenhaCorreta1', 12);
+  const calls = [];
+  const db = {
+    execute: async (sql, params) => {
+      calls.push({ sql, params });
+      if (sql.startsWith('SELECT')) return [[{ senha_crip: hash }]];
+      return [{ affectedRows: 1 }];
+    }
+  };
+  await changeOwnPassword(9, 1, 'SenhaCorreta1', 'NovaSenha1', db);
+  const update = calls[1];
+  assert.match(update.sql, /UPDATE usuarios SET senha = NULL, senha_crip = \?/);
+  assert.equal(await bcrypt.compare('NovaSenha1', update.params[0]), true);
+  assert.equal(update.params[1], 9);
 });
