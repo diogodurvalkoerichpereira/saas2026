@@ -21,19 +21,19 @@ const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
 
 // Le o certificado A1 (.pfx) do caminho informado e a senha da variavel de ambiente.
 // Lanca 428 quando falta configuracao, para o chamador manter o documento como pendente.
-function loadCertificate({ path: pfxPath, passwordEnv } = {}) {
+function loadCertificate({ path: pfxPath, password, passwordEnv } = {}) {
   if (!pfxPath) {
     throw Object.assign(new Error('Certificado fiscal não configurado: caminho do arquivo ausente.'), { status: 428, code: 'CERT_NAO_CONFIGURADO' });
   }
   const envName = passwordEnv || 'FISCAL_CERT_PASSWORD';
-  const password = process.env[envName];
-  if (!password) {
-    throw Object.assign(new Error(`Senha do certificado ausente: defina a variável de ambiente ${envName} no servidor.`), { status: 428, code: 'CERT_SENHA_AUSENTE' });
+  const senha = password || process.env[envName];
+  if (!senha) {
+    throw Object.assign(new Error(`Senha do certificado ausente: cadastre o certificado na configuração fiscal ou defina a variável de ambiente ${envName}.`), { status: 428, code: 'CERT_SENHA_AUSENTE' });
   }
   const der = fs.readFileSync(pfxPath, 'binary');
   let p12;
   try {
-    p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(der), password);
+    p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(der), senha);
   } catch {
     throw Object.assign(new Error('Não foi possível abrir o certificado: arquivo inválido ou senha incorreta.'), { status: 422, code: 'CERT_INVALIDO' });
   }
@@ -46,7 +46,7 @@ function loadCertificate({ path: pfxPath, passwordEnv } = {}) {
     privateKeyPem: forge.pki.privateKeyToPem(keyBag.key),
     certificatePem: forge.pki.certificateToPem(certBag.cert),
     pfx: Buffer.from(der, 'binary'),
-    password
+    password: senha
   };
 }
 

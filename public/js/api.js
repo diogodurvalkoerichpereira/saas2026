@@ -37,6 +37,22 @@ export async function uploadAttachment(path, file) {
   return payload;
 }
 
+export async function uploadCertificate(path, file, password) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${session.token}`,
+      'content-type': 'application/octet-stream',
+      'x-file-name': encodeURIComponent(file.name),
+      'x-cert-password': encodeURIComponent(password)
+    },
+    body: file
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'Não foi possível enviar o certificado.');
+  return payload;
+}
+
 export async function downloadAttachment(path, fileName) {
   const response = await fetch(path, { headers: { authorization: `Bearer ${session.token}` } });
   if (!response.ok) {

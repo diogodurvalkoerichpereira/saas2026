@@ -1,40 +1,69 @@
 'use strict';
 
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
 const { audit } = require('../../services/audit.service');
-const { getFiscalConfig, upsertFiscalConfig, getDocument, listDocuments, emitNfseFromSale, emitNfeFromSale } = require('./fiscal.service');
+const { getFiscalConfig, publicFiscalConfig, upsertFiscalConfig, saveCertificate, getDocument, listDocuments, emitNfseFromSale, emitNfeFromSale } = require('./fiscal.service');
 
 const idSchema = z.coerce.number().int().positive();
 const configSchema = z.object({
   ambiente: z.enum(['homologacao', 'producao']).default('homologacao'),
   emiteNfse: z.enum(['Sim', 'Nao']).default('Sim'),
   emiteNfe: z.enum(['Sim', 'Nao']).default('Nao'),
-  certificadoRef: z.string().trim().max(255).optional(),
-  certificadoSenhaRef: z.string().trim().max(100).optional(),
-  certificadoValidade: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   regimeEspecial: z.string().trim().max(30).optional(),
-  incentivoFiscal: z.enum(['Sim', 'Nao']).default('Nao')
+  incentivoFiscal: z.enum(['Sim', 'Nao']).default('Nao'),
+  emitente: z.object({
+    cnpj: z.string().trim().max(18).optional(),
+    razaoSocial: z.string().trim().max(150).optional(),
+    inscricaoEstadual: z.string().trim().max(20).optional(),
+    inscricaoMunicipal: z.string().trim().max(20).optional(),
+    codigoIbge: z.string().trim().regex(/^\d{7}$/).optional(),
+    regimeTributario: z.string().trim().max(30).optional(),
+    cnae: z.string().trim().max(10).optional()
+  }).optional()
 });
 
 router.use(authenticate, permit('vendas'));
 
+// GET /config junta a configuração fiscal (sem segredos) com os dados fiscais do emitente
+// (tabela empresas), para preencher o formulário da aba Configuração.
 router.get('/config', authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
-    res.json(await getFiscalConfig(Number(req.auth.companyId)));
+    const companyId = Number(req.auth.companyId);
+    const config = publicFiscalConfig(await getFiscalConfig(companyId));
+    const [[empresa]] = await pool.execute(
+      'SELECT cnpj, razao_social, inscricao_estadual, inscricao_municipal, codigo_ibge, regime_tributario, cnae FROM empresas WHERE id = ? LIMIT 1',
+      [companyId]
+    );
+    res.json({ config, emitente: empresa || {} });
   } catch (error) { next(error); }
 });
 
 router.put('/config', authorize('Administrador'), async (req, res, next) => {
   try {
     const data = configSchema.parse(req.body);
-    const config = await upsertFiscalConfig(Number(req.auth.companyId), Number(req.auth.sub), data);
-    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'configurar', entity: 'fiscal', entityId: config?.id || 0 });
-    res.json(config);
+    await upsertFiscalConfig(Number(req.auth.companyId), Number(req.auth.sub), data);
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'configurar', entity: 'fiscal', entityId: 0 });
+    res.json(publicFiscalConfig(await getFiscalConfig(Number(req.auth.companyId))));
+  } catch (error) { next(error); }
+});
+
+// Upload do certificado A1 (.pfx) em corpo binário. A senha vem no header e é cifrada no
+// service; nunca é logada nem persistida em texto.
+router.post('/certificate', authorize('Administrador'), express.raw({ type: 'application/octet-stream', limit: '4mb' }), async (req, res, next) => {
+  try {
+    let senha = String(req.headers['x-cert-password'] || '');
+    try { senha = decodeURIComponent(senha); } catch {}
+    let nome = String(req.headers['x-file-name'] || 'certificado.pfx');
+    try { nome = decodeURIComponent(nome); } catch {}
+    const result = await saveCertificate(Number(req.auth.companyId), req.body, senha, nome, Number(req.auth.sub));
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'cadastrar_certificado', entity: 'fiscal', entityId: 0, details: { validade: result.validade } });
+    res.status(201).json(result);
   } catch (error) { next(error); }
 });
 

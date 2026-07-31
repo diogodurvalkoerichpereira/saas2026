@@ -1,11 +1,17 @@
 'use strict';
 
 const { randomUUID } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const forge = require('node-forge');
 const { pool } = require('../../config/database');
 const { buildDps } = require('./nfse-payload');
 const { buildNfe } = require('./nfe-payload');
+const { encrypt, decrypt } = require('./crypto');
 const provider = require('./providers/nfse-nacional');
 const nfeProvider = require('./providers/nfe-sefaz');
+
+const uploadRoot = path.resolve(__dirname, '..', '..', '..', 'uploads');
 
 // Config fiscal por empresa. Guarda apenas referencias ao certificado, nunca o segredo.
 async function getFiscalConfig(companyId, db = pool) {
@@ -29,7 +35,52 @@ async function upsertFiscalConfig(companyId, userId, data, db = pool) {
       data.regimeEspecial || null, data.incentivoFiscal || 'Nao', userId
     ]
   );
+  // Dados do emitente ficam em `empresas`, que é a origem lida pela emissão. Só grava os
+  // campos fiscais informados, sem apagar o restante do cadastro da empresa.
+  const emit = data.emitente || {};
+  const map = {
+    cnpj: emit.cnpj, razao_social: emit.razaoSocial, inscricao_estadual: emit.inscricaoEstadual,
+    inscricao_municipal: emit.inscricaoMunicipal, codigo_ibge: emit.codigoIbge,
+    regime_tributario: emit.regimeTributario, cnae: emit.cnae
+  };
+  const set = Object.entries(map).filter(([, value]) => value !== undefined && value !== null && value !== '');
+  if (set.length) {
+    await db.execute(
+      `UPDATE empresas SET ${set.map(([col]) => `${col} = ?`).join(', ')} WHERE id = ?`,
+      [...set.map(([, value]) => value), companyId]
+    );
+  }
   return getFiscalConfig(companyId, db);
+}
+
+// Recebe o certificado A1 (.pfx), valida abrindo com a senha, extrai a validade, salva o
+// arquivo em pasta protegida (uploads/ não é servida publicamente) e grava no config o
+// caminho, a senha CIFRADA e a validade. A senha nunca é gravada em texto.
+async function saveCertificate(companyId, buffer, senha, nomeOriginal, userId, db = pool) {
+  if (!Buffer.isBuffer(buffer) || !buffer.length) throw Object.assign(new Error('Arquivo do certificado vazio.'), { status: 400 });
+  if (!senha) throw Object.assign(new Error('Informe a senha do certificado.'), { status: 400 });
+  let validade = null;
+  try {
+    const p12 = forge.pkcs12.pkcs12FromAsn1(forge.asn1.fromDer(buffer.toString('binary')), senha);
+    const certBag = (p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag] || [])[0];
+    if (!certBag) throw new Error('sem certificado');
+    validade = certBag.cert.validity.notAfter.toISOString().slice(0, 10);
+  } catch {
+    throw Object.assign(new Error('Não foi possível abrir o certificado: arquivo inválido ou senha incorreta.'), { status: 422, code: 'CERT_INVALIDO' });
+  }
+  const folder = path.join(uploadRoot, String(companyId), 'fiscal');
+  await fs.promises.mkdir(folder, { recursive: true });
+  const absolutePath = path.join(folder, 'certificado.pfx');
+  await fs.promises.writeFile(absolutePath, buffer);
+  const nome = String(nomeOriginal || 'certificado.pfx').slice(0, 180);
+  await db.execute(
+    `INSERT INTO node_fiscal_config (empresa, certificado_ref, certificado_senha_cifrada, certificado_validade, certificado_nome, atualizado_por)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE certificado_ref = VALUES(certificado_ref), certificado_senha_cifrada = VALUES(certificado_senha_cifrada),
+       certificado_validade = VALUES(certificado_validade), certificado_nome = VALUES(certificado_nome), atualizado_por = VALUES(atualizado_por)`,
+    [companyId, absolutePath, encrypt(senha), validade, nome, userId || null]
+  );
+  return { validade, nome };
 }
 
 // Reserva o proximo numero de forma atomica dentro da conexao/transacao do chamador.
@@ -147,7 +198,7 @@ async function emitNfseFromSale({ saleId, companyId, userId, now = new Date() },
     const { response } = await provider.emit({
       xml,
       ambiente: config.ambiente,
-      certConfig: { path: config.certificado_ref, passwordEnv: config.certificado_senha_ref }
+      certConfig: { path: config.certificado_ref, password: config.certificado_senha_cifrada ? decrypt(config.certificado_senha_cifrada) : undefined, passwordEnv: config.certificado_senha_ref }
     });
     const ok = response.statusCode >= 200 && response.statusCode < 300;
     await pool.execute(
@@ -234,7 +285,7 @@ async function emitNfeFromSale({ saleId, companyId, userId, now = new Date() }, 
   try {
     const { response } = await nfeProvider.emit({
       xml: built.xml, chave: built.chave, ambiente: config.ambiente,
-      certConfig: { path: config.certificado_ref, passwordEnv: config.certificado_senha_ref }
+      certConfig: { path: config.certificado_ref, password: config.certificado_senha_cifrada ? decrypt(config.certificado_senha_cifrada) : undefined, passwordEnv: config.certificado_senha_ref }
     });
     const ok = response.statusCode >= 200 && response.statusCode < 300;
     await pool.execute(
@@ -251,4 +302,11 @@ async function emitNfeFromSale({ saleId, companyId, userId, now = new Date() }, 
   return getDocument(docId, companyId);
 }
 
-module.exports = { getFiscalConfig, upsertFiscalConfig, reserveNumero, getDocument, listDocuments, emitNfseFromSale, emitNfeFromSale };
+// Config sem os segredos, para devolver ao frontend (nunca expor senha cifrada nem ref).
+function publicFiscalConfig(config) {
+  if (!config) return null;
+  const { certificado_senha_cifrada, certificado_senha_ref, certificado_ref, ...rest } = config;
+  return { ...rest, certificado_configurado: Boolean(certificado_ref) };
+}
+
+module.exports = { getFiscalConfig, publicFiscalConfig, upsertFiscalConfig, saveCertificate, reserveNumero, getDocument, listDocuments, emitNfseFromSale, emitNfeFromSale };

@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api, uploadCertificate } from './api.js';
 import { money, number, date, text, escapeHtml, badge } from './format.mjs';
 import { icon } from './icons.mjs';
 import { loading, pageHeader, table, pagination, openForm, confirmAction, toast } from './ui.js';
@@ -69,7 +69,16 @@ const entityConfigs = {
         { name: 'fornecedor', label: 'Fornecedor', type: 'select', numeric: true, options: [{ value: 0, label: 'Sem fornecedor' }, ...suppliers.map((item) => ({ value: item.id, label: item.nome }))] },
         { name: 'tem_estoque', label: 'Controla estoque', type: 'select', options: yesNoOptions() },
         { name: 'mostrar_site', label: 'Mostrar no site', type: 'select', options: yesNoOptions() },
-        { name: 'descricao', label: 'Descrição', type: 'textarea', optional: true, full: true, max: 255 }
+        { name: 'descricao', label: 'Descrição', type: 'textarea', optional: true, full: true, max: 255 },
+        { name: 'tipo_fiscal', label: 'Tipo fiscal', type: 'select', full: true, options: [{ value: 'mercadoria', label: 'Mercadoria (NF-e)' }, { value: 'servico', label: 'Serviço (NFS-e)' }] },
+        { name: 'ncm', label: 'NCM (mercadoria)', optional: true, max: 8 },
+        { name: 'cfop', label: 'CFOP (mercadoria)', optional: true, max: 4 },
+        { name: 'cst_csosn', label: 'CST/CSOSN (mercadoria)', optional: true, max: 4 },
+        { name: 'origem', label: 'Origem (0-8, mercadoria)', optional: true, max: 1 },
+        { name: 'unidade_fiscal', label: 'Unidade fiscal (mercadoria)', optional: true, max: 6 },
+        { name: 'codigo_lc116', label: 'Código LC 116 (serviço)', optional: true, max: 10 },
+        { name: 'codigo_tributacao_municipio', label: 'Cód. tributação município (serviço)', optional: true, max: 20 },
+        { name: 'aliquota_iss', label: 'Alíquota ISS % (serviço)', type: 'number', step: '.01', min: 0, numeric: true, optional: true }
       ];
     }
   },
@@ -592,10 +601,14 @@ async function renderWork(type) {
   await load();
 }
 
-async function renderFiscal() {
+async function renderFiscal(route = {}) {
   loading();
+  const tab = route.query?.tab === 'config' ? 'config' : 'documentos';
+  const tabs = `<div class="split-tabs"><a class="${tab === 'documentos' ? 'active' : ''}" href="#/fiscal">Documentos</a><a class="${tab === 'config' ? 'active' : ''}" href="#/fiscal?tab=config">Configuração</a></div>`;
+  if (tab === 'config') return renderFiscalConfig(tabs);
+
   const result = await api('/api/fiscal');
-  root().innerHTML = `${pageHeader('Notas fiscais', 'Documentos emitidos a partir das vendas. NFS-e pelo Padrão Nacional; homologação antes de produção.')}
+  root().innerHTML = `${pageHeader('Notas fiscais', 'Documentos emitidos a partir das vendas. NFS-e pelo Padrão Nacional; homologação antes de produção.')}${tabs}
     <section class="panel">${table([
       { key: 'id', label: 'Doc' },
       { key: 'modelo', label: 'Modelo', render: (value) => value ? String(value).toUpperCase() : '' },
@@ -609,6 +622,77 @@ async function renderFiscal() {
   root().querySelectorAll('[data-print-fiscal]').forEach((button) => button.addEventListener('click', async () => {
     try { printFiscalDocument(await api(`/api/fiscal/${button.dataset.printFiscal}`)); } catch (error) { toast(error.message, 'error'); }
   }));
+}
+
+async function renderFiscalConfig(tabs) {
+  const { config, emitente } = await api('/api/fiscal/config');
+  const cfg = config || {};
+  const validade = cfg.certificado_validade ? date(cfg.certificado_validade) : 'Nenhum certificado enviado';
+  root().innerHTML = `${pageHeader('Notas fiscais', 'Configuração de emissão, dados fiscais da empresa e certificado digital.')}${tabs}
+    <section class="panel">
+      <div class="toolbar"><strong>Configuração fiscal</strong><button class="button primary small" data-edit-fiscal>${icon('edit')}Editar dados fiscais</button></div>
+      <div class="detail-list" style="padding:16px">
+        <div><small>Ambiente</small><strong>${escapeHtml(cfg.ambiente || 'homologacao')}</strong></div>
+        <div><small>Emite NFS-e</small><strong>${escapeHtml(cfg.emite_nfse || 'Sim')}</strong></div>
+        <div><small>Emite NF-e</small><strong>${escapeHtml(cfg.emite_nfe || 'Nao')}</strong></div>
+        <div><small>CNPJ</small><strong>${escapeHtml(emitente.cnpj || 'Não informado')}</strong></div>
+        <div><small>Inscrição municipal</small><strong>${escapeHtml(emitente.inscricao_municipal || 'Não informada')}</strong></div>
+        <div><small>Código IBGE</small><strong>${escapeHtml(emitente.codigo_ibge || 'Não informado')}</strong></div>
+        <div><small>Regime</small><strong>${escapeHtml(emitente.regime_tributario || 'Não informado')}</strong></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="toolbar"><strong>Certificado digital A1</strong></div>
+      <div style="padding:16px">
+        <p class="muted">Situação: ${cfg.certificado_configurado ? `certificado cadastrado, válido até <strong>${validade}</strong>` : 'nenhum certificado cadastrado'}. O arquivo fica em pasta protegida e a senha é guardada cifrada.</p>
+        <div class="modal-grid">
+          <label class="field">Arquivo .pfx / .p12<input type="file" id="cert-file" accept=".pfx,.p12"></label>
+          <label class="field">Senha do certificado<input type="password" id="cert-password" autocomplete="off"></label>
+          <div class="full"><button class="button primary" id="cert-upload">${icon('upload')}Enviar certificado</button></div>
+        </div>
+      </div>
+    </section>`;
+
+  root().querySelector('[data-edit-fiscal]').addEventListener('click', () => {
+    openForm({
+      title: 'Dados fiscais da empresa', eyebrow: 'Configuração fiscal', submitLabel: 'Salvar',
+      fields: [
+        { name: 'ambiente', label: 'Ambiente', type: 'select', options: [{ value: 'homologacao', label: 'Homologação' }, { value: 'producao', label: 'Produção' }] },
+        { name: 'emiteNfse', label: 'Emite NFS-e', type: 'select', options: [{ value: 'Sim', label: 'Sim' }, { value: 'Nao', label: 'Não' }] },
+        { name: 'emiteNfe', label: 'Emite NF-e', type: 'select', options: [{ value: 'Sim', label: 'Sim' }, { value: 'Nao', label: 'Não' }] },
+        { name: 'cnpj', label: 'CNPJ', optional: true, max: 18 },
+        { name: 'razaoSocial', label: 'Razão social', optional: true, max: 150, full: true },
+        { name: 'inscricaoEstadual', label: 'Inscrição estadual', optional: true, max: 20 },
+        { name: 'inscricaoMunicipal', label: 'Inscrição municipal', optional: true, max: 20 },
+        { name: 'codigoIbge', label: 'Código IBGE (7 dígitos)', optional: true, max: 7 },
+        { name: 'regimeTributario', label: 'Regime tributário', type: 'select', options: [{ value: 'Simples Nacional', label: 'Simples Nacional' }, { value: 'Lucro Presumido', label: 'Lucro Presumido' }, { value: 'Lucro Real', label: 'Lucro Real' }] },
+        { name: 'cnae', label: 'CNAE', optional: true, max: 10 }
+      ],
+      record: {
+        ambiente: cfg.ambiente || 'homologacao', emiteNfse: cfg.emite_nfse || 'Sim', emiteNfe: cfg.emite_nfe || 'Nao',
+        cnpj: emitente.cnpj || '', razaoSocial: emitente.razao_social || '', inscricaoEstadual: emitente.inscricao_estadual || '',
+        inscricaoMunicipal: emitente.inscricao_municipal || '', codigoIbge: emitente.codigo_ibge || '', regimeTributario: emitente.regime_tributario || 'Simples Nacional', cnae: emitente.cnae || ''
+      },
+      onSubmit: async (values) => {
+        const { ambiente, emiteNfse, emiteNfe, ...emit } = values;
+        await api('/api/fiscal/config', { method: 'PUT', body: { ambiente, emiteNfse, emiteNfe, emitente: emit } });
+        toast('Configuração fiscal salva.');
+        await renderFiscalConfig(tabs);
+      }
+    });
+  });
+
+  root().querySelector('#cert-upload').addEventListener('click', async () => {
+    const file = root().querySelector('#cert-file').files[0];
+    const senha = root().querySelector('#cert-password').value;
+    if (!file) return toast('Selecione o arquivo do certificado.', 'error');
+    if (!senha) return toast('Informe a senha do certificado.', 'error');
+    try {
+      const result = await uploadCertificate('/api/fiscal/certificate', file, senha);
+      toast(`Certificado cadastrado. Válido até ${date(result.validade)}.`);
+      await renderFiscalConfig(tabs);
+    } catch (error) { toast(error.message, 'error'); }
+  });
 }
 
 function printFiscalDocument(doc) {
@@ -639,7 +723,7 @@ export async function renderRoute(route) {
   if (route.name === 'inventory') return renderInventory();
   if (route.name === 'finance') return renderFinance(route);
   if (route.name === 'sales') return renderSales();
-  if (route.name === 'fiscal') return renderFiscal();
+  if (route.name === 'fiscal') return renderFiscal(route);
   if (route.name === 'orders' || route.name === 'quotes') return renderWork(route.name);
   return renderDashboard();
 }
