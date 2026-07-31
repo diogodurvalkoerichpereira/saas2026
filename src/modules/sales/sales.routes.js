@@ -9,7 +9,7 @@ const { audit } = require('../../services/audit.service');
 const { listSales, getSale, createSale, cancelSale } = require('./sales.service');
 
 const idSchema = z.coerce.number().int().positive();
-const schema = z.object({ clientId: z.number().int().positive(), paymentMethodId: z.number().int().nonnegative(), dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), paid: z.boolean(), items: z.array(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive() })).min(1).max(100) });
+const schema = z.object({ clientId: z.number().int().positive(), paymentMethodId: z.number().int().nonnegative(), dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), paid: z.boolean(), items: z.array(z.object({ type: z.enum(['produto', 'servico']).default('produto'), id: z.number().int().positive(), quantity: z.number().int().positive() })).min(1).max(100) });
 const reasonSchema = z.object({ reason: z.string().trim().min(3).max(255) });
 
 router.use(authenticate, permit('vendas'));

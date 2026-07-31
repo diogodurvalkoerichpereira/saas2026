@@ -131,9 +131,9 @@ async function emitNfseFromSale({ saleId, companyId, userId, now = new Date() },
   const [[emp]] = await db.execute('SELECT nome, razao_social, cnpj, inscricao_municipal, codigo_ibge, regime_tributario FROM empresas WHERE id = ? LIMIT 1', [companyId]);
   const [[cli]] = await db.execute('SELECT nome, cpf, cnpj, tipo_pessoa FROM clientes WHERE id = ? AND empresa = ? LIMIT 1', [sale.cliente, companyId]);
   const [items] = await db.execute(
-    `SELECT p.nome, p.codigo_lc116, p.codigo_tributacao_municipio, p.aliquota_iss, i.total
-       FROM itens_venda i JOIN produtos p ON p.id = i.produto AND p.empresa = i.empresa
-      WHERE i.id_venda = ? AND i.empresa = ? AND p.tipo_fiscal = 'servico'`,
+    `SELECT s.nome, s.codigo_lc116, s.codigo_tributacao_municipio, s.aliquota_iss, i.total
+       FROM itens_venda i JOIN servicos s ON s.id = i.produto AND s.empresa = i.empresa
+      WHERE i.id_venda = ? AND i.empresa = ? AND i.tipo = 'servico'`,
     [saleId, companyId]
   );
   if (!items.length) throw Object.assign(new Error('Venda sem itens de serviço para emitir NFS-e.'), { status: 422 });

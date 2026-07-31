@@ -93,7 +93,10 @@ const entityConfigs = {
       { name: 'dias', label: 'Prazo em dias', type: 'number', step: '1', min: 0, numeric: true, required: true },
       { name: 'comissao', label: 'Comissão %', type: 'number', step: '1', min: 0, numeric: true, optional: true },
       { name: 'mostrar_site', label: 'Mostrar no site', type: 'select', options: yesNoOptions() },
-      { name: 'descricao', label: 'Descrição', type: 'textarea', optional: true, full: true, max: 5000 }
+      { name: 'descricao', label: 'Descrição', type: 'textarea', optional: true, full: true, max: 5000 },
+      { name: 'codigo_lc116', label: 'Código da LC 116 (NFS-e)', optional: true, max: 10 },
+      { name: 'codigo_tributacao_municipio', label: 'Cód. tributação município (NFS-e)', optional: true, max: 20 },
+      { name: 'aliquota_iss', label: 'Alíquota ISS % (NFS-e)', type: 'number', step: '.01', min: 0, numeric: true, optional: true }
     ]
   },
   users: {
@@ -325,8 +328,8 @@ async function renderSales() {
     root().querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => { state.page = Number(button.dataset.page); load(); }));
     root().querySelectorAll('[data-action="attachments"]').forEach((button) => button.addEventListener('click', () => openAttachments({ entity: 'sales', id: Number(button.dataset.attachmentId), title: `venda #${button.dataset.attachmentId}` })));
     root().querySelector('[data-new-sale]').addEventListener('click', async () => {
-      const [clients, products, paymentMethods] = await Promise.all([allItems('/api/clients'), allItems('/api/catalog/products'), allItems('/api/finance/payment-methods', false)]);
-      openSaleForm(clients, products.filter((item) => item.ativo === 'Sim'), paymentMethods, load);
+      const [clients, products, services, paymentMethods] = await Promise.all([allItems('/api/clients'), allItems('/api/catalog/products'), allItems('/api/catalog/services'), allItems('/api/finance/payment-methods', false)]);
+      openSaleForm(clients, products.filter((item) => item.ativo === 'Sim'), services.filter((item) => item.ativo === 'Sim'), paymentMethods, load);
     });
     root().querySelectorAll('[data-cancel-sale]').forEach((button) => button.addEventListener('click', async () => { const reason = prompt('Informe o motivo do cancelamento da venda:'); if (reason) { await api(`/api/sales/${button.dataset.cancelSale}`, { method: 'DELETE', body: { reason } }); toast('Venda cancelada e estoque restaurado.'); await load(); } }));
     root().querySelectorAll('[data-nfse]').forEach((button) => button.addEventListener('click', async () => {
@@ -353,25 +356,30 @@ async function renderSales() {
   await load();
 }
 
-function openSaleForm(clients, products, paymentMethods, reload) {
-  if (!clients.length || !products.length) {
-    toast('Cadastre ao menos um cliente e um produto ativo antes da venda.', 'error');
+function openSaleForm(clients, products, services, paymentMethods, reload) {
+  if (!clients.length || (!products.length && !services.length)) {
+    toast('Cadastre um cliente e ao menos um produto ou serviço ativo antes da venda.', 'error');
     return;
   }
   const dialog = document.querySelector('#app-modal');
   const form = document.querySelector('#modal-form');
-  const lines = [{ productId: products[0].id, quantity: 1 }];
+  const firstKind = products.length ? 'produto' : 'servico';
+  const lines = [{ kind: firstKind, itemId: (firstKind === 'produto' ? products : services)[0].id, quantity: 1 }];
   document.querySelector('#modal-title').textContent = 'Nova venda';
   document.querySelector('#modal-eyebrow').textContent = 'PDV';
   document.querySelector('#modal-submit-label').textContent = 'Concluir venda';
   document.querySelector('#modal-error').textContent = '';
   const renderLines = () => {
     const container = form.querySelector('#sale-lines');
-    container.innerHTML = lines.map((line, index) => `<div class="line-item" data-sale-line="${index}">
-      <label class="field">Produto<select data-line-product required>${products.map((product) => `<option value="${product.id}" ${String(product.id) === String(line.productId) ? 'selected' : ''}>${escapeHtml(product.nome)} · ${money(product.valor_venda)} · saldo ${number(product.estoque)}</option>`).join('')}</select></label>
+    container.innerHTML = lines.map((line, index) => {
+      const catalog = line.kind === 'produto' ? products : services;
+      const label = line.kind === 'produto' ? 'Produto' : 'Serviço';
+      return `<div class="line-item" data-sale-line="${index}" data-kind="${line.kind}">
+      <label class="field">${label}<select data-line-item required>${catalog.map((entry) => `<option value="${entry.id}" ${String(entry.id) === String(line.itemId) ? 'selected' : ''}>${escapeHtml(entry.nome)} · ${money(line.kind === 'produto' ? entry.valor_venda : entry.valor)}${line.kind === 'produto' ? ` · saldo ${number(entry.estoque)}` : ''}</option>`).join('')}</select></label>
       <label class="field quantity">Quantidade<input data-line-quantity type="number" min="1" step="1" value="${line.quantity}" required></label>
       <button class="button danger small" type="button" data-remove-line="${index}" ${lines.length === 1 ? 'disabled' : ''}>${icon('trash')}Remover</button>
-    </div>`).join('');
+    </div>`;
+    }).join('');
     container.querySelectorAll('[data-remove-line]').forEach((button) => button.addEventListener('click', () => { lines.splice(Number(button.dataset.removeLine), 1); renderLines(); }));
   };
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">
@@ -379,11 +387,16 @@ function openSaleForm(clients, products, paymentMethods, reload) {
     <label class="field">Vencimento<input name="dueDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
     <label class="field">Pagamento imediato<select name="paid"><option value="false">Não</option><option value="true">Sim</option></select></label>
     <label class="field full">Forma de pagamento<select name="paymentMethodId"><option value="0">Não informado</option>${paymentMethods.map((method) => `<option value="${method.id}">${escapeHtml(method.nome)}</option>`).join('')}</select></label>
-    <div class="full line-items-header"><strong>Itens da venda</strong><button class="button ghost small" type="button" id="add-sale-line">${icon('plus')}Adicionar produto</button></div>
+    <div class="full line-items-header"><strong>Itens da venda</strong><span>${products.length ? `<button class="button ghost small" type="button" data-add-line="produto">${icon('plus')}Produto</button> ` : ''}${services.length ? `<button class="button ghost small" type="button" data-add-line="servico">${icon('plus')}Serviço</button>` : ''}</span></div>
     <div class="full" id="sale-lines"></div>
   </div>`;
   renderLines();
-  form.querySelector('#add-sale-line').addEventListener('click', () => { lines.push({ productId: products[0].id, quantity: 1 }); renderLines(); });
+  form.querySelectorAll('[data-add-line]').forEach((button) => button.addEventListener('click', () => {
+    const kind = button.dataset.addLine;
+    const catalog = kind === 'produto' ? products : services;
+    lines.push({ kind, itemId: catalog[0].id, quantity: 1 });
+    renderLines();
+  }));
   const handler = async (event) => {
     event.preventDefault();
     const submit = document.querySelector('#modal-submit');
@@ -392,10 +405,11 @@ function openSaleForm(clients, products, paymentMethods, reload) {
     try {
       const values = Object.fromEntries(new FormData(form));
       const items = [...form.querySelectorAll('[data-sale-line]')].map((row) => ({
-        productId: Number(row.querySelector('[data-line-product]').value),
+        type: row.dataset.kind,
+        id: Number(row.querySelector('[data-line-item]').value),
         quantity: Number(row.querySelector('[data-line-quantity]').value)
       }));
-      if (items.some((item) => !item.productId || !Number.isInteger(item.quantity) || item.quantity < 1)) throw new Error('Revise os produtos e as quantidades.');
+      if (items.some((item) => !item.id || !Number.isInteger(item.quantity) || item.quantity < 1)) throw new Error('Revise os itens e as quantidades.');
       await api('/api/sales', { method: 'POST', body: { clientId: Number(values.clientId), paymentMethodId: Number(values.paymentMethodId), dueDate: values.dueDate, paid: values.paid === 'true', items } });
       toast('Venda concluída.');
       await reload();
@@ -644,7 +658,10 @@ async function renderFiscalConfig(tabs) {
     <section class="panel">
       <div class="toolbar"><strong>Certificado digital A1</strong></div>
       <div style="padding:16px">
-        <p class="muted">Situação: ${cfg.certificado_configurado ? `certificado cadastrado, válido até <strong>${validade}</strong>` : 'nenhum certificado cadastrado'}. O arquivo fica em pasta protegida e a senha é guardada cifrada.</p>
+        ${cfg.certificado_configurado
+          ? `<div class="detail-list" style="margin-bottom:12px"><div><small>Arquivo</small><strong>${escapeHtml(cfg.certificado_nome || 'certificado.pfx')}</strong></div><div><small>Validade</small><strong>${validade}</strong></div><div><small>Situação</small><strong>Cadastrado</strong></div></div>`
+          : '<p class="muted">Nenhum certificado cadastrado.</p>'}
+        <p class="muted">O arquivo fica em pasta protegida e a senha é guardada cifrada, nunca reexibida. Enviar novamente substitui o atual.</p>
         <div class="modal-grid">
           <label class="field">Arquivo .pfx / .p12<input type="file" id="cert-file" accept=".pfx,.p12"></label>
           <label class="field">Senha do certificado<input type="password" id="cert-password" autocomplete="off"></label>

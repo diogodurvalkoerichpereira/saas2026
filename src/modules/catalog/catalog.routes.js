@@ -24,8 +24,8 @@ const resources = {
     })
   },
   services: {
-    schema: z.object({ ...common, valor: z.number().nonnegative(), comissao: z.number().int().nonnegative().optional(), dias: z.number().int().nonnegative(), mostrar_site: z.enum(['Sim', 'Não']).optional(), descricao: z.string().max(5000).optional() }),
-    repository: createRepository({ table: 'servicos', fields: ['nome', 'valor', 'comissao', 'dias', 'ativo', 'mostrar_site', 'descricao'], defaults: { ativo: 'Sim', comissao: 0, mostrar_site: 'Não' } })
+    schema: z.object({ ...common, valor: z.number().nonnegative(), comissao: z.number().int().nonnegative().optional(), dias: z.number().int().nonnegative(), mostrar_site: z.enum(['Sim', 'Não']).optional(), descricao: z.string().max(5000).optional(), codigo_lc116: z.string().max(10).optional(), codigo_tributacao_municipio: z.string().max(20).optional(), aliquota_iss: z.number().nonnegative().optional() }),
+    repository: createRepository({ table: 'servicos', fields: ['nome', 'valor', 'comissao', 'dias', 'ativo', 'mostrar_site', 'descricao', 'codigo_lc116', 'codigo_tributacao_municipio', 'aliquota_iss'], defaults: { ativo: 'Sim', comissao: 0, mostrar_site: 'Não' } })
   }
 };
 const idSchema = z.coerce.number().int().positive();

@@ -29,7 +29,10 @@ async function getSale(id, companyId, db = pool) {
   if (!sales[0]) throw Object.assign(new Error('Venda não encontrada.'), { status: 404 });
   const [items] = await db.execute(
     `SELECT i.id, i.produto, i.valor, i.quantidade, i.total, i.tipo,
-            (SELECT nome FROM produtos p WHERE p.id = i.produto AND p.empresa = i.empresa LIMIT 1) AS produto_nome
+            CASE WHEN i.tipo = 'servico'
+                 THEN (SELECT nome FROM servicos s WHERE s.id = i.produto AND s.empresa = i.empresa LIMIT 1)
+                 ELSE (SELECT nome FROM produtos p WHERE p.id = i.produto AND p.empresa = i.empresa LIMIT 1)
+            END AS produto_nome
        FROM itens_venda i WHERE i.id_venda = ? AND i.empresa = ? ORDER BY i.id`,
     [id, companyId]
   );
@@ -44,14 +47,23 @@ async function createSale({ clientId, paymentMethodId, dueDate, paid, items, use
     let totalCents = 0;
     let costCents = 0;
     for (const item of items) {
-      const [products] = await connection.execute('SELECT id, valor_venda, valor_compra, estoque, tem_estoque FROM produtos WHERE id = ? AND empresa = ? AND ativo = \'Sim\' FOR UPDATE', [item.productId, companyId]);
+      if (item.type === 'servico') {
+        const [services] = await connection.execute("SELECT id, valor FROM servicos WHERE id = ? AND empresa = ? AND ativo = 'Sim'", [item.id, companyId]);
+        const service = services[0];
+        if (!service) throw Object.assign(new Error('Serviço indisponível.'), { status: 404 });
+        const unitCents = money(service.valor);
+        totalCents += unitCents * item.quantity;
+        lines.push({ type: 'servico', id: item.id, quantity: item.quantity, unitCents });
+        continue;
+      }
+      const [products] = await connection.execute('SELECT id, valor_venda, valor_compra, estoque, tem_estoque FROM produtos WHERE id = ? AND empresa = ? AND ativo = \'Sim\' FOR UPDATE', [item.id, companyId]);
       const product = products[0];
       if (!product) throw Object.assign(new Error('Produto indisponível.'), { status: 404 });
       if (product.tem_estoque === 'Sim' && Number(product.estoque) < item.quantity) throw Object.assign(new Error('Estoque insuficiente.'), { status: 409 });
       const unitCents = money(product.valor_venda);
       totalCents += unitCents * item.quantity;
       costCents += money(product.valor_compra) * item.quantity;
-      lines.push({ ...item, unitCents });
+      lines.push({ type: 'produto', id: item.id, quantity: item.quantity, unitCents });
     }
     const total = (totalCents / 100).toFixed(2);
     const cost = (costCents / 100).toFixed(2);
@@ -62,8 +74,10 @@ async function createSale({ clientId, paymentMethodId, dueDate, paid, items, use
     );
     for (const line of lines) {
       const lineTotal = ((line.unitCents * line.quantity) / 100).toFixed(2);
-      await connection.execute('INSERT INTO itens_venda (produto, valor, quantidade, total, id_venda, funcionario, empresa, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [line.productId, (line.unitCents / 100).toFixed(2), line.quantity, lineTotal, sale.insertId, userId, companyId, 'produto']);
-      await connection.execute("UPDATE produtos SET estoque = CASE WHEN tem_estoque = 'Sim' THEN estoque - ? ELSE estoque END, vendas = COALESCE(vendas, 0) + ? WHERE id = ? AND empresa = ?", [line.quantity, line.quantity, line.productId, companyId]);
+      await connection.execute('INSERT INTO itens_venda (produto, valor, quantidade, total, id_venda, funcionario, empresa, tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [line.id, (line.unitCents / 100).toFixed(2), line.quantity, lineTotal, sale.insertId, userId, companyId, line.type]);
+      if (line.type === 'produto') {
+        await connection.execute("UPDATE produtos SET estoque = CASE WHEN tem_estoque = 'Sim' THEN estoque - ? ELSE estoque END, vendas = COALESCE(vendas, 0) + ? WHERE id = ? AND empresa = ?", [line.quantity, line.quantity, line.id, companyId]);
+      }
     }
     await connection.commit();
     return { id: sale.insertId, total };
@@ -79,7 +93,7 @@ async function cancelSale(id, companyId, userId, reason, db = pool) {
     await connection.beginTransaction();
     const [sales] = await connection.execute("SELECT id, node_status FROM receber WHERE id = ? AND empresa = ? AND referencia = 'Venda' FOR UPDATE", [id, companyId]);
     if (!sales[0] || sales[0].node_status === 'cancelado') throw Object.assign(new Error('Venda não encontrada ou já cancelada.'), { status: 409 });
-    const [items] = await connection.execute('SELECT produto, quantidade FROM itens_venda WHERE id_venda = ? AND empresa = ?', [id, companyId]);
+    const [items] = await connection.execute("SELECT produto, quantidade FROM itens_venda WHERE id_venda = ? AND empresa = ? AND tipo = 'produto'", [id, companyId]);
     for (const item of items) {
       await connection.execute(
         "UPDATE produtos SET estoque = CASE WHEN tem_estoque = 'Sim' THEN estoque + ? ELSE estoque END, vendas = GREATEST(COALESCE(vendas, 0) - ?, 0) WHERE id = ? AND empresa = ?",
