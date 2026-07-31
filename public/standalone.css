@@ -18,3 +18,9 @@ table th{background:linear-gradient(180deg,#eef7f2,#e6f2eb);color:#15633f;border
 table tbody tr{transition:background .12s}
 table tbody tr:hover{background:#f1f9f5}
 input:focus,.field input:focus,.field select:focus,.field textarea:focus,.toolbar input:focus,.toolbar select:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.16);outline:none}
+
+/* Sidebar do admin no padrão do ERP (ícones + acento verde no item ativo) */
+.side nav a{display:flex;align-items:center;gap:11px}
+.side .nav-icon{width:19px;height:19px;flex:0 0 19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;color:#8fd5b8;transition:color .18s,transform .18s}
+.side nav a:hover .nav-icon,.side nav a.active .nav-icon{color:#c4f5df;transform:scale(1.06)}
+.side nav a.active{box-shadow:inset 3px 0 #61c99d}
