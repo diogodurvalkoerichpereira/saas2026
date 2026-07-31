@@ -33,13 +33,16 @@ async function createUser(data, companyId, db = pool) {
   const [result] = await db.execute(
     `INSERT INTO usuarios
       (nome, email, senha, senha_crip, nivel, ativo, telefone, endereco, data, acessar_painel, mostrar_registros,
-       comissao, pix, tipo_chave, salario, valor_hora, hora_entrada, hora_saida, jornada_horas, empresa)
-     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       comissao, pix, tipo_chave, salario, valor_hora, hora_entrada, hora_saida, jornada_horas,
+       cpf, data_nasc, numero, bairro, cidade, estado, cep, complemento, empresa)
+     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.nome, data.email, hash, data.nivel, data.ativo ?? 'Sim', data.telefone ?? '', data.endereco ?? '',
       data.acessar_painel ?? 'Sim', data.mostrar_registros ?? 'Sim', data.comissao ?? 0, data.pix ?? '',
       data.tipo_chave ?? '', data.salario ?? 0, data.valor_hora ?? 0, data.hora_entrada ?? null,
-      data.hora_saida ?? null, data.jornada_horas ?? null, companyId
+      data.hora_saida ?? null, data.jornada_horas ?? null,
+      data.cpf ?? '', data.data_nasc ?? null, data.numero ?? '', data.bairro ?? '', data.cidade ?? '',
+      data.estado ?? '', data.cep ?? '', data.complemento ?? '', companyId
     ]
   );
   return result.insertId;
@@ -49,7 +52,8 @@ async function updateUser(userId, data, companyId, db = pool) {
   await assertUserInTenant(userId, companyId, db);
   const allowed = [
     'nome', 'email', 'nivel', 'telefone', 'endereco', 'acessar_painel', 'mostrar_registros',
-    'comissao', 'pix', 'tipo_chave', 'salario', 'valor_hora', 'hora_entrada', 'hora_saida', 'jornada_horas'
+    'comissao', 'pix', 'tipo_chave', 'salario', 'valor_hora', 'hora_entrada', 'hora_saida', 'jornada_horas',
+    'cpf', 'data_nasc', 'numero', 'bairro', 'cidade', 'estado', 'cep', 'complemento'
   ];
   const changed = allowed.filter((field) => data[field] !== undefined);
   const assignments = changed.map((field) => `${field} = ?`);

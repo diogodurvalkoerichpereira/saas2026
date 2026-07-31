@@ -44,6 +44,7 @@ const entityConfigs = {
       { name: 'endereco', label: 'Endereço', optional: true, max: 100 }, { name: 'numero', label: 'Número', optional: true, max: 10 },
       { name: 'bairro', label: 'Bairro', optional: true, max: 50 }, { name: 'cidade', label: 'Cidade', optional: true, max: 50 },
       { name: 'estado', label: 'Estado', optional: true, max: 50 }, { name: 'cep', label: 'CEP', optional: true, max: 20 },
+      { name: 'complemento', label: 'Complemento', optional: true, max: 255, full: true },
       { name: 'pix', label: 'Chave Pix', optional: true, max: 50 }, { name: 'tipo_chave', label: 'Tipo da chave', optional: true, max: 100 }
     ]
   },
@@ -111,6 +112,10 @@ const entityConfigs = {
       { name: 'password', label: 'Senha (mínimo 8 caracteres)', type: 'password', optional: true, max: 72 },
       { name: 'nivel', label: 'Perfil', type: 'select', required: true, options: ['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro', 'Financeiro'].map((value) => ({ value, label: value })) },
       { name: 'telefone', label: 'Telefone', optional: true, max: 20 }, { name: 'endereco', label: 'Endereço', optional: true, max: 150 },
+      { name: 'numero', label: 'Número', optional: true, max: 10 }, { name: 'bairro', label: 'Bairro', optional: true, max: 50 },
+      { name: 'cidade', label: 'Cidade', optional: true, max: 50 }, { name: 'estado', label: 'Estado', optional: true, max: 50 },
+      { name: 'cep', label: 'CEP', optional: true, max: 20 }, { name: 'complemento', label: 'Complemento', optional: true, max: 100, full: true },
+      { name: 'cpf', label: 'CPF', optional: true, max: 20 }, { name: 'data_nasc', label: 'Nascimento', type: 'date', optional: true },
       { name: 'acessar_painel', label: 'Acessar painel', type: 'select', options: yesNoOptions() },
       { name: 'mostrar_registros', label: 'Mostrar registros', type: 'select', options: yesNoOptions() },
       { name: 'comissao', label: 'Comissão (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
