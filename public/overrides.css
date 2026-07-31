@@ -359,8 +359,21 @@
   line-height: 1;
 }
 
-.nav-bell.has-alert > .icon-button {
-  color: var(--danger);
+/* Ícones de notificação diferenciados: receber (entrada, verde) x pagar (saída, âmbar) */
+#bell-receivables .ui-icon {
+  color: #15704a;
+}
+
+#bell-receivables .bell-badge {
+  background: #15704a;
+}
+
+#bell-payables .ui-icon {
+  color: #9a6700;
+}
+
+#bell-payables .bell-badge {
+  background: var(--warning);
 }
 
 .bell-menu {
