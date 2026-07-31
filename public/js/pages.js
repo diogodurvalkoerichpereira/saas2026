@@ -398,6 +398,9 @@ function openSaleForm(clients, products, services, paymentMethods, reload) {
     <label class="field">Vencimento<input name="dueDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
     <label class="field">Pagamento imediato<select name="paid"><option value="false">Não</option><option value="true">Sim</option></select></label>
     <label class="field full">Forma de pagamento<select name="paymentMethodId"><option value="0">Não informado</option>${paymentMethods.map((method) => `<option value="${method.id}">${escapeHtml(method.nome)}</option>`).join('')}</select></label>
+    <label class="field">Desconto<input name="desconto" type="number" step=".01" min="0" value="0"></label>
+    <label class="field">Tipo do desconto<select name="tipo_desconto"><option value="Valor">Valor</option><option value="Percentual">Percentual</option></select></label>
+    <label class="field full">Observações<textarea name="obs" maxlength="100"></textarea></label>
     <div class="full line-items-header"><strong>Itens da venda</strong><span>${products.length ? `<button class="button ghost small" type="button" data-add-line="produto">${icon('plus')}Produto</button> ` : ''}${services.length ? `<button class="button ghost small" type="button" data-add-line="servico">${icon('plus')}Serviço</button>` : ''}</span></div>
     <div class="full" id="sale-lines"></div>
   </div>`;
@@ -421,7 +424,7 @@ function openSaleForm(clients, products, services, paymentMethods, reload) {
         quantity: Number(row.querySelector('[data-line-quantity]').value)
       }));
       if (items.some((item) => !item.id || !Number.isInteger(item.quantity) || item.quantity < 1)) throw new Error('Revise os itens e as quantidades.');
-      await api('/api/sales', { method: 'POST', body: { clientId: Number(values.clientId), paymentMethodId: Number(values.paymentMethodId), dueDate: values.dueDate, paid: values.paid === 'true', items } });
+      await api('/api/sales', { method: 'POST', body: { clientId: Number(values.clientId), paymentMethodId: Number(values.paymentMethodId), dueDate: values.dueDate, paid: values.paid === 'true', desconto: Number(values.desconto || 0), tipo_desconto: values.tipo_desconto, obs: values.obs, items } });
       toast('Venda concluída.');
       await reload();
       dialog.close();

@@ -39,7 +39,7 @@ async function getSale(id, companyId, db = pool) {
   return { ...sales[0], items };
 }
 
-async function createSale({ clientId, paymentMethodId, dueDate, paid, items, userId, companyId }, db = pool) {
+async function createSale({ clientId, paymentMethodId, dueDate, paid, items, desconto = 0, tipo_desconto = 'Valor', obs = '', userId, companyId }, db = pool) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
@@ -65,12 +65,21 @@ async function createSale({ clientId, paymentMethodId, dueDate, paid, items, use
       costCents += money(product.valor_compra) * item.quantity;
       lines.push({ type: 'produto', id: item.id, quantity: item.quantity, unitCents });
     }
-    const total = (totalCents / 100).toFixed(2);
+    const grossCents = totalCents;
+    let discountCents = tipo_desconto === 'Percentual'
+      ? Math.round((grossCents * Number(desconto || 0)) / 100)
+      : money(Number(desconto || 0));
+    if (!Number.isFinite(discountCents) || discountCents < 0) discountCents = 0;
+    if (discountCents > grossCents) discountCents = grossCents;
+    const netCents = grossCents - discountCents;
+    const total = (netCents / 100).toFixed(2);
+    const gross = (grossCents / 100).toFixed(2);
+    const discount = (discountCents / 100).toFixed(2);
     const cost = (costCents / 100).toFixed(2);
     const [sale] = await connection.execute(
-      `INSERT INTO receber (descricao, cliente, valor, vencimento, data_pgto, data_lanc, forma_pgto, arquivo, referencia, subtotal, usuario_lanc, usuario_pgto, pago, hora, empresa, total_venda, valor_custo)
-       VALUES ('Nova Venda', ?, ?, ?, ?, CURRENT_DATE, ?, 'sem-foto.png', 'Venda', ?, ?, ?, ?, CURRENT_TIME, ?, ?, ?)`,
-      [clientId, total, dueDate, paid ? dueDate : null, paymentMethodId, total, userId, paid ? userId : 0, paid ? 'Sim' : 'Não', companyId, total, cost]
+      `INSERT INTO receber (descricao, cliente, valor, vencimento, data_pgto, data_lanc, forma_pgto, arquivo, referencia, subtotal, desconto, obs, usuario_lanc, usuario_pgto, pago, hora, empresa, total_venda, valor_custo)
+       VALUES ('Nova Venda', ?, ?, ?, ?, CURRENT_DATE, ?, 'sem-foto.png', 'Venda', ?, ?, ?, ?, ?, ?, CURRENT_TIME, ?, ?, ?)`,
+      [clientId, total, dueDate, paid ? dueDate : null, paymentMethodId, gross, discount, obs ?? '', userId, paid ? userId : 0, paid ? 'Sim' : 'Não', companyId, gross, cost]
     );
     for (const line of lines) {
       const lineTotal = ((line.unitCents * line.quantity) / 100).toFixed(2);
