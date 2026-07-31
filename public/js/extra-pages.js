@@ -507,15 +507,27 @@ async function renderRecurring() {
 
 async function renderCommissions() {
   loading();
-  const result = await api('/api/operations/commissions?page=1&pageSize=100');
-  const total = result.items.reduce((sum, item) => sum + Number(item.comissao || 0), 0);
-  root().innerHTML = `${pageHeader('Comissões', 'Comissões calculadas por item vendido e percentual do funcionário.')}
-    <div class="metric-grid compact-metrics"><div class="metric-card"><span>Total no período exibido</span><strong>${money(total)}</strong><small>${result.pagination.total} item(ns)</small></div></div>
-    <section class="panel">${table([
-      { key: 'data', label: 'Data', render: date }, { key: 'id_venda', label: 'Venda' }, { key: 'funcionario_nome', label: 'Funcionário' },
-      { key: 'total', label: 'Base', render: money }, { key: 'percentual', label: 'Percentual', render: (value) => `${number(value)}%` },
-      { key: 'comissao', label: 'Comissão', render: money }, { key: 'pago', label: 'Venda paga', render: badge }
-    ], result.items)}</section>`;
+  const load = async () => {
+    const result = await api('/api/operations/commissions?page=1&pageSize=100');
+    const total = result.items.reduce((sum, item) => sum + Number(item.comissao || 0), 0);
+    const pendente = result.items.filter((item) => item.comissao_paga !== 'Sim').reduce((sum, item) => sum + Number(item.comissao || 0), 0);
+    root().innerHTML = `${pageHeader('Comissões', 'Comissões calculadas por item vendido e percentual do funcionário.')}
+      <div class="metric-grid compact-metrics"><div class="metric-card"><span>Total exibido</span><strong>${money(total)}</strong><small>${result.pagination.total} item(ns)</small></div><div class="metric-card warn"><span>Comissão a pagar</span><strong>${money(pendente)}</strong><small>Itens não pagos</small></div></div>
+      <section class="panel">${table([
+        { key: 'data', label: 'Data', render: date }, { key: 'id_venda', label: 'Venda' }, { key: 'funcionario_nome', label: 'Funcionário' },
+        { key: 'total', label: 'Base', render: money }, { key: 'percentual', label: 'Percentual', render: (value) => `${number(value)}%` },
+        { key: 'comissao', label: 'Comissão', render: money }, { key: 'pago', label: 'Venda paga', render: badge },
+        { key: 'comissao_paga', label: 'Comissão paga', render: badge }
+      ], result.items, (item) => item.comissao_paga === 'Sim'
+        ? `<button class="button ghost small" data-pay="${item.id}" data-set="Não">${icon('refresh')}Estornar</button>`
+        : `<button class="button primary small" data-pay="${item.id}" data-set="Sim">${icon('check')}Marcar paga</button>`)}</section>`;
+    root().querySelectorAll('[data-pay]').forEach((button) => button.addEventListener('click', async () => {
+      await api(`/api/operations/commissions/${button.dataset.pay}/pay`, { method: 'PATCH', body: { pago: button.dataset.set } });
+      toast(button.dataset.set === 'Sim' ? 'Comissão marcada como paga.' : 'Pagamento de comissão estornado.');
+      await load();
+    }));
+  };
+  await load();
 }
 
 async function renderOnlineOrders() {

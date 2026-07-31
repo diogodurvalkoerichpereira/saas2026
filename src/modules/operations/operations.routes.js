@@ -464,7 +464,7 @@ router.get('/commissions', permit('comissoes', 'minhas_comissoes'), async (req, 
     if (onlyOwn) params.push(Number(req.auth.sub));
     const [rows] = await pool.execute(
       `SELECT iv.id, iv.id_venda, iv.funcionario, iv.total, iv.tipo, r.data_lanc AS data,
-              r.pago, r.node_status, u.nome AS funcionario_nome, COALESCE(u.comissao, 0) AS percentual,
+              r.pago, r.node_status, iv.comissao_paga, u.nome AS funcionario_nome, COALESCE(u.comissao, 0) AS percentual,
               ROUND(iv.total * COALESCE(u.comissao, 0) / 100, 2) AS comissao
          FROM itens_venda iv
          JOIN receber r ON r.id = iv.id_venda AND r.empresa = iv.empresa
@@ -474,6 +474,19 @@ router.get('/commissions', permit('comissoes', 'minhas_comissoes'), async (req, 
       params
     );
     res.json(listResponse(rows, req.query, { searchFields: ['funcionario_nome', 'tipo'], statusField: 'pago', dateField: 'data', defaultSort: 'data' }));
+  } catch (error) { next(error); }
+});
+router.patch('/commissions/:id/pay', permit('comissoes'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const itemId = z.coerce.number().int().positive().parse(req.params.id);
+    const paid = z.object({ pago: z.enum(['Sim', 'Não']).default('Sim') }).parse(req.body).pago;
+    const [result] = await pool.execute(
+      "UPDATE itens_venda SET comissao_paga = ?, comissao_paga_em = ?, comissao_paga_por = ? WHERE id = ? AND empresa = ?",
+      [paid, paid === 'Sim' ? new Date() : null, paid === 'Sim' ? Number(req.auth.sub) : null, itemId, Number(req.auth.companyId)]
+    );
+    if (!result.affectedRows) throw Object.assign(new Error('Item de comissão não encontrado.'), { status: 404 });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'pagar_comissao', entity: 'comissao', entityId: itemId, details: { pago: paid } });
+    res.status(204).end();
   } catch (error) { next(error); }
 });
 

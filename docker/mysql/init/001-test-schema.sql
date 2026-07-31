@@ -266,7 +266,10 @@ CREATE TABLE itens_venda (
   id_venda INT NOT NULL,
   funcionario INT NOT NULL,
   empresa INT NULL,
-  tipo VARCHAR(25) NULL
+  tipo VARCHAR(25) NULL,
+  comissao_paga VARCHAR(5) NOT NULL DEFAULT 'Não',
+  comissao_paga_em DATETIME NULL,
+  comissao_paga_por INT NULL
 );
 CREATE TABLE entradas (id INT AUTO_INCREMENT PRIMARY KEY, produto INT NOT NULL, quantidade INT NOT NULL, motivo VARCHAR(100) NOT NULL, usuario INT NOT NULL, data DATE NOT NULL, empresa INT NULL);
 CREATE TABLE saidas LIKE entradas;
