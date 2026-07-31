@@ -82,13 +82,36 @@ async function updateEntry(type, id, data, companyId, db = pool) {
   if (!result.affectedRows) throw Object.assign(new Error('Somente lançamentos ativos e não pagos podem ser editados.'), { status: 409 });
 }
 
-async function settleEntry(type, id, companyId, userId, paymentDate, db = pool, cashRegisterId = null) {
+async function settleEntry(type, id, companyId, userId, paymentDate, db = pool, cashRegisterId = null, overrides = {}) {
   const table = tableFor(type, companyId);
   if (cashRegisterId) {
     const [cash] = await db.execute('SELECT id FROM caixas WHERE id = ? AND empresa = ? AND data_fechamento IS NULL', [cashRegisterId, companyId]);
     if (!cash[0]) throw Object.assign(new Error('O caixa informado não existe ou já foi fechado.'), { status: 409 });
   }
-  const [result] = await db.execute(`UPDATE ${table} SET pago = 'Sim', data_pgto = ?, usuario_pgto = ?, caixa = ? WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim')`, [paymentDate, userId, cashRegisterId, id, companyId]);
+  const [entries] = await db.execute(
+    `SELECT vencimento, valor FROM ${table} WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim') LIMIT 1`,
+    [id, companyId]
+  );
+  const entry = entries[0];
+  if (!entry) throw Object.assign(new Error('Lançamento não encontrado, cancelado ou já baixado.'), { status: 409 });
+
+  let { multa, juros } = overrides;
+  const overdueDays = Math.floor((new Date(paymentDate) - new Date(entry.vencimento)) / 86400000);
+  if ((multa === undefined || juros === undefined) && overdueDays > 0) {
+    const [configRows] = await db.execute('SELECT multa_atraso, juros_atraso FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1', [companyId]);
+    const rates = configRows[0] || {};
+    if (multa === undefined) multa = rates.multa_atraso ? Number(entry.valor) * (Number(rates.multa_atraso) / 100) : 0;
+    if (juros === undefined) juros = rates.juros_atraso ? Number(entry.valor) * (Number(rates.juros_atraso) / 100) * overdueDays : 0;
+  }
+  multa = Number(multa || 0);
+  juros = Number(juros || 0);
+  const subtotal = Number(entry.valor) + multa + juros;
+
+  const [result] = await db.execute(
+    `UPDATE ${table} SET pago = 'Sim', data_pgto = ?, usuario_pgto = ?, caixa = ?, multa = ?, juros = ?, subtotal = ?
+      WHERE id = ? AND empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim')`,
+    [paymentDate, userId, cashRegisterId, multa, juros, subtotal, id, companyId]
+  );
   if (!result.affectedRows) throw Object.assign(new Error('Lançamento não encontrado, cancelado ou já baixado.'), { status: 409 });
 }
 

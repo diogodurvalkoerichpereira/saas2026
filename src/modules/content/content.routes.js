@@ -34,7 +34,13 @@ const settingsSchema = z.object({
   abertura_caixa: z.enum(['Sim', 'Não']).optional(), dias_comissao: z.number().int().min(0).max(365).optional(),
   assinatura_cliente: z.enum(['Sim', 'Não']).optional(), cobrar_automaticamente: z.enum(['Sim', 'Não']).optional(),
   cobrar_duas_vezes: z.enum(['Sim', 'Não']).optional(), pagina_entrada: optional(25),
-  url_site: optional(255), meta_descricao: optional(255)
+  url_site: optional(255), meta_descricao: optional(255),
+  multa_atraso: z.number().min(0).max(100).optional(), juros_atraso: z.number().min(0).max(100).optional(),
+  dias_lembrete: z.number().int().min(0).max(365).optional(),
+  mao_obra_orc: optional(100), senha_aparelho_orc: optional(100), defeito_orc: optional(100),
+  avarias_orc: optional(100), acessorios_orc: optional(100), laudo_orc: optional(100),
+  mao_obra_os: optional(100), senha_aparelho_os: optional(100), defeito_os: optional(100),
+  avarias_os: optional(100), acessorios_os: optional(100), laudo_os: optional(100)
 });
 
 router.use(authenticate);
@@ -44,7 +50,10 @@ router.get('/settings', permit('configuracoes', 'home'), async (req, res, next) 
     const [rows] = await pool.execute(
       `SELECT id, nome, email, telefone, endereco, instagram, cnpj, cidade_sistema, marca_dagua,
               assinatura_recibo, impressao_automatica, abertura_caixa, dias_comissao, assinatura_cliente,
-              cobrar_automaticamente, cobrar_duas_vezes, pagina_entrada, url_site, meta_descricao, empresa
+              cobrar_automaticamente, cobrar_duas_vezes, pagina_entrada, url_site, meta_descricao, empresa,
+              multa_atraso, juros_atraso, dias_lembrete,
+              mao_obra_orc, senha_aparelho_orc, defeito_orc, avarias_orc, acessorios_orc, laudo_orc,
+              mao_obra_os, senha_aparelho_os, defeito_os, avarias_os, acessorios_os, laudo_os
          FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1`,
       [Number(req.auth.companyId)]
     );

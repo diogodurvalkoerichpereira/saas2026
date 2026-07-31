@@ -778,7 +778,22 @@ const companySettingsFields = [
   { name: 'cobrar_automaticamente', label: 'Cobrança automática', type: 'select', options: yesNo() },
   { name: 'cobrar_duas_vezes', label: 'Segunda tentativa de cobrança', type: 'select', options: yesNo() },
   { name: 'pagina_entrada', label: 'Página inicial', optional: true, max: 25 },
-  { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 }
+  { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 },
+  { name: 'multa_atraso', label: 'Multa por atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+  { name: 'juros_atraso', label: 'Juros por dia de atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+  { name: 'dias_lembrete', label: 'Lembrete de vencimento (dias antes)', type: 'number', min: 0, numeric: true, optional: true },
+  { name: 'defeito_orc', label: 'Texto padrão · Defeito relatado (orçamento)', optional: true, max: 100 },
+  { name: 'laudo_orc', label: 'Texto padrão · Laudo técnico (orçamento)', optional: true, max: 100 },
+  { name: 'acessorios_orc', label: 'Texto padrão · Acessórios (orçamento)', optional: true, max: 100 },
+  { name: 'senha_aparelho_orc', label: 'Texto padrão · Senha do aparelho (orçamento)', optional: true, max: 100 },
+  { name: 'avarias_orc', label: 'Texto padrão · Avarias (orçamento)', optional: true, max: 100 },
+  { name: 'mao_obra_orc', label: 'Texto padrão · Condições de mão de obra (orçamento)', optional: true, max: 100 },
+  { name: 'defeito_os', label: 'Texto padrão · Defeito relatado (OS)', optional: true, max: 100 },
+  { name: 'laudo_os', label: 'Texto padrão · Laudo técnico (OS)', optional: true, max: 100 },
+  { name: 'acessorios_os', label: 'Texto padrão · Acessórios (OS)', optional: true, max: 100 },
+  { name: 'senha_aparelho_os', label: 'Texto padrão · Senha do aparelho (OS)', optional: true, max: 100 },
+  { name: 'avarias_os', label: 'Texto padrão · Avarias (OS)', optional: true, max: 100 },
+  { name: 'mao_obra_os', label: 'Texto padrão · Condições de mão de obra (OS)', optional: true, max: 100 }
 ];
 
 async function renderSettings() {
@@ -792,6 +807,8 @@ async function renderSettings() {
       <div><small>CNPJ</small><strong>${escapeHtml(settings.cnpj || 'Não configurado')}</strong></div>
       <div><small>Cidade</small><strong>${escapeHtml(settings.cidade_sistema || 'Não configurada')}</strong></div>
       <div><small>Site</small><strong>${escapeHtml(settings.url_site || 'Não configurado')}</strong></div>
+      <div><small>Multa por atraso</small><strong>${settings.multa_atraso != null ? `${settings.multa_atraso}%` : 'Não configurada'}</strong></div>
+      <div><small>Juros por dia de atraso</small><strong>${settings.juros_atraso != null ? `${settings.juros_atraso}%` : 'Não configurado'}</strong></div>
     </div></section>`;
   root().querySelector('[data-edit]').addEventListener('click', () => openForm({
     title: 'Configurações da empresa', eyebrow: 'Administração', fields: companySettingsFields, record: settings,
@@ -937,23 +954,58 @@ async function renderReports(route) {
         { key: 'valor_abertura', label: 'Inicial', render: money }, { key: 'valor_fechamento', label: 'Final', render: money },
         { key: 'sangrias', label: 'Retiradas', render: money }, { key: 'quebra', label: 'Diferença', render: money }
       ]
+    },
+    'top-products': {
+      label: 'Produtos mais vendidos', path: '/api/reports/top-products', period: true,
+      columns: [
+        { key: 'codigo', label: 'Código' }, { key: 'nome', label: 'Produto' },
+        { key: 'quantidade_vendida', label: 'Quantidade', render: number }, { key: 'valor_total', label: 'Valor total', render: money }
+      ]
+    },
+    'annual-balance': {
+      label: 'Balanço anual', path: '/api/reports/annual-balance', yearFilter: true,
+      columns: [
+        { key: 'mes', label: 'Mês', render: (value) => ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][Number(value) - 1] || value },
+        { key: 'receitas', label: 'Receitas', render: money }, { key: 'despesas', label: 'Despesas', render: money }, { key: 'saldo', label: 'Saldo', render: money }
+      ]
+    },
+    'synthetic-payables': {
+      label: 'Sintético de despesas', path: '/api/reports/synthetic-payables', period: true,
+      columns: [
+        { key: 'categoria', label: 'Categoria', render: text }, { key: 'quantidade', label: 'Lançamentos', render: number },
+        { key: 'pago', label: 'Pago', render: money }, { key: 'pendente', label: 'Pendente', render: money }
+      ]
+    },
+    'synthetic-receivables': {
+      label: 'Sintético a receber', path: '/api/reports/synthetic-receivables', period: true,
+      columns: [
+        { key: 'categoria', label: 'Categoria', render: text }, { key: 'quantidade', label: 'Lançamentos', render: number },
+        { key: 'recebido', label: 'Recebido', render: money }, { key: 'pendente', label: 'Pendente', render: money }
+      ]
     }
   };
   const selected = configs[route.query.tab] ? route.query.tab : 'sales';
   const config = configs[selected];
-  const state = { from: route.query.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), to: route.query.to || today() };
+  const state = { from: route.query.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), to: route.query.to || today(), year: route.query.year || String(new Date().getFullYear()) };
   const query = new URLSearchParams({ page: 1, pageSize: 100 });
   if (config.period) { query.set('from', state.from); query.set('to', state.to); }
+  if (config.yearFilter) query.set('year', state.year);
   const result = await api(`${config.path}?${query}`);
   const tabs = `<div class="split-tabs report-tabs">${Object.entries(configs).map(([key, item]) => `<a class="${selected === key ? 'active' : ''}" href="#/reports?tab=${key}">${item.label}</a>`).join('')}</div>`;
   root().innerHTML = `${pageHeader('Relatórios', 'Consultas consolidadas com exportação CSV segura.', `<button class="button ghost" data-export>${icon('file-text')}Exportar CSV</button>`)}${tabs}
     ${config.period ? `<section class="panel report-filter"><form class="toolbar" data-filter><label class="compact-field">De <input name="from" type="date" value="${state.from}"></label><label class="compact-field">Até <input name="to" type="date" value="${state.to}"></label><button class="button ghost">${icon('filter')}Aplicar</button></form></section>` : ''}
+    ${config.yearFilter ? `<section class="panel report-filter"><form class="toolbar" data-year-filter><label class="compact-field">Ano <input name="year" type="number" min="2000" max="2100" value="${state.year}"></label><button class="button ghost">${icon('filter')}Aplicar</button></form></section>` : ''}
     <section class="panel">${table(config.columns, result.items)}</section>`;
   root().querySelector('[data-export]').addEventListener('click', () => downloadCsv(`relatorio-${selected}-${today()}.csv`, config.columns, result.items));
   root().querySelector('[data-filter]')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     location.hash = `#/reports?tab=${selected}&from=${values.from}&to=${values.to}`;
+  });
+  root().querySelector('[data-year-filter]')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    location.hash = `#/reports?tab=${selected}&year=${values.year}`;
   });
 }
 

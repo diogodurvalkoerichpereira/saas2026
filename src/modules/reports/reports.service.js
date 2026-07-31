@@ -84,4 +84,74 @@ async function cashReport(companyId, { from, to }, db = pool) {
   return rows;
 }
 
-module.exports = { financialSummary, operationalSummary, salesReport, cashFlowReport, inventoryReport, delinquencyReport, cashReport };
+async function topProductsReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT p.id, p.codigo, p.nome, SUM(i.quantidade) AS quantidade_vendida, SUM(i.total) AS valor_total
+       FROM itens_venda i
+       JOIN produtos p ON p.id = i.produto AND p.empresa = i.empresa
+       JOIN receber r ON r.id = i.id_venda AND r.empresa = i.empresa
+      WHERE i.empresa = ? AND i.tipo = 'produto' AND r.referencia = 'Venda' AND r.data_lanc BETWEEN ? AND ?
+      GROUP BY p.id, p.codigo, p.nome
+      ORDER BY quantidade_vendida DESC
+      LIMIT 50`,
+    [companyId, from, to]
+  );
+  return rows;
+}
+
+async function annualBalanceReport(companyId, year, db = pool) {
+  const [income] = await db.execute(
+    `SELECT MONTH(data_pgto) AS mes, COALESCE(SUM(subtotal), 0) AS total
+       FROM receber WHERE empresa = ? AND pago = 'Sim' AND YEAR(data_pgto) = ?
+      GROUP BY MONTH(data_pgto)`,
+    [companyId, year]
+  );
+  const [expense] = await db.execute(
+    `SELECT MONTH(data_pgto) AS mes, COALESCE(SUM(subtotal), 0) AS total
+       FROM pagar WHERE empresa = ? AND pago = 'Sim' AND YEAR(data_pgto) = ?
+      GROUP BY MONTH(data_pgto)`,
+    [companyId, year]
+  );
+  const incomeByMonth = new Map(income.map((row) => [row.mes, Number(row.total)]));
+  const expenseByMonth = new Map(expense.map((row) => [row.mes, Number(row.total)]));
+  return Array.from({ length: 12 }, (_, index) => {
+    const mes = index + 1;
+    const receitas = incomeByMonth.get(mes) || 0;
+    const despesas = expenseByMonth.get(mes) || 0;
+    return { mes, receitas, despesas, saldo: receitas - despesas };
+  });
+}
+
+async function syntheticPayablesReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT COALESCE(pc.nome, 'Sem categoria') AS categoria, COUNT(*) AS quantidade,
+            COALESCE(SUM(CASE WHEN p.pago = 'Sim' THEN p.subtotal ELSE 0 END), 0) AS pago,
+            COALESCE(SUM(CASE WHEN p.pago IS NULL OR p.pago <> 'Sim' THEN p.subtotal ELSE 0 END), 0) AS pendente
+       FROM pagar p
+       LEFT JOIN plano_contas pc ON pc.id = p.plano_contas AND pc.empresa = p.empresa
+      WHERE p.empresa = ? AND p.data_lanc BETWEEN ? AND ?
+      GROUP BY categoria
+      ORDER BY pendente DESC, pago DESC`,
+    [companyId, from, to]
+  );
+  return rows;
+}
+
+async function syntheticReceivablesReport(companyId, { from, to }, db = pool) {
+  const [rows] = await db.execute(
+    `SELECT COALESCE(referencia, 'Outros') AS categoria, COUNT(*) AS quantidade,
+            COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) AS recebido,
+            COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) AS pendente
+       FROM receber
+      WHERE empresa = ? AND data_lanc BETWEEN ? AND ?
+      GROUP BY categoria
+      ORDER BY pendente DESC, recebido DESC`,
+    [companyId, from, to]
+  );
+  return rows;
+}
+
+module.exports = {
+  financialSummary, operationalSummary, salesReport, cashFlowReport, inventoryReport, delinquencyReport, cashReport,
+  topProductsReport, annualBalanceReport, syntheticPayablesReport, syntheticReceivablesReport
+};

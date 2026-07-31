@@ -22,6 +22,7 @@ function table(columns, items, actions) {
 const header = (title, subtitle, action = '') => `<div class="page-header"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div>${action}</div>`;
 const routeName = () => (location.hash.replace(/^#\//, '') || 'dashboard').split('?')[0];
 const yesNo = [{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }];
+const nivelOptions = ['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro', 'Financeiro'].map((value) => ({ value, label: value }));
 
 function openForm({ title, fields, record = {}, submit }) {
   document.querySelector('#admin-modal-title').textContent = title;
@@ -70,12 +71,23 @@ const configs = {
     title: 'Alertas', path: '/api/admin/alerts', singular: 'alerta',
     columns: [{ key: 'data', label: 'Data', render: date }, { key: 'titulo', label: 'Título' }, { key: 'texto', label: 'Mensagem' }, { key: 'ativo', label: 'Ativo', render: badge }],
     fields: [{ name: 'titulo', label: 'Título', required: true }, { name: 'data', label: 'Data', type: 'date', default: new Date().toISOString().slice(0, 10) }, { name: 'ativo', label: 'Ativo', type: 'select', options: yesNo, default: 'Sim' }, { name: 'texto', label: 'Mensagem', type: 'textarea', required: true }]
+  },
+  users: {
+    title: 'Usuários SaaS', path: '/api/users', singular: 'usuário',
+    columns: [{ key: 'nome', label: 'Nome' }, { key: 'email', label: 'E-mail' }, { key: 'nivel', label: 'Perfil' }, { key: 'ativo', label: 'Ativo', render: badge }],
+    fields: [
+      { name: 'nome', label: 'Nome', required: true }, { name: 'email', label: 'E-mail', type: 'email', required: true },
+      { name: 'nivel', label: 'Perfil', type: 'select', options: nivelOptions, default: 'Administrador' },
+      { name: 'ativo', label: 'Ativo', type: 'select', options: yesNo, default: 'Sim' },
+      { name: 'telefone', label: 'Telefone' },
+      { name: 'password', label: 'Senha (deixe em branco para manter)', type: 'password', full: true }
+    ]
   }
 };
 
 async function renderCrud(config) {
   const result = await api(`${config.path}?pageSize=100`);
-  root.innerHTML = `${header(config.title, `Administração de ${config.title.toLowerCase()}.`, `<button class="button primary" data-new>Adicionar ${esc(config.singular)}</button>`)}<section class="panel">${table(config.columns, result.items, (item) => `<button class="button ghost small" data-edit="${item.id}">Editar</button>${config === configs.companies ? `<button class="button ghost small" data-access="${item.id}">Recursos</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-restore="${item.id}">Reativar</button>`}` : config === configs.plans ? `<button class="button ghost small" data-plan-resources="${item.id}">Recursos</button>` : ''}`)}</section>`;
+  root.innerHTML = `${header(config.title, `Administração de ${config.title.toLowerCase()}.`, `<button class="button primary" data-new>Adicionar ${esc(config.singular)}</button>`)}<section class="panel">${table(config.columns, result.items, (item) => `<button class="button ghost small" data-edit="${item.id}">Editar</button>${config === configs.companies ? `<button class="button ghost small" data-access="${item.id}">Recursos</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-restore="${item.id}">Reativar</button>`}` : config === configs.plans ? `<button class="button ghost small" data-plan-resources="${item.id}">Recursos</button>` : config === configs.users ? `<button class="button ghost small" data-user-permissions="${item.id}">Permissões</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-user-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-user-restore="${item.id}">Reativar</button>`}` : ''}`)}</section>`;
   const byId = new Map(result.items.map((item) => [String(item.id), item]));
   root.querySelector('[data-new]').addEventListener('click', () => openForm({ title: `Adicionar ${config.singular}`, fields: config.fields, submit: (values) => api(config.path, { method: 'POST', body: values }) }));
   root.querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', () => openForm({ title: `Editar ${config.singular}`, fields: config.fields, record: byId.get(button.dataset.edit), submit: (values) => api(`${config.path}/${button.dataset.edit}`, { method: 'PATCH', body: values }) })));
@@ -83,6 +95,23 @@ async function renderCrud(config) {
   root.querySelectorAll('[data-restore]').forEach((button) => button.addEventListener('click', async () => { await api(`/api/admin/companies/${button.dataset.restore}/restore`, { method: 'POST', body: {} }); await render(); }));
   root.querySelectorAll('[data-plan-resources]').forEach((button) => button.addEventListener('click', () => editResources('plans', button.dataset.planResources)));
   root.querySelectorAll('[data-access]').forEach((button) => button.addEventListener('click', () => editResources('companies', button.dataset.access)));
+  root.querySelectorAll('[data-user-permissions]').forEach((button) => button.addEventListener('click', () => editUserPermissions(button.dataset.userPermissions)));
+  root.querySelectorAll('[data-user-disable]').forEach((button) => button.addEventListener('click', async () => { if (confirm('Inativar este usuário?')) { await api(`/api/users/${button.dataset.userDisable}`, { method: 'DELETE', body: { reason: 'Inativação pela administração SaaS' } }); await render(); } }));
+  root.querySelectorAll('[data-user-restore]').forEach((button) => button.addEventListener('click', async () => { await api(`/api/users/${button.dataset.userRestore}/restore`, { method: 'POST', body: {} }); await render(); }));
+}
+
+async function editUserPermissions(userId) {
+  const [options, selected] = await Promise.all([api('/api/users/permissions/options'), api(`/api/users/${userId}/permissions`)]);
+  const selectedIds = new Set(selected.map(String));
+  document.querySelector('#admin-modal-title').textContent = 'Permissões do usuário';
+  document.querySelector('#admin-modal-error').textContent = '';
+  document.querySelector('#admin-modal-body').innerHTML = `<div class="field">${options.map((item) => `<label><input type="checkbox" name="permissionIds" value="${item.id}" ${selectedIds.has(String(item.id)) ? 'checked' : ''}> ${esc(item.nome)}</label>`).join('')}</div>`;
+  modalForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const permissionIds = [...modalForm.querySelectorAll('[name="permissionIds"]:checked')].map((input) => Number(input.value));
+    try { await api(`/api/users/${userId}/permissions`, { method: 'PUT', body: { permissionIds } }); modal.close(); await render(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; }
+  };
+  modal.showModal();
 }
 
 async function editResources(type, id) {
@@ -111,8 +140,7 @@ async function render() {
     const result = await api('/api/admin/billing?pageSize=100');
     root.innerHTML = `${header('Mensalidades', 'Cobranças administrativas do SaaS.')}<section class="panel">${table([{ key: 'empresa_nome', label: 'Empresa' }, { key: 'descricao', label: 'Descrição' }, { key: 'vencimento', label: 'Vencimento', render: date }, { key: 'subtotal', label: 'Valor', render: money }, { key: 'pago', label: 'Pago', render: badge }], result.items)}</section>`; return;
   }
-  const result = await api('/api/users?pageSize=100');
-  root.innerHTML = `${header('Usuários SaaS', 'Contas que administram a plataforma, separadas das empresas.')}<section class="panel">${table([{ key: 'nome', label: 'Nome' }, { key: 'email', label: 'E-mail' }, { key: 'nivel', label: 'Perfil' }, { key: 'ativo', label: 'Ativo', render: badge }], result.items)}</section>`;
+  root.innerHTML = '<div class="empty">Rota não encontrada.</div>';
 }
 function showApp() {
   if (Number(current?.user?.companyId) !== 0) { sessionStorage.removeItem('admin_session'); current = null; throw new Error('Use uma conta da administração SaaS.'); }

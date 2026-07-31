@@ -5,7 +5,7 @@ const { env } = require('../../config/env');
 
 async function authenticate({ email, password }) {
   const [users] = await pool.execute(
-    `SELECT id, nome, email, senha_crip, nivel, ativo, empresa, mostrar_registros
+    `SELECT id, nome, email, senha_crip, nivel, ativo, empresa, mostrar_registros, acessar_painel
        FROM usuarios WHERE email = ? ORDER BY id DESC LIMIT 1`,
     [email]
   );
@@ -13,6 +13,11 @@ async function authenticate({ email, password }) {
   if (!user || user.ativo !== 'Sim' || !(await bcrypt.compare(password, user.senha_crip))) {
     const error = new Error('E-mail ou senha inválidos.');
     error.status = 401;
+    throw error;
+  }
+  if (user.acessar_painel === 'Não') {
+    const error = new Error('Este usuário não tem permissão para acessar o painel.');
+    error.status = 403;
     throw error;
   }
 
@@ -42,7 +47,8 @@ async function authenticate({ email, password }) {
       [user.id]
     );
   const permissions = permissionRows.map((row) => row.chave);
-  const payload = { sub: user.id, companyId: user.empresa || 0, role: user.nivel, kind: 'staff' };
+  const mostrarRegistros = user.mostrar_registros !== 'Não';
+  const payload = { sub: user.id, companyId: user.empresa || 0, role: user.nivel, kind: 'staff', mostrarRegistros };
   const token = jwt.sign(payload, env.jwtSecret, { expiresIn: '8h' });
   return {
     token,
@@ -52,6 +58,7 @@ async function authenticate({ email, password }) {
       email: user.email,
       role: user.nivel,
       companyId: user.empresa || 0,
+      mostrarRegistros,
       permissions
     }
   };

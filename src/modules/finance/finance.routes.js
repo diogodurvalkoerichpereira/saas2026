@@ -25,7 +25,9 @@ const entrySchema = z.object({
 const reasonSchema = z.object({ reason: z.string().trim().min(3).max(255) });
 const settlementSchema = z.object({
   paymentDate: dateSchema,
-  cashRegisterId: z.number().int().positive().nullable().optional()
+  cashRegisterId: z.number().int().positive().nullable().optional(),
+  multa: z.number().nonnegative().optional(),
+  juros: z.number().nonnegative().optional()
 });
 
 router.use(authenticate, permit('financeiro', 'receber', 'pagar'), authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'));
@@ -68,7 +70,7 @@ router.post('/:type/:id/settle', async (req, res, next) => {
     const type = typeSchema.parse(req.params.type);
     const id = idSchema.parse(req.params.id);
     const settlement = settlementSchema.parse(req.body);
-    await settleEntry(type, id, Number(req.auth.companyId), Number(req.auth.sub), settlement.paymentDate, pool, settlement.cashRegisterId ?? null);
+    await settleEntry(type, id, Number(req.auth.companyId), Number(req.auth.sub), settlement.paymentDate, pool, settlement.cashRegisterId ?? null, { multa: settlement.multa, juros: settlement.juros });
     if (type === 'receivables') {
       await pool.execute(`UPDATE node_store_orders SET status = 'Pago', atualizado_em = CURRENT_TIMESTAMP WHERE recebivel = ? AND empresa = ? AND status = 'Aguardando pagamento'`, [id, Number(req.auth.companyId)]);
     }

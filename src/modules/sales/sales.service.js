@@ -2,16 +2,18 @@ const { pool } = require('../../config/database');
 
 const money = (value) => Math.round(Number(value) * 100);
 
-async function listSales(companyId, db = pool) {
+async function listSales(companyId, restrictToUserId, db = pool) {
+  const ownerFilter = restrictToUserId ? ' AND r.usuario_lanc = ?' : '';
+  const params = restrictToUserId ? [companyId, restrictToUserId] : [companyId];
   const [rows] = await db.execute(
     `SELECT r.id, r.cliente, r.valor, r.subtotal, r.total_venda, r.valor_custo, r.vencimento, r.data_lanc, r.data_pgto,
             r.pago, r.forma_pgto, r.node_status, r.node_cancel_reason, r.empresa,
             (SELECT nome FROM clientes c WHERE c.id = r.cliente AND c.empresa = r.empresa LIMIT 1) AS cliente_nome,
             (SELECT nome FROM formas_pgto f WHERE f.id = r.forma_pgto AND f.empresa = r.empresa LIMIT 1) AS forma_pgto_nome
        FROM receber r
-      WHERE r.empresa = ? AND r.referencia = 'Venda'
+      WHERE r.empresa = ? AND r.referencia = 'Venda'${ownerFilter}
       ORDER BY r.data_lanc DESC, r.id DESC`,
-    [companyId]
+    params
   );
   return rows;
 }

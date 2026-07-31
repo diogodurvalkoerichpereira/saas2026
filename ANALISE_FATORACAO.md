@@ -22,10 +22,10 @@ A análise cruza três fontes:
 | Frente | Situação |
 |---|---|
 | **Telas operacionais (tenant)** | ✅ ~45 de 55 permissões fatoradas; 3 parciais; 7 ausentes |
-| **Administração SaaS** | ⚠️ núcleo fatorado; gestão de usuários/permissões SaaS ausente ou só-leitura |
-| **Senha** | ⚠️ P0 corrigido nesta entrega (troca self-service do staff, rate limiting, credenciais hardcoded); recuperação/reset por e-mail e MFA seguem ausentes |
-| **Perfis de acesso** | ⚠️ modelo sólido, mas `acessar_painel`/`mostrar_registros` sem enforcement |
-| **Configurações / Relatórios** | ⚠️ Configurações ~18 de ~60 campos; 4 relatórios legados ausentes |
+| **Administração SaaS** | ✅ P1 corrigido nesta entrega — CRUD e permissões de usuários SaaS agora completos |
+| **Senha** | ✅ P0 corrigido nesta entrega (troca self-service do staff, rate limiting, credenciais hardcoded); recuperação/reset por e-mail e MFA seguem ausentes (fora do que é responsável fabricar sem provedor real) |
+| **Perfis de acesso** | ✅ P1 corrigido nesta entrega — `acessar_painel`/`mostrar_registros` com enforcement real |
+| **Configurações / Relatórios** | ✅ P2 corrigido nesta entrega — Configurações ampliadas e aplicadas (multa/juros, textos padrão); todos os relatórios legados com equivalente |
 
 ---
 
@@ -64,8 +64,8 @@ home, usuarios, funcionarios (RH), fornecedores, formas_pgto, cargos, frequencia
 
 | Chave legada | Tela | Status Node |
 |---|---|---|
-| `usuarios` | Usuários SaaS | ⚠️ **somente leitura** — sem CRUD nem atribuição de permissões, apesar de existirem `acessos_sas`/`usuarios_permissoes_sas` |
-| `acessos` / `grupo_acessos` | Catálogo/grupos de permissão SaaS | ❌ ausente |
+| `usuarios` | Usuários SaaS | ✅ **corrigido** — CRUD completo + atribuição de permissões (`editUserPermissions` em `admin.js`, reaproveitando `/api/users` e `/api/users/:id/permissions`, já companyId-aware) |
+| `acessos` / `grupo_acessos` | Catálogo/grupos de permissão SaaS | ❌ ausente (fora do escopo do P1; gestão do catálogo em si, não das atribuições) |
 | `tarefas` / `lancar_tarefas` | Tarefas SaaS (`tarefas_sas`) | ❌ ausente (tabela não consumida) |
 | `site` / `configuracoes` | Site/config da plataforma | ❌ ausente |
 
@@ -104,31 +104,32 @@ home, usuarios, funcionarios (RH), fornecedores, formas_pgto, cargos, frequencia
 
 **Lacunas:**
 
-- ❌ **`acessar_painel` e `mostrar_registros` sem enforcement.** São persistidos (`users.service.js:35,51`), têm campo no formulário (`pages.js:101-102`) e `mostrar_registros` é lido no login (`auth.service.js:8`) — mas **nenhuma query ou middleware os aplica**. No legado, `acessar_painel='Não'` bloqueia o acesso ao painel e `mostrar_registros='Não'` limita as listagens aos registros do próprio usuário. **Hoje todos os usuários da empresa veem todos os registros.**
-- ⚠️ Sem tela para gerir permissões de usuários **SaaS**.
-- ⚠️ Sem o conceito de "grupos de acesso" (templates de permissão reutilizáveis).
+- ✅ **corrigido — `acessar_painel` e `mostrar_registros` agora com enforcement.** `acessar_painel='Não'` bloqueia o login no painel (`auth.service.js`); `mostrar_registros='Não'` é embarcado no JWT e escopa as listagens de clientes, vendas e OS/orçamentos ao próprio usuário (`clients.service.js`, `sales.service.js`, `work.service.js`).
+- ✅ **corrigido — CRUD de permissões de usuários SaaS** na administração (`admin.js`).
+- ⚠️ Sem o conceito de "grupos de acesso" (templates de permissão reutilizáveis) — não fazia parte do escopo do P1.
 
 ---
 
-## E. Configurações — `config` (parcial: ~18 de ~60 campos)
+## E. Configurações — `config` (ampliado nesta entrega: ~34 de ~60 campos)
 
-**Editáveis no Node** (`content.routes.js:29-38`): nome, email, telefone, endereco, instagram, cnpj, cidade_sistema, marca_dagua, assinatura_recibo, impressao_automatica, abertura_caixa, dias_comissao, assinatura_cliente, cobrar_automaticamente, cobrar_duas_vezes, pagina_entrada, url_site, meta_descricao.
+**Editáveis no Node** (`content.routes.js`): nome, email, telefone, endereco, instagram, cnpj, cidade_sistema, marca_dagua, assinatura_recibo, impressao_automatica, abertura_caixa, dias_comissao, assinatura_cliente, cobrar_automaticamente, cobrar_duas_vezes, pagina_entrada, url_site, meta_descricao, **multa_atraso, juros_atraso, dias_lembrete, mao_obra_orc/os, senha_aparelho_orc/os, defeito_orc/os, avarias_orc/os, acessorios_orc/os, laudo_orc/os** (12 campos novos ✅ corrigidos).
 
-**Não fatorados (destaques):**
+- ✅ **`multa_atraso`/`juros_atraso` agora aplicados automaticamente**: `finance.service.js#settleEntry` calcula multa (% fixo) e juros (% ao dia de atraso) sobre o valor quando a baixa ocorre após o vencimento e nenhum valor manual é informado; o operador pode sobrepor via `PATCH .../settle { multa, juros }`.
+- ✅ **Textos padrão de OS/orçamento agora aplicados**: `work.service.js#createWork` usa os textos de `config` (`defeito_*`, `laudo_*`, `acessorios_*`, `senha_aparelho_*`, e `avarias_*`+`mao_obra_*` mesclados em `condicoes`) como valor inicial quando o campo não é informado na criação.
 
-- `multa_atraso` / `juros_atraso` — **não referenciados em `src/`**: não há tela nem **cálculo automático de multa/juros** sobre contas em atraso.
+**Ainda não fatorados:**
+
 - Logos e branding: `logo`, `icone`, `logo_rel`, `logo_painel`, `imagem_assinatura`, `fundo_login` — sem upload.
 - Integrações por empresa: `api_whatsapp`/`token_whatsapp`/`instancia_whatsapp`, `api_pagamento`/`chave_api_asaas`/`access_token`/`public_key` — Node usa apenas variáveis de ambiente, não configuração por tenant.
-- Textos padrão de OS/orçamento: `mao_obra_*`, `defeito_*`, `avarias_*`, `acessorios_*`, `laudo_*`, `senha_aparelho_*`.
-- Outros: `dias_lembrete`, `taxa_cartao_api`, `alterar_acessos`, `limitar_recursos`, `multi_empresas`, `entrar_automatico`, `mostrar_preloader`, `ocultar_mobile`, `endereco_checkout`.
+- Outros: `taxa_cartao_api`, `alterar_acessos`, `limitar_recursos`, `multi_empresas`, `entrar_automatico`, `mostrar_preloader`, `ocultar_mobile`, `endereco_checkout`.
 
-> `marca_dagua`, `assinatura_recibo` e `impressao_automatica` são graváveis, mas **não há geração de PDF/recibo** que os consuma (o módulo `files` apenas armazena anexos).
+> `marca_dagua`, `assinatura_recibo` e `impressao_automatica` continuam graváveis mas sem geração de PDF/recibo que os consuma — ver seção G (P3).
 
 ---
 
 ## F. Relatórios
 
-De 9 relatórios legados, **5 têm equivalente** e **4 estão ausentes**. O Node adicionou fluxo de caixa e inventário no lugar.
+Todos os 9 relatórios legados agora têm equivalente no Node. O Node também adicionou fluxo de caixa e inventário, que não existiam no legado.
 
 | Relatório legado | Node |
 |---|---|
@@ -137,10 +138,10 @@ De 9 relatórios legados, **5 têm equivalente** e **4 estão ausentes**. O Node
 | `rel_caixas` | ✅ `cashReport` |
 | `rel_inadimplementes` | ✅ `delinquencyReport` |
 | `rel_contratos` | ⚠️ parcial (via `operations/contracts`) |
-| `rel_sintetico_despesas` | ❌ ausente |
-| `rel_sintetico_receber` | ❌ ausente |
-| `rel_balanco` (balanço anual) | ❌ ausente |
-| `rel_prod_vendidos` (mais vendidos) | ❌ ausente |
+| `rel_sintetico_despesas` | ✅ **corrigido** — `syntheticPayablesReport` (agrupado por plano de contas) |
+| `rel_sintetico_receber` | ✅ **corrigido** — `syntheticReceivablesReport` (agrupado por referência) |
+| `rel_balanco` (balanço anual) | ✅ **corrigido** — `annualBalanceReport` (receita/despesa/saldo por mês) |
+| `rel_prod_vendidos` (mais vendidos) | ✅ **corrigido** — `topProductsReport` |
 | — | ➕ `operationalSummary`, `cashFlowReport`, `inventoryReport` (novos) |
 
 ---
@@ -152,7 +153,7 @@ De 9 relatórios legados, **5 têm equivalente** e **4 estão ausentes**. O Node
 - **Conciliação bancária** — ❌ ausente.
 - **Folha de pagamento completa** — ⚠️ parcial (só ponto + estimativa, sem rubricas/encargos).
 - **Webhooks de Asaas/WhatsApp e homologação das integrações** — ❌ ausente.
-- **Multa/juros de atraso automáticos** — ❌ ausente.
+- **Multa/juros de atraso automáticos** — ✅ **corrigido** (ver seção E) — não estava mais ausente ao chegar em P3.
 - **Upgrade de plano self-service** e **upload de logos/assinatura** — ❌ ausente.
 
 ---
@@ -160,9 +161,9 @@ De 9 relatórios legados, **5 têm equivalente** e **4 estão ausentes**. O Node
 ## H. Backlog priorizado de remediação
 
 - **P0 — Senha/segurança — ✅ concluído em 31/07/2026:** troca de senha self-service do staff (`PATCH /api/users/me/password` + tela "Alterar senha" em `index.html`/`admin.html`); rate limiting em memória nos logins (`src/middlewares/login-rate-limit.js`, 20 tentativas/15min por IP+e-mail); credenciais demo hardcoded removidas de `admin.html`/`portal.html`. *(Recuperação de senha por e-mail continua pendente — exige decidir provedor de e-mail antes.)*
-- **P1 — Perfis:** aplicar `mostrar_registros` (escopar listagens ao `usuario`) e `acessar_painel` (bloquear login no painel); CRUD + atribuição de permissões de usuários SaaS.
-- **P2 — Configurações/Relatórios:** ampliar `settingsSchema` para os campos de negócio faltantes (multa/juros, textos padrão de OS/orçamento, `dias_lembrete`) e aplicá-los; relatórios `rel_balanco`, `rel_prod_vendidos` e sintéticos.
-- **P3 — Módulos amplos:** fiscal/NF-e, PDF/impressão, conciliação bancária, folha completa, webhooks (esforço maior, fora do "core de fatoração").
+- **P1 — Perfis — ✅ concluído em 31/07/2026:** `mostrar_registros` escopando listagens de clientes/vendas/OS/orçamentos ao usuário; `acessar_painel` bloqueando login no painel; CRUD + atribuição de permissões de usuários SaaS em `admin.js`.
+- **P2 — Configurações/Relatórios — ✅ concluído em 31/07/2026:** `settingsSchema` ampliado com multa/juros, textos padrão de OS/orçamento e `dias_lembrete`, todos aplicados (não só armazenados); relatórios `rel_balanco`, `rel_prod_vendidos` e os dois sintéticos implementados.
+- **P3 — Módulos amplos — ver seção J.** Fiscal/NF-e, PDF/impressão, conciliação bancária, folha completa e webhooks — parte foi endereçada nesta entrega (dentro do que é honesto entregar sem infraestrutura externa real); a emissão fiscal segue como scaffold não homologado.
 
 ## I. Como validar
 

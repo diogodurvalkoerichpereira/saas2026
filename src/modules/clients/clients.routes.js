@@ -21,7 +21,8 @@ const idSchema = z.coerce.number().int().positive();
 router.use(authenticate, permit('clientes'));
 router.get('/', async (req, res, next) => {
   try {
-    const rows = await listClients(Number(req.auth.companyId));
+    const restrictToUserId = req.auth.mostrarRegistros === false ? Number(req.auth.sub) : null;
+    const rows = await listClients(Number(req.auth.companyId), restrictToUserId);
     res.json(listResponse(rows, req.query, { searchFields: ['nome', 'cpf', 'telefone', 'email', 'cidade'], defaultSort: 'nome' }));
   } catch (error) { next(error); }
 });

@@ -54,7 +54,8 @@ router.get('/:type', async (req, res, next) => {
   try {
     const type = typeSchema.parse(req.params.type);
     configFor(type);
-    const rows = await listWork(type, Number(req.auth.companyId), req.query.status);
+    const restrictToUserId = req.auth.mostrarRegistros === false ? Number(req.auth.sub) : null;
+    const rows = await listWork(type, Number(req.auth.companyId), req.query.status, restrictToUserId);
     res.json(listResponse(rows, req.query, { searchFields: ['cliente_nome', 'funcionario_nome', 'tecnico_nome', 'equipamento', 'marca', 'modelo', 'defeito'], statusField: 'status', dateField: 'data', defaultSort: 'id' }));
   } catch (error) { next(error); }
 });

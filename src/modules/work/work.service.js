@@ -115,12 +115,18 @@ async function replaceWorkItems(type, id, items, companyId, userId, db) {
   };
 }
 
-async function listWork(type, companyId, status, db = pool) {
+async function listWork(type, companyId, status, restrictToUserId, db = pool) {
   const config = configFor(type);
   const params = [companyId];
   const statusFilter = status ? ' AND status = ?' : '';
   if (status) params.push(status);
-  const [rows] = await db.execute(`SELECT ${config.select} FROM ${config.table} WHERE empresa = ?${statusFilter} ORDER BY data DESC, id DESC`, params);
+  let ownerFilter = '';
+  if (restrictToUserId) {
+    ownerFilter = type === 'orders' ? ' AND (funcionario = ? OR tecnico = ?)' : ' AND funcionario = ?';
+    params.push(restrictToUserId);
+    if (type === 'orders') params.push(restrictToUserId);
+  }
+  const [rows] = await db.execute(`SELECT ${config.select} FROM ${config.table} WHERE empresa = ?${statusFilter}${ownerFilter} ORDER BY data DESC, id DESC`, params);
   return rows;
 }
 
@@ -129,6 +135,17 @@ async function getWork(type, id, companyId, db = pool) {
   const [rows] = await db.execute(`SELECT ${config.select} FROM ${config.table} WHERE id = ? AND empresa = ? LIMIT 1`, [id, companyId]);
   if (!rows[0]) throw Object.assign(new Error('Registro não encontrado.'), { status: 404 });
   return { ...rows[0], items: await listWorkItems(type, id, companyId, db) };
+}
+
+async function loadTextDefaults(type, companyId, db) {
+  const suffix = type === 'orders' ? '_os' : '_orc';
+  const [rows] = await db.execute(
+    `SELECT mao_obra${suffix} AS mao_obra_texto, senha_aparelho${suffix} AS senha_aparelho, defeito${suffix} AS defeito,
+            avarias${suffix} AS avarias, acessorios${suffix} AS acessorios, laudo${suffix} AS laudo
+       FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1`,
+    [companyId]
+  );
+  return rows[0] || {};
 }
 
 async function createWork(type, data, companyId, userId, db = pool) {
@@ -143,8 +160,10 @@ async function createWork(type, data, companyId, userId, db = pool) {
     const totalServices = totals.filter((item) => item.kind === 'service').reduce((sum, item) => sum + item.total, 0);
     const itemTotal = totalProducts + totalServices;
     const value = data.items?.length ? itemTotal : data.valor ?? 0;
+    const defaults = await loadTextDefaults(type, companyId, connection);
+    const condicoesDefault = [defaults.avarias, defaults.mao_obra_texto].filter(Boolean).join(' ');
     const baseColumns = ['cliente', 'data', 'data_entrega', 'dias_validade', 'valor', 'desconto', 'tipo_desconto', 'subtotal', 'obs', 'status', 'total_produtos', 'total_servicos', 'funcionario', 'frete', 'equipamento', 'marca', 'modelo', 'defeito', 'condicoes', 'acessorios', 'laudo', 'senha_ap', 'mao_obra', 'vall', 'empresa'];
-    const values = [data.cliente, data.data, data.data_entrega, data.dias_validade ?? 0, value, data.desconto ?? 0, data.tipo_desconto ?? 'Valor', value, data.obs ?? '', data.status, totalProducts, totalServices, userId, data.frete ?? 0, data.equipamento ?? '', data.marca ?? '', data.modelo ?? '', data.defeito ?? '', data.condicoes ?? '', data.acessorios ?? '', data.laudo ?? '', data.senha_ap ?? '', data.mao_obra ?? 0, data.vall ?? 0, companyId];
+    const values = [data.cliente, data.data, data.data_entrega, data.dias_validade ?? 0, value, data.desconto ?? 0, data.tipo_desconto ?? 'Valor', value, data.obs ?? '', data.status, totalProducts, totalServices, userId, data.frete ?? 0, data.equipamento ?? '', data.marca ?? '', data.modelo ?? '', data.defeito ?? defaults.defeito ?? '', data.condicoes ?? condicoesDefault, data.acessorios ?? defaults.acessorios ?? '', data.laudo ?? defaults.laudo ?? '', data.senha_ap ?? defaults.senha_aparelho ?? '', data.mao_obra ?? 0, data.vall ?? 0, companyId];
     if (type === 'orders') {
       baseColumns.push('tecnico', 'val_entrada', 'dias_garantia', 'forma_pgto', 'orcamento', 'pago');
       values.push(data.tecnico ?? 0, data.val_entrada ?? 0, data.dias_garantia ?? '', data.forma_pgto ?? '', data.orcamento ?? 0, data.pago ?? 'Não');
@@ -203,4 +222,4 @@ async function updateStatus(type, id, status, companyId, db = pool) {
   if (!result.affectedRows) throw Object.assign(new Error('Registro não encontrado.'), { status: 404 });
 }
 
-module.exports = { configFor, assertTransition, listWork, listWorkItems, getWork, createWork, updateWork, updateStatus };
+module.exports = { configFor, assertTransition, listWork, listWorkItems, getWork, createWork, updateWork, updateStatus, loadTextDefaults };

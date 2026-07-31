@@ -3,8 +3,10 @@ const { pool } = require('../../config/database');
 
 const fields = ['nome', 'cpf', 'telefone', 'email', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep', 'tipo_pessoa', 'data_nasc', 'complemento', 'marketing', 'ativo'];
 
-async function listClients(companyId, db = pool) {
-  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, IF(senha_crip IS NULL OR senha_crip = '', 'Não', 'Sim') AS portal_ativo FROM clientes WHERE empresa = ? ORDER BY nome`, [companyId]);
+async function listClients(companyId, restrictToUserId, db = pool) {
+  const ownerFilter = restrictToUserId ? ' AND usuario = ?' : '';
+  const params = restrictToUserId ? [companyId, restrictToUserId] : [companyId];
+  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, IF(senha_crip IS NULL OR senha_crip = '', 'Não', 'Sim') AS portal_ativo FROM clientes WHERE empresa = ?${ownerFilter} ORDER BY nome`, params);
   return rows;
 }
 

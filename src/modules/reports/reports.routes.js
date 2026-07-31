@@ -4,7 +4,10 @@ const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
 const { z } = require('zod');
 const { listResponse } = require('../../lib/list-response');
-const { financialSummary, operationalSummary, salesReport, cashFlowReport, inventoryReport, delinquencyReport, cashReport } = require('./reports.service');
+const {
+  financialSummary, operationalSummary, salesReport, cashFlowReport, inventoryReport, delinquencyReport, cashReport,
+  topProductsReport, annualBalanceReport, syntheticPayablesReport, syntheticReceivablesReport
+} = require('./reports.service');
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 function period(raw) {
@@ -13,7 +16,7 @@ function period(raw) {
   return z.object({ from: date.default(first), to: date.default(today.toISOString().slice(0, 10)) }).parse(raw);
 }
 
-router.use(authenticate, permit('home', 'rel_financeiro', 'rel_vendas'));
+router.use(authenticate, permit('home', 'rel_financeiro', 'rel_vendas', 'rel_balanco', 'rel_prod_vendidos', 'rel_sintetico_despesas', 'rel_sintetico_receber'));
 router.get('/financial', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => { try { res.json(await financialSummary(Number(req.auth.companyId))); } catch (error) { next(error); } });
 router.get('/operational', async (req, res, next) => { try { res.json(await operationalSummary(Number(req.auth.companyId))); } catch (error) { next(error); } });
 router.get('/sales', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
@@ -30,5 +33,20 @@ router.get('/delinquency', authorize('Administrador', 'Gerente', 'Tesoureiro', '
 });
 router.get('/cash-registers', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
   try { res.json(listResponse(await cashReport(Number(req.auth.companyId), period(req.query)), req.query, { searchFields: ['operador_nome', 'obs'], dateField: 'data_abertura', defaultSort: 'data_abertura' })); } catch (error) { next(error); }
+});
+router.get('/top-products', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
+  try { res.json(listResponse(await topProductsReport(Number(req.auth.companyId), period(req.query)), req.query, { searchFields: ['codigo', 'nome'], defaultSort: 'quantidade_vendida' })); } catch (error) { next(error); }
+});
+router.get('/annual-balance', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
+  try {
+    const year = z.coerce.number().int().min(2000).max(2100).default(new Date().getFullYear()).parse(req.query.year);
+    res.json(listResponse(await annualBalanceReport(Number(req.auth.companyId), year), req.query, { defaultSort: 'mes' }));
+  } catch (error) { next(error); }
+});
+router.get('/synthetic-payables', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
+  try { res.json(listResponse(await syntheticPayablesReport(Number(req.auth.companyId), period(req.query)), req.query, { searchFields: ['categoria'], defaultSort: 'pendente' })); } catch (error) { next(error); }
+});
+router.get('/synthetic-receivables', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {
+  try { res.json(listResponse(await syntheticReceivablesReport(Number(req.auth.companyId), period(req.query)), req.query, { searchFields: ['categoria'], defaultSort: 'pendente' })); } catch (error) { next(error); }
 });
 module.exports = router;

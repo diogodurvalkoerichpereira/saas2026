@@ -15,7 +15,8 @@ const reasonSchema = z.object({ reason: z.string().trim().min(3).max(255) });
 router.use(authenticate, permit('vendas'));
 router.get('/', async (req, res, next) => {
   try {
-    const rows = await listSales(Number(req.auth.companyId));
+    const restrictToUserId = req.auth.mostrarRegistros === false ? Number(req.auth.sub) : null;
+    const rows = await listSales(Number(req.auth.companyId), restrictToUserId);
     res.json(listResponse(rows, req.query, { searchFields: ['cliente_nome', 'forma_pgto_nome', 'pago'], statusField: 'node_status', dateField: 'data_lanc', defaultSort: 'id' }));
   } catch (error) { next(error); }
 });
