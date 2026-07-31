@@ -184,9 +184,7 @@ async function bootstrapEntry() {
   if (new URLSearchParams(location.search).has('acesso')) return;
   try {
     const entry = await api('/api/public/entry', { authenticated: false });
-    if (entry?.paginaEntrada === 'Site' && entry.companyId) {
-      location.replace(`/store.html?company=${entry.companyId}`);
-    }
+    if (entry?.paginaEntrada === 'Site') location.replace('/planos.html');
   } catch { /* mantém a tela de login */ }
 }
 

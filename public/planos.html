@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Planos e assinatura · SaaS 2026</title>
+  <link rel="stylesheet" href="/standalone.css">
+  <style>
+    .plans-hero { text-align: center; padding: 32px 16px 8px; }
+    .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; padding: 18px 0 32px; }
+    .plan-card { display: flex; flex-direction: column; gap: 14px; }
+    .plan-price { font-size: 2rem; font-weight: 800; color: var(--brand); }
+    .plan-price small { font-size: .85rem; color: var(--muted); font-weight: 600; }
+    .plan-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+    .plan-items li { display: flex; gap: 8px; align-items: flex-start; font-size: .88rem; }
+    .plan-items li::before { content: "✓"; color: var(--brand); font-weight: 800; }
+    .plan-limits { color: var(--muted); font-size: .8rem; }
+    .plan-card .button { margin-top: auto; }
+    .sub-field { display: grid; gap: 5px; margin-bottom: 12px; }
+    .sub-field label { font-size: .82rem; font-weight: 700; color: var(--ink); }
+    .sub-field input, .sub-field select { padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; font: inherit; }
+    dialog#sub-modal { border: 0; border-radius: 16px; padding: 0; max-width: 460px; width: 92%; box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+    dialog#sub-modal::backdrop { background: rgba(15,22,19,.55); }
+    .sub-frame { padding: 22px; }
+    .sub-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .sub-plan-tag { display: inline-block; margin-bottom: 14px; padding: 4px 10px; border-radius: 999px; background: #e9f6f0; color: #15704a; font-size: .78rem; font-weight: 800; }
+    .sub-success { display: grid; gap: 10px; }
+    .cred-box { padding: 12px 14px; border: 1px dashed var(--line); border-radius: 10px; background: #f7faf9; font-size: .88rem; display: grid; gap: 6px; }
+    .cred-box code { font-weight: 800; color: var(--ink); }
+    .form-error { color: #b42318; font-size: .82rem; min-height: 1em; margin: 2px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="store-header">
+    <div class="brand" style="margin:0"><span class="brand-mark">S26</span><div><strong>SaaS 2026</strong><div class="muted">Planos e assinatura</div></div></div>
+    <nav style="display:flex;gap:16px;align-items:center"><a href="/index.html?acesso=1">Acessar sistema</a></nav>
+  </header>
+  <main class="store-main">
+    <section class="plans-hero">
+      <h1>Escolha o plano ideal para o seu negócio</h1>
+      <p class="muted">Assine e comece com 3 dias de teste. Cancele quando quiser.</p>
+    </section>
+    <div class="plans-grid" id="plans-grid"><p class="muted">Carregando planos…</p></div>
+  </main>
+
+  <dialog id="sub-modal">
+    <div class="sub-frame">
+      <div class="sub-head"><h2 style="margin:0">Finalizar assinatura</h2><button class="button ghost small" type="button" data-close>Fechar</button></div>
+      <span class="sub-plan-tag" id="sub-plan-tag"></span>
+      <form id="sub-form">
+        <input type="hidden" name="planId" id="sub-plan-id">
+        <div class="sub-field"><label>Nome / Razão social</label><input name="nome" maxlength="50" required></div>
+        <div class="sub-field"><label>E-mail</label><input name="email" type="email" maxlength="50" required></div>
+        <div class="sub-field"><label>Telefone</label><input name="telefone" maxlength="20" required placeholder="(00) 00000-0000"></div>
+        <div class="sub-field"><label>Tipo de pessoa</label><select name="tipo_pessoa"><option value="Jurídica">Jurídica</option><option value="Física">Física</option></select></div>
+        <div class="sub-field"><label>CPF / CNPJ (opcional)</label><input name="cpf" maxlength="25"></div>
+        <p class="form-error" id="sub-error" role="alert"></p>
+        <button class="button primary" type="submit" style="width:100%">Assinar agora</button>
+      </form>
+      <div class="sub-success" id="sub-success" hidden></div>
+    </div>
+  </dialog>
+
+  <script type="module" src="/planos.js"></script>
+</body>
+</html>

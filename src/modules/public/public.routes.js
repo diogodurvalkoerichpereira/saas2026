@@ -1,8 +1,24 @@
-const { randomUUID } = require('node:crypto');
+const { randomUUID, randomBytes } = require('node:crypto');
 const router = require('express').Router();
+const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { normalizeRecord } = require('../../lib/list-response');
+
+const slugify = (value) => String(value || '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'empresa';
+
+// Rate limit simples por IP para a auto-assinatura pública (endpoint não autenticado).
+const subscribeAttempts = new Map();
+function subscribeRateLimit(req, res, next) {
+  const now = Date.now();
+  const entry = subscribeAttempts.get(req.ip);
+  if (!entry || now - entry.first >= 15 * 60 * 1000) { subscribeAttempts.set(req.ip, { count: 1, first: now }); return next(); }
+  if (entry.count >= 5) return res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' });
+  entry.count += 1;
+  next();
+}
 
 const companyIdSchema = z.coerce.number().int().positive();
 const checkoutSchema = z.object({
@@ -53,6 +69,91 @@ router.get('/entry', async (_req, res, next) => {
     const row = rows[0] || {};
     res.json({ companyId: row.company_id ?? null, paginaEntrada: row.pagina_entrada || 'Login' });
   } catch (error) { next(error); }
+});
+
+// Planos ativos para a landing pública de assinatura (com as características de cada plano).
+router.get('/plans', async (_req, res, next) => {
+  try {
+    const [plans] = await pool.execute(
+      `SELECT id, nome, valor, clientes, usuarios, dispositivos FROM planos WHERE ativo = 'Sim' ORDER BY valor ASC, id ASC`
+    );
+    const itemsByPlan = {};
+    if (plans.length) {
+      const [items] = await pool.query('SELECT plano, nome FROM planos_itens WHERE plano IN (?) ORDER BY id', [plans.map((p) => p.id)]);
+      for (const item of items) { (itemsByPlan[item.plano] = itemsByPlan[item.plano] || []).push(item.nome); }
+    }
+    res.json(plans.map((plan) => ({ ...normalizeRecord(plan), itens: itemsByPlan[plan.id] || [] })));
+  } catch (error) { next(error); }
+});
+
+// Auto-assinatura pública: cria a empresa, o usuário administrador, copia os recursos do
+// plano e gera a primeira mensalidade (pendente). Não processa pagamento — isso depende de
+// gateway/credenciais e é tratado à parte.
+const subscribeSchema = z.object({
+  planId: z.coerce.number().int().positive(),
+  nome: z.string().trim().min(2).max(50),
+  email: z.string().trim().email().max(50),
+  telefone: z.string().trim().min(8).max(20),
+  tipo_pessoa: z.enum(['Física', 'Jurídica']).optional(),
+  cpf: z.string().trim().max(25).optional()
+});
+router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
+  let conn;
+  try {
+    const data = subscribeSchema.parse(req.body);
+    conn = await pool.getConnection();
+    const [[plan]] = await conn.execute(`SELECT id, nome, valor, dispositivos FROM planos WHERE id = ? AND ativo = 'Sim' LIMIT 1`, [data.planId]);
+    if (!plan) throw Object.assign(new Error('Plano indisponível.'), { status: 404 });
+    const [dups] = await conn.execute('SELECT id FROM empresas WHERE email = ? OR telefone = ? LIMIT 1', [data.email, data.telefone]);
+    if (dups[0]) throw Object.assign(new Error('E-mail ou telefone já cadastrado. Faça login para continuar.'), { status: 409 });
+
+    const mensalidade = Number(plan.valor) || 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const dataTeste = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    const tempPassword = randomBytes(9).toString('base64url');
+    const senhaCrip = await bcrypt.hash(tempPassword, 12);
+
+    await conn.beginTransaction();
+    const [emp] = await conn.execute(
+      `INSERT INTO empresas (nome, cpf, telefone, email, tipo_pessoa, data_cad, dias_teste, mensalidade, ativo, data_teste, plano, frequencia, dispositivos)
+       VALUES (?, ?, ?, ?, ?, CURRENT_DATE, 3, ?, 'Sim', ?, ?, 30, ?)`,
+      [data.nome, data.cpf ?? null, data.telefone, data.email, data.tipo_pessoa ?? 'Jurídica', mensalidade, dataTeste, plan.id, plan.dispositivos ?? null]
+    );
+    const companyId = emp.insertId;
+    const slug = `${slugify(data.nome)}-${companyId}`;
+    await conn.execute('UPDATE empresas SET url_site = ? WHERE id = ?', [slug, companyId]);
+    await conn.execute(
+      `INSERT INTO usuarios (nome, email, senha_crip, nivel, ativo, telefone, data, acessar_painel, mostrar_registros, empresa)
+       VALUES (?, ?, ?, 'Administrador', 'Sim', ?, CURRENT_DATE, 'Sim', 'Sim', ?)`,
+      [data.nome, data.email, senhaCrip, data.telefone, companyId]
+    );
+    await conn.execute('INSERT INTO clientes_recursos (empresa, recurso) SELECT ?, recurso FROM planos_recursos WHERE plano = ?', [companyId, plan.id]);
+    let receivableId = null;
+    if (mensalidade > 0) {
+      const [rec] = await conn.execute(
+        `INSERT INTO receber_sas (descricao, cliente, valor, subtotal, vencimento, data_lanc, referencia, pago, empresa)
+         VALUES ('Mensalidade SAAS', ?, ?, ?, ?, CURRENT_DATE, 'Mensalidade', 'Não', 0)`,
+        [companyId, mensalidade, mensalidade, today]
+      );
+      receivableId = rec.insertId;
+    }
+    await conn.execute('INSERT INTO config (empresa, nome, email, telefone, url_site) VALUES (?, ?, ?, ?, ?)',
+      [companyId, data.nome, data.email, data.telefone, slug]);
+    await conn.commit();
+
+    res.status(201).json({
+      companyId,
+      email: data.email,
+      tempPassword,
+      plano: { nome: plan.nome, valor: mensalidade },
+      mensalidade: mensalidade > 0 ? { id: receivableId, valor: mensalidade, vencimento: today } : null
+    });
+  } catch (error) {
+    if (conn) { try { await conn.rollback(); } catch { /* ignore */ } }
+    next(error);
+  } finally {
+    if (conn) conn.release();
+  }
 });
 
 router.get('/:companyId/site', async (req, res, next) => {
