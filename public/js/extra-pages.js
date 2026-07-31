@@ -714,13 +714,31 @@ async function renderHr(route) {
   const tab = route.query.tab === 'payroll' ? 'payroll' : 'attendance';
   const tabs = `<div class="split-tabs"><a class="${tab === 'attendance' ? 'active' : ''}" href="#/hr?tab=attendance">Ponto</a><a class="${tab === 'payroll' ? 'active' : ''}" href="#/hr?tab=payroll">Folha estimada</a></div>`;
   if (tab === 'payroll') {
-    const payroll = await api('/api/hr/payroll');
-    root().innerHTML = `${pageHeader('RH e folha', `Estimativa de ${date(payroll.from)} a ${date(payroll.to)}. Valores devem ser conferidos antes do fechamento.`)}${tabs}
-      <section class="panel">${table([
-        { key: 'nome', label: 'Funcionário' }, { key: 'nivel', label: 'Perfil', render: badge }, { key: 'salario', label: 'Salário', render: money },
-        { key: 'horas_trabalhadas', label: 'Horas trabalhadas', render: text }, { key: 'horas_extras', label: 'Horas extras', render: text },
-        { key: 'faltas', label: 'Faltas', render: number }, { key: 'total_estimado', label: 'Total estimado', render: money }
-      ], payroll.items)}</section>`;
+    const users = await allItems('/api/users', 'Sim');
+    const loadPayroll = async () => {
+      const payroll = await api('/api/hr/payroll');
+      const competencia = payroll.from.slice(0, 7);
+      root().innerHTML = `${pageHeader('RH e folha', `Estimativa de ${date(payroll.from)} a ${date(payroll.to)}. Proventos e descontos são lançados manualmente; encargos legais (INSS, FGTS, IRRF) não são calculados e dependem de validação contábil.`, `<button class="button primary" data-new-entry>${icon('plus')}Lançar na folha</button>`)}${tabs}
+        <section class="panel">${table([
+          { key: 'nome', label: 'Funcionário' }, { key: 'salario', label: 'Salário', render: money },
+          { key: 'horas_extras', label: 'Horas extras', render: text }, { key: 'faltas', label: 'Faltas', render: number },
+          { key: 'proventos', label: 'Proventos', render: money }, { key: 'descontos', label: 'Descontos', render: money },
+          { key: 'total_estimado', label: 'Total estimado', render: money }
+        ], payroll.items, (item) => `<button class="button ghost small" data-entries="${item.id}">${icon('list')}Lançamentos</button>`)}</section>`;
+      root().querySelector('[data-new-entry]').addEventListener('click', () => openForm({
+        title: 'Lançamento na folha', eyebrow: `Competência ${competencia}`, submitLabel: 'Adicionar',
+        record: { tipo: 'provento' },
+        fields: [
+          { name: 'employeeId', label: 'Funcionário', type: 'select', numeric: true, required: true, options: users.map((u) => ({ value: u.id, label: u.nome })) },
+          { name: 'tipo', label: 'Tipo', type: 'select', options: [{ value: 'provento', label: 'Provento (soma ao total)' }, { value: 'desconto', label: 'Desconto (subtrai do total)' }] },
+          { name: 'descricao', label: 'Descrição', required: true, max: 120, full: true },
+          { name: 'valor', label: 'Valor', type: 'number', step: '.01', min: 0, numeric: true, required: true }
+        ],
+        onSubmit: async (values) => { await api('/api/hr/payroll/entries', { method: 'POST', body: { ...values, competencia } }); toast('Lançamento adicionado.'); await loadPayroll(); }
+      }));
+      root().querySelectorAll('[data-entries]').forEach((button) => button.addEventListener('click', () => openPayrollEntries(button.dataset.entries, competencia, loadPayroll)));
+    };
+    await loadPayroll();
     return;
   }
   const load = async () => {
@@ -758,6 +776,34 @@ async function renderHr(route) {
     }));
   };
   await load();
+}
+
+async function openPayrollEntries(employeeId, competencia, onChange) {
+  const dialog = document.querySelector('#app-modal');
+  const form = document.querySelector('#modal-form');
+  const render = async () => {
+    const { items } = await api(`/api/hr/payroll/entries?competencia=${competencia}&employeeId=${employeeId}`);
+    document.querySelector('#modal-title').textContent = 'Lançamentos da folha';
+    document.querySelector('#modal-eyebrow').textContent = `Competência ${competencia}`;
+    document.querySelector('#modal-error').textContent = '';
+    const submitLabel = document.querySelector('#modal-submit-label');
+    if (submitLabel) submitLabel.textContent = 'Fechar';
+    document.querySelector('#modal-body').innerHTML = items.length
+      ? `<div class="detail-list">${items.map((entry) => `<div><small>${escapeHtml(entry.tipo)}</small><strong>${escapeHtml(entry.descricao)} · ${money(entry.valor)}</strong><button class="button danger small" type="button" data-del-entry="${entry.id}">${icon('trash')}Excluir</button></div>`).join('')}</div>`
+      : '<p class="muted">Nenhum lançamento nesta competência.</p>';
+    document.querySelector('#modal-body').querySelectorAll('[data-del-entry]').forEach((button) => button.addEventListener('click', async () => {
+      await api(`/api/hr/payroll/entries/${button.dataset.delEntry}`, { method: 'DELETE' });
+      toast('Lançamento removido.');
+      await render();
+      await onChange();
+    }));
+  };
+  await render();
+  const handler = (event) => { event.preventDefault(); dialog.close(); };
+  if (form._submitHandler) form.removeEventListener('submit', form._submitHandler);
+  form._submitHandler = handler;
+  form.addEventListener('submit', handler);
+  dialog.showModal();
 }
 
 const companySettingsFields = [

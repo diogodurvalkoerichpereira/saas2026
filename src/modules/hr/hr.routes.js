@@ -115,20 +115,76 @@ router.get('/payroll', authorize('Administrador', 'Gerente'), async (req, res, n
     const filters = z.object({ from: date.optional(), to: date.optional() }).parse(req.query);
     const from = filters.from || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const to = filters.to || new Date().toISOString().slice(0, 10);
+    const companyId = Number(req.auth.companyId);
+    // Lançamentos manuais somam por competência (YYYY-MM) dentro do período consultado.
     const [rows] = await pool.execute(
       `SELECT u.id, u.nome, u.nivel, u.salario, u.valor_hora, u.jornada_horas,
               COALESCE(SEC_TO_TIME(SUM(TIME_TO_SEC(j.total_horas))), '00:00:00') AS horas_trabalhadas,
               COALESCE(SEC_TO_TIME(SUM(TIME_TO_SEC(j.hora_extra))), '00:00:00') AS horas_extras,
               SUM(CASE WHEN j.falta = 'Sim' THEN 1 ELSE 0 END) AS faltas,
-              ROUND(COALESCE(u.salario, 0) + (COALESCE(SUM(TIME_TO_SEC(j.hora_extra)), 0) / 3600) * COALESCE(u.valor_hora, 0), 2) AS total_estimado
+              COALESCE(fl.proventos, 0) AS proventos, COALESCE(fl.descontos, 0) AS descontos,
+              ROUND(COALESCE(u.salario, 0) + (COALESCE(SUM(TIME_TO_SEC(j.hora_extra)), 0) / 3600) * COALESCE(u.valor_hora, 0)
+                    + COALESCE(fl.proventos, 0) - COALESCE(fl.descontos, 0), 2) AS total_estimado
          FROM usuarios u
          LEFT JOIN jornada j ON j.funcionario = u.id AND j.empresa = u.empresa AND j.data BETWEEN ? AND ?
+         LEFT JOIN (
+           SELECT funcionario,
+                  SUM(CASE WHEN tipo = 'provento' THEN valor ELSE 0 END) AS proventos,
+                  SUM(CASE WHEN tipo = 'desconto' THEN valor ELSE 0 END) AS descontos
+             FROM node_folha_lancamentos
+            WHERE empresa = ? AND competencia BETWEEN ? AND ?
+            GROUP BY funcionario
+         ) fl ON fl.funcionario = u.id
         WHERE u.empresa = ? AND u.ativo = 'Sim' AND u.nivel <> 'Cliente'
-        GROUP BY u.id, u.nome, u.nivel, u.salario, u.valor_hora, u.jornada_horas
+        GROUP BY u.id, u.nome, u.nivel, u.salario, u.valor_hora, u.jornada_horas, fl.proventos, fl.descontos
         ORDER BY u.nome`,
-      [from, to, Number(req.auth.companyId)]
+      [from, to, companyId, from.slice(0, 7), to.slice(0, 7), companyId]
     );
     res.json({ from, to, items: rows });
+  } catch (error) { next(error); }
+});
+
+const entrySchema = z.object({
+  employeeId: z.number().int().positive(),
+  competencia: z.string().regex(/^\d{4}-\d{2}$/),
+  tipo: z.enum(['provento', 'desconto']),
+  descricao: z.string().trim().min(2).max(120),
+  valor: z.number().positive()
+});
+router.get('/payroll/entries', authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const f = z.object({ competencia: z.string().regex(/^\d{4}-\d{2}$/).optional(), employeeId: id.optional() }).parse(req.query);
+    const where = ['empresa = ?'];
+    const params = [Number(req.auth.companyId)];
+    if (f.competencia) { where.push('competencia = ?'); params.push(f.competencia); }
+    if (f.employeeId) { where.push('funcionario = ?'); params.push(f.employeeId); }
+    const [rows] = await pool.execute(
+      `SELECT id, funcionario AS employeeId, competencia, tipo, descricao, valor FROM node_folha_lancamentos WHERE ${where.join(' AND ')} ORDER BY id DESC`,
+      params
+    );
+    res.json({ items: rows });
+  } catch (error) { next(error); }
+});
+router.post('/payroll/entries', authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const data = entrySchema.parse(req.body);
+    const [emp] = await pool.execute('SELECT id FROM usuarios WHERE id = ? AND empresa = ?', [data.employeeId, Number(req.auth.companyId)]);
+    if (!emp[0]) throw Object.assign(new Error('Funcionário não encontrado.'), { status: 404 });
+    const [r] = await pool.execute(
+      'INSERT INTO node_folha_lancamentos (empresa, funcionario, competencia, tipo, descricao, valor, criado_por) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [Number(req.auth.companyId), data.employeeId, data.competencia, data.tipo, data.descricao, data.valor, Number(req.auth.sub)]
+    );
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'criar', entity: 'folha_lancamento', entityId: r.insertId });
+    res.status(201).json({ id: r.insertId });
+  } catch (error) { next(error); }
+});
+router.delete('/payroll/entries/:id', authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const entryId = id.parse(req.params.id);
+    const [r] = await pool.execute('DELETE FROM node_folha_lancamentos WHERE id = ? AND empresa = ?', [entryId, Number(req.auth.companyId)]);
+    if (!r.affectedRows) throw Object.assign(new Error('Lançamento não encontrado.'), { status: 404 });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'excluir', entity: 'folha_lancamento', entityId: entryId });
+    res.status(204).end();
   } catch (error) { next(error); }
 });
 
