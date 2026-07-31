@@ -709,6 +709,14 @@ CREATE TABLE config (
   access_token VARCHAR(255) NULL,
   public_key VARCHAR(255) NULL,
   chave_api_asaas VARCHAR(255) NULL,
+  api_whatsapp VARCHAR(60) NULL,
+  multa_atraso DECIMAL(8,2) NULL,
+  juros_atraso DECIMAL(8,2) NULL,
+  dias_lembrete INT NULL,
+  mao_obra_orc VARCHAR(100) NULL, senha_aparelho_orc VARCHAR(100) NULL, defeito_orc VARCHAR(100) NULL,
+  avarias_orc VARCHAR(100) NULL, acessorios_orc VARCHAR(100) NULL, laudo_orc VARCHAR(100) NULL,
+  mao_obra_os VARCHAR(100) NULL, senha_aparelho_os VARCHAR(100) NULL, defeito_os VARCHAR(100) NULL,
+  avarias_os VARCHAR(100) NULL, acessorios_os VARCHAR(100) NULL, laudo_os VARCHAR(100) NULL,
   empresa INT NULL
 );
 CREATE TABLE recursos_site (

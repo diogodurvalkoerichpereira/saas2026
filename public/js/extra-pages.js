@@ -793,13 +793,16 @@ const companySettingsFields = [
   { name: 'acessorios_os', label: 'Texto padrão · Acessórios (OS)', optional: true, max: 100 },
   { name: 'senha_aparelho_os', label: 'Texto padrão · Senha do aparelho (OS)', optional: true, max: 100 },
   { name: 'avarias_os', label: 'Texto padrão · Avarias (OS)', optional: true, max: 100 },
-  { name: 'mao_obra_os', label: 'Texto padrão · Condições de mão de obra (OS)', optional: true, max: 100 }
+  { name: 'mao_obra_os', label: 'Texto padrão · Condições de mão de obra (OS)', optional: true, max: 100 },
+  { name: 'api_whatsapp', label: 'WhatsApp · URL da API', optional: true, max: 60, full: true },
+  { name: 'instancia_whatsapp', label: 'WhatsApp · Instância', optional: true, max: 70 },
+  { name: 'token_whatsapp', label: 'WhatsApp · Token (deixe em branco para manter o atual)', optional: true, max: 70 }
 ];
 
 async function renderSettings() {
   loading();
   const settings = await api('/api/content/settings') || {};
-  root().innerHTML = `${pageHeader('Configurações da empresa', 'Somente dados operacionais seguros. Tokens e chaves de API não são exibidos nem editados aqui.', `<button class="button primary" data-edit>${icon('edit')}Editar configurações</button>`)}
+  root().innerHTML = `${pageHeader('Configurações da empresa', 'Dados operacionais e integração de WhatsApp. O token é gravado de forma protegida e não é reexibido após salvo.', `<button class="button primary" data-edit>${icon('edit')}Editar configurações</button>`)}
     <section class="panel settings-summary"><div class="detail-list">
       <div><small>Empresa</small><strong>${escapeHtml(settings.nome || 'Não configurado')}</strong></div>
       <div><small>E-mail</small><strong>${escapeHtml(settings.email || 'Não configurado')}</strong></div>
@@ -809,6 +812,8 @@ async function renderSettings() {
       <div><small>Site</small><strong>${escapeHtml(settings.url_site || 'Não configurado')}</strong></div>
       <div><small>Multa por atraso</small><strong>${settings.multa_atraso != null ? `${settings.multa_atraso}%` : 'Não configurada'}</strong></div>
       <div><small>Juros por dia de atraso</small><strong>${settings.juros_atraso != null ? `${settings.juros_atraso}%` : 'Não configurado'}</strong></div>
+      <div><small>WhatsApp (instância)</small><strong>${escapeHtml(settings.instancia_whatsapp || 'Não configurado')}</strong></div>
+      <div><small>Token WhatsApp</small><strong>${settings.token_whatsapp_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
     </div></section>`;
   root().querySelector('[data-edit]').addEventListener('click', () => openForm({
     title: 'Configurações da empresa', eyebrow: 'Administração', fields: companySettingsFields, record: settings,

@@ -20,7 +20,7 @@ function normalizeDate(value) {
 
 function normalizeRecord(record) {
   return Object.fromEntries(Object.entries(record).map(([key, value]) => {
-    if (/^(data|vencimento|.*_date|.*_at)/.test(key)) return [key, normalizeDate(value)];
+    if (/^data|^vencimento|_date$|_at$/.test(key)) return [key, normalizeDate(value)];
     return [key, value];
   }));
 }

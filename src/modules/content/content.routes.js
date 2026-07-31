@@ -40,7 +40,8 @@ const settingsSchema = z.object({
   mao_obra_orc: optional(100), senha_aparelho_orc: optional(100), defeito_orc: optional(100),
   avarias_orc: optional(100), acessorios_orc: optional(100), laudo_orc: optional(100),
   mao_obra_os: optional(100), senha_aparelho_os: optional(100), defeito_os: optional(100),
-  avarias_os: optional(100), acessorios_os: optional(100), laudo_os: optional(100)
+  avarias_os: optional(100), acessorios_os: optional(100), laudo_os: optional(100),
+  api_whatsapp: optional(60), token_whatsapp: optional(70), instancia_whatsapp: optional(70)
 });
 
 router.use(authenticate);
@@ -53,16 +54,24 @@ router.get('/settings', permit('configuracoes', 'home'), async (req, res, next) 
               cobrar_automaticamente, cobrar_duas_vezes, pagina_entrada, url_site, meta_descricao, empresa,
               multa_atraso, juros_atraso, dias_lembrete,
               mao_obra_orc, senha_aparelho_orc, defeito_orc, avarias_orc, acessorios_orc, laudo_orc,
-              mao_obra_os, senha_aparelho_os, defeito_os, avarias_os, acessorios_os, laudo_os
+              mao_obra_os, senha_aparelho_os, defeito_os, avarias_os, acessorios_os, laudo_os,
+              api_whatsapp, token_whatsapp, instancia_whatsapp
          FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1`,
       [Number(req.auth.companyId)]
     );
-    res.json(rows[0] ? normalizeRecord(rows[0]) : null);
+    if (!rows[0]) return res.json(null);
+    const record = normalizeRecord(rows[0]);
+    // Token do WhatsApp é write-only: nunca reexibido, só um indicador de configurado.
+    record.token_whatsapp_configurado = Boolean(record.token_whatsapp);
+    delete record.token_whatsapp;
+    res.json(record);
   } catch (error) { next(error); }
 });
 router.put('/settings', permit('configuracoes', 'home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const data = settingsSchema.parse(req.body);
+    // Token vazio significa "manter o atual" (write-only), não apagar.
+    if (data.token_whatsapp === '') delete data.token_whatsapp;
     const fields = Object.keys(data);
     if (!fields.length) return res.status(204).end();
     const [existing] = await pool.execute('SELECT id FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1', [Number(req.auth.companyId)]);
