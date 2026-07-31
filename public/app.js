@@ -3,11 +3,99 @@ import { session } from './js/session.js';
 import { startRouter } from './js/router.mjs';
 import { renderRoute } from './js/pages.js';
 import { toast, openForm } from './js/ui.js';
+import { money, date, escapeHtml } from './js/format.mjs';
 
 const loginView = document.querySelector('#login-view');
 const appView = document.querySelector('#app-view');
 const loginForm = document.querySelector('#login-form');
 const loginError = document.querySelector('#login-error');
+
+// Destaca o item ativo (por rota + status) e abre o grupo que o contém.
+function updateActiveNav(route) {
+  const currentStatus = route.query?.status || '';
+  let activeLink = null;
+  document.querySelectorAll('.sidebar-nav a[data-route]').forEach((link) => {
+    const match = link.dataset.route === route.name && (link.dataset.status || '') === currentStatus;
+    link.classList.toggle('active', match);
+    if (match) activeLink = link;
+  });
+  if (!activeLink) {
+    activeLink = [...document.querySelectorAll('.sidebar-nav a[data-route]')].find((l) => l.dataset.route === route.name && !l.dataset.status) || null;
+    if (activeLink) activeLink.classList.add('active');
+  }
+  document.querySelectorAll('.side-group').forEach((group) => group.classList.remove('active-group'));
+  const group = activeLink?.closest('.side-group');
+  if (group) group.classList.add('open', 'active-group');
+}
+
+// Esconde grupos cujos itens estão todos ocultos por permissão.
+function hideEmptyGroups() {
+  document.querySelectorAll('.side-group').forEach((group) => {
+    const anyVisible = [...group.querySelectorAll('.side-group-list a')].some((a) => !a.hidden);
+    group.hidden = !anyVisible;
+  });
+}
+
+function setupSidebarGroups() {
+  document.querySelectorAll('.side-group-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => btn.closest('.side-group').classList.toggle('open'));
+  });
+}
+
+function setupTheme() {
+  document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  document.querySelector('#theme-toggle')?.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+  });
+}
+
+function setupBells() {
+  document.querySelectorAll('.nav-bell [data-bell-toggle]').forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const menu = btn.parentElement.querySelector('.bell-menu');
+      const wasOpen = !menu.hidden;
+      document.querySelectorAll('.bell-menu').forEach((m) => { m.hidden = true; });
+      menu.hidden = wasOpen;
+    });
+  });
+  document.addEventListener('click', () => document.querySelectorAll('.bell-menu').forEach((m) => { m.hidden = true; }));
+}
+
+function applyGreeting(user) {
+  const el = document.querySelector('#topbar-greeting');
+  if (!el) return;
+  const hour = new Date().getHours();
+  const saudacao = hour < 6 ? 'Boa madrugada' : hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const first = (user?.name || '').trim().split(/\s+/)[0] || 'Usuário';
+  el.textContent = `${saudacao}, ${first}`;
+}
+
+function fillBell(container, payload, label) {
+  if (!container || !payload) return;
+  const count = payload.count || 0;
+  const badge = container.querySelector('.bell-badge');
+  const list = container.querySelector('.bell-list');
+  container.hidden = false;
+  badge.hidden = count === 0;
+  badge.textContent = count > 99 ? '99+' : String(count);
+  container.classList.toggle('has-alert', count > 0);
+  list.innerHTML = payload.items && payload.items.length
+    ? payload.items.map((item) => `<div class="bell-item"><strong>${escapeHtml(item.descricao || 'Conta')}</strong><span>${date(item.vencimento)} · ${money(item.valor)}</span></div>`).join('')
+    : `<p class="bell-empty">Nenhuma conta ${label} vencida.</p>`;
+}
+
+async function loadFinanceAlerts() {
+  const receivables = document.querySelector('#bell-receivables');
+  const payables = document.querySelector('#bell-payables');
+  if (!receivables && !payables) return;
+  let data;
+  try { data = await api('/api/finance/alerts'); } catch { return; }
+  fillBell(receivables, data.receivables, 'a receber');
+  fillBell(payables, data.payables, 'a pagar');
+}
 
 function showApp() {
   loginView.hidden = true;
@@ -21,9 +109,12 @@ function showApp() {
     const accepted = element.dataset.permission.split(',').map((value) => value.trim());
     element.hidden = user?.role !== 'Administrador' && !accepted.some((key) => permissions.has(key));
   });
+  hideEmptyGroups();
+  applyGreeting(user);
+  loadFinanceAlerts();
   if (!location.hash || location.hash === '#') location.hash = '#/dashboard';
   startRouter(async (route) => {
-    document.querySelectorAll('[data-route]').forEach((link) => link.classList.toggle('active', link.dataset.route === route.name));
+    updateActiveNav(route);
     document.querySelector('#page-title').textContent = route.title;
     document.querySelector('#breadcrumb-current').textContent = route.title;
     await renderRoute(route);
@@ -87,4 +178,21 @@ window.addEventListener('auth:expired', () => {
   setTimeout(() => location.reload(), 900);
 });
 
+// Página de entrada (legado pagina_entrada): visitante não logado vê o Site ou a tela de Login.
+// Com ?acesso na URL, sempre mostra o login (para acessar o sistema a partir do site).
+async function bootstrapEntry() {
+  if (new URLSearchParams(location.search).has('acesso')) return;
+  try {
+    const entry = await api('/api/public/entry', { authenticated: false });
+    if (entry?.paginaEntrada === 'Site' && entry.companyId) {
+      location.replace(`/store.html?company=${entry.companyId}`);
+    }
+  } catch { /* mantém a tela de login */ }
+}
+
+setupSidebarGroups();
+setupBells();
+setupTheme();
+
 if (session.token && session.user) showApp();
+else bootstrapEntry();

@@ -560,7 +560,7 @@ function openWorkForm({ type, config, item, clients, products, services, users, 
   dialog.showModal();
 }
 
-async function renderWork(type) {
+async function renderWork(type, route = {}) {
   loading();
   const config = {
     orders: {
@@ -586,7 +586,7 @@ async function renderWork(type) {
       transitions: { Pendente: ['Aprovado', 'Reprovado', 'Cancelado'], Aprovado: ['Cancelado'], Reprovado: ['Pendente', 'Cancelado'], Cancelado: [] }
     }
   }[type];
-  const state = { page: 1, search: '', status: '' };
+  const state = { page: 1, search: '', status: config.statuses.includes(route.query?.status) ? route.query.status : '' };
   const load = async () => {
     const params = new URLSearchParams({ page: state.page, pageSize: 25, search: state.search });
     if (state.status) params.set('status', state.status);
@@ -813,6 +813,6 @@ export async function renderRoute(route) {
   if (route.name === 'finance') return renderFinance(route);
   if (route.name === 'sales') return renderSales();
   if (route.name === 'fiscal') return renderFiscal(route);
-  if (route.name === 'orders' || route.name === 'quotes') return renderWork(route.name);
+  if (route.name === 'orders' || route.name === 'quotes') return renderWork(route.name, route);
   return renderDashboard();
 }

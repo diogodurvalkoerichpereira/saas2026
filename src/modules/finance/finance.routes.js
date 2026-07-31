@@ -37,6 +37,27 @@ router.get('/payment-methods', async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['nome'], defaultSort: 'nome' }));
   } catch (error) { next(error); }
 });
+router.get('/alerts', async (req, res, next) => {
+  try {
+    const companyId = Number(req.auth.companyId);
+    const listOverdue = (table, person) => pool.execute(
+      `SELECT id, descricao, valor, vencimento, ${person} AS pessoa
+         FROM ${table}
+        WHERE empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim') AND vencimento < CURRENT_DATE
+        ORDER BY vencimento ASC LIMIT 8`, [companyId]);
+    const countOverdue = (table) => pool.execute(
+      `SELECT COUNT(*) AS total FROM ${table}
+        WHERE empresa = ? AND node_status = 'ativo' AND (pago IS NULL OR pago <> 'Sim') AND vencimento < CURRENT_DATE`, [companyId]);
+    const [[receber], [pagar], [[rc]], [[pc]]] = await Promise.all([
+      listOverdue('receber', 'cliente'), listOverdue('pagar', 'fornecedor'),
+      countOverdue('receber'), countOverdue('pagar')
+    ]);
+    res.json({
+      receivables: { count: Number(rc.total), items: receber.map(normalizeRecord) },
+      payables: { count: Number(pc.total), items: pagar.map(normalizeRecord) }
+    });
+  } catch (error) { next(error); }
+});
 router.get('/:type', async (req, res, next) => {
   try {
     const type = typeSchema.parse(req.params.type);

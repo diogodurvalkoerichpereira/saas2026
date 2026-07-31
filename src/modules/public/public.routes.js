@@ -40,6 +40,21 @@ async function assertCompany(companyId, db = pool) {
   return company;
 }
 
+// Decisão de página de entrada para visitante não logado (legado: pagina_entrada Site/Login).
+// Espelha o legado single-tenant: usa a primeira empresa ativa como site padrão da raiz.
+router.get('/entry', async (_req, res, next) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT c.empresa AS company_id, c.pagina_entrada
+         FROM config c JOIN empresas e ON e.id = c.empresa
+        WHERE c.empresa > 0 AND e.ativo = 'Sim'
+        ORDER BY c.empresa ASC LIMIT 1`
+    );
+    const row = rows[0] || {};
+    res.json({ companyId: row.company_id ?? null, paginaEntrada: row.pagina_entrada || 'Login' });
+  } catch (error) { next(error); }
+});
+
 router.get('/:companyId/site', async (req, res, next) => {
   try {
     const companyId = companyIdSchema.parse(req.params.companyId);
