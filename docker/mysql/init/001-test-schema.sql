@@ -764,7 +764,36 @@ VALUES (1, 'Plano Demonstração', 99.90, 'Sim', 1000, 20, 2);
 INSERT INTO recursos (id, nome, chave) VALUES
   (1, 'Gestão comercial', 'comercial'),
   (2, 'Financeiro', 'financeiro'),
-  (3, 'Marketing WhatsApp', 'marketing');
+  (3, 'Marketing WhatsApp', 'marketing'),
+  (4, 'Dashboard', 'dashboard'),
+  (5, 'Clientes', 'clientes'),
+  (6, 'Fornecedores', 'fornecedores'),
+  (7, 'Usuários e permissões', 'usuarios'),
+  (8, 'Produtos e serviços', 'produtos_servicos'),
+  (9, 'Cadastros auxiliares', 'cadastros_auxiliares'),
+  (10, 'Estoque', 'estoque'),
+  (11, 'Compras', 'compras'),
+  (12, 'Vendas / PDV', 'vendas_pdv'),
+  (13, 'Cupons', 'cupons'),
+  (14, 'Orçamentos', 'orcamentos'),
+  (15, 'Ordens de serviço', 'ordens_servico'),
+  (16, 'Contratos', 'contratos'),
+  (17, 'Cobranças recorrentes', 'cobrancas_recorrentes'),
+  (18, 'Comissões', 'comissoes'),
+  (19, 'Recursos humanos', 'recursos_humanos'),
+  (20, 'Tarefas', 'tarefas'),
+  (21, 'Anotações', 'anotacoes'),
+  (22, 'Chamados', 'chamados'),
+  (23, 'Relatórios', 'relatorios'),
+  (24, 'Site institucional', 'site'),
+  (25, 'Assinatura', 'assinatura'),
+  (26, 'Configurações', 'configuracoes'),
+  (27, 'Tutoriais', 'tutoriais'),
+  (28, 'Emissão fiscal NFS-e/NF-e', 'fiscal'),
+  (29, 'Portal do cliente', 'portal_cliente'),
+  (30, 'Loja online', 'loja_online'),
+  (31, 'Anexos', 'anexos'),
+  (32, 'Auditoria', 'auditoria');
 INSERT INTO planos_recursos (plano, recurso) VALUES (1, 1), (1, 2), (1, 3);
 INSERT INTO planos_itens (plano, nome) VALUES (1, 'Até 20 usuários'), (1, 'Marketing e financeiro');
 INSERT INTO empresas
