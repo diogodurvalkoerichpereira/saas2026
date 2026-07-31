@@ -323,10 +323,16 @@ async function renderSales() {
     const result = await api(`/api/sales?${params}`);
     root().innerHTML = `${pageHeader('Vendas / PDV', 'Vendas integradas ao financeiro e ao estoque.', `<button class="button primary" data-new-sale>${icon('plus')}Nova venda</button>`)}
       <section class="panel"><form class="toolbar" id="sales-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, venda ou forma de pagamento"><select name="status"><option value="">Ativas e canceladas</option><option value="ativo" ${state.status === 'ativo' ? 'selected' : ''}>Ativas</option><option value="cancelado" ${state.status === 'cancelado' ? 'selected' : ''}>Canceladas</option></select><button class="button ghost">${icon('filter')}Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => `${attachmentButton('sales', item.id)}${item.node_status === 'cancelado' ? '' : `<button class="button ghost small" data-nfse="${item.id}">${icon('file-text')}NFS-e</button><button class="button ghost small" data-nfe="${item.id}">${icon('file-text')}NF-e</button><button class="button danger small" data-cancel-sale="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
+      ${table([{ key: 'id', label: 'Venda' }, { key: 'data_lanc', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'forma_pgto_nome', label: 'Forma', render: text }, { key: 'total_venda', label: 'Total', render: (value, item) => `<span class="money">${money(value || item.valor)}</span>` }, { key: 'pago', label: 'Pagamento', render: badge }, { key: 'node_status', label: 'Situação', render: badge }], result.items, (item) => `${attachmentButton('sales', item.id)}<button class="button ghost small" data-receipt="${item.id}">${icon('file-text')}Recibo</button>${item.node_status === 'cancelado' ? '' : `<button class="button ghost small" data-nfse="${item.id}">${icon('file-text')}NFS-e</button><button class="button ghost small" data-nfe="${item.id}">${icon('file-text')}NF-e</button><button class="button danger small" data-cancel-sale="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
     root().querySelector('#sales-filter').addEventListener('submit', (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); state.search = data.search; state.status = data.status; state.page = 1; load(); });
     root().querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => { state.page = Number(button.dataset.page); load(); }));
     root().querySelectorAll('[data-action="attachments"]').forEach((button) => button.addEventListener('click', () => openAttachments({ entity: 'sales', id: Number(button.dataset.attachmentId), title: `venda #${button.dataset.attachmentId}` })));
+    root().querySelectorAll('[data-receipt]').forEach((button) => button.addEventListener('click', async () => {
+      try {
+        const [sale, settings] = await Promise.all([api(`/api/sales/${button.dataset.receipt}`), api('/api/content/settings').catch(() => null)]);
+        printSaleReceipt(sale, settings || {});
+      } catch (error) { toast(error.message, 'error'); }
+    }));
     root().querySelector('[data-new-sale]').addEventListener('click', async () => {
       const [clients, products, services, paymentMethods] = await Promise.all([allItems('/api/clients'), allItems('/api/catalog/products'), allItems('/api/catalog/services'), allItems('/api/finance/payment-methods', false)]);
       openSaleForm(clients, products.filter((item) => item.ativo === 'Sim'), services.filter((item) => item.ativo === 'Sim'), paymentMethods, load);
@@ -587,7 +593,7 @@ async function renderWork(type) {
     const result = await api(`/api/work/${type}?${params}`);
     root().innerHTML = `${pageHeader(config.title, 'Acompanhamento por cliente, equipamento, data e situação.', `<button class="button primary" data-new-work>${icon('plus')}${config.newLabel}</button>`)}
       <section class="panel"><form class="toolbar" id="work-filter"><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar cliente, equipamento ou responsável"><select name="status"><option value="">Todas as situações</option>${config.statuses.map((status) => `<option value="${escapeHtml(status)}" ${state.status === status ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select><button class="button ghost">${icon('filter')}Filtrar</button></form>
-      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }], result.items, (item) => `${editButton(item.id)}${attachmentButton(type, item.id)}${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
+      ${table([{ key: 'id', label: 'Número' }, { key: 'data', label: 'Data', render: date }, { key: 'cliente_nome', label: 'Cliente', render: text }, { key: 'equipamento', label: 'Equipamento', render: text }, { key: 'subtotal', label: 'Total', render: (value) => `<span class="money">${money(value)}</span>` }, { key: 'status', label: 'Situação', render: badge }, ...(type === 'quotes' ? [{ key: 'dias_validade', label: 'Validade', render: (value, item) => workVencido(item) }] : [{ key: 'data_entrega', label: 'Entrega', render: (value, item) => workEntrega(item) }])], result.items, (item) => `${editButton(item.id)}${attachmentButton(type, item.id)}<button class="button ghost small" data-print-work="${item.id}">${icon('file-text')}Imprimir</button>${/Cancel/.test(item.status) ? '' : `<button class="button danger small" data-action="cancel" data-id="${item.id}">${icon('close')}Cancelar</button>`}`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
     const showForm = async (item) => {
       const fullItem = item ? await api(`/api/work/${type}/${item.id}`) : null;
@@ -611,8 +617,55 @@ async function renderWork(type) {
       if (button.dataset.action === 'edit') await showForm(item);
       if (button.dataset.action === 'cancel') await confirmAction(`Cancelar este ${config.singular}?`, async () => { await api(`/api/work/${type}/${item.id}`, { method: 'DELETE', body: { reason: 'Cancelamento pela interface' } }); toast('Registro cancelado.'); await load(); });
     }));
+    root().querySelectorAll('[data-print-work]').forEach((button) => button.addEventListener('click', async () => {
+      try {
+        const [work, settings] = await Promise.all([api(`/api/work/${type}/${button.dataset.printWork}`), api('/api/content/settings').catch(() => null)]);
+        printWorkDocument(work, type, settings || {});
+      } catch (error) { toast(error.message, 'error'); }
+    }));
   };
   await load();
+}
+
+function workVencido(item) {
+  if (item.status !== 'Pendente' || !item.data || !Number(item.dias_validade)) return '<span class="badge">—</span>';
+  const limite = new Date(item.data);
+  limite.setDate(limite.getDate() + Number(item.dias_validade));
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return limite < hoje ? '<span class="badge danger">Vencido</span>' : `<span class="badge success">até ${date(limite.toISOString().slice(0, 10))}</span>`;
+}
+
+function workEntrega(item) {
+  if (!item.data_entrega) return '<span class="badge">—</span>';
+  const entrega = String(item.data_entrega).slice(0, 10);
+  const hoje = new Date().toISOString().slice(0, 10);
+  return item.status === 'Entregue' && entrega === hoje ? '<span class="badge success">Hoje</span>' : `<span>${date(entrega)}</span>`;
+}
+
+function printWorkDocument(work, type, settings) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('Habilite pop-ups para imprimir.', 'error'); return; }
+  const rotulo = type === 'orders' ? 'Ordem de serviço' : 'Orçamento';
+  const itens = (work.items || []).map((item) => `<tr><td>${escapeHtml(item.nome || item.descricao || '')}</td><td class="r">${number(item.quantity ?? item.quantidade ?? 1)}</td><td class="r">${money(item.total)}</td></tr>`).join('');
+  const linha = (rotuloCampo, valor) => valor ? `<p><small>${rotuloCampo}: ${escapeHtml(String(valor))}</small></p>` : '';
+  const assina = settings.assinatura_cliente === 'Sim';
+  win.document.write(`<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>${rotulo} ${work.id}</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 2px}small{color:#555}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #ddd;padding:6px;font-size:13px;text-align:left}.r{text-align:right}.tot{text-align:right;font-weight:bold;margin-top:12px;font-size:15px}.assina{margin-top:48px;border-top:1px solid #333;width:60%;padding-top:6px;font-size:12px;color:#555}</style>
+    </head><body>
+    <h1>${escapeHtml(settings.nome || 'Empresa')}</h1>
+    <small>${rotulo} nº ${work.id} · ${date(work.data)} · ${escapeHtml(String(work.status || ''))}</small>
+    ${linha('Cliente', work.cliente_nome)}
+    ${linha('Equipamento', [work.equipamento, work.marca, work.modelo].filter(Boolean).join(' '))}
+    ${linha('Defeito relatado', work.defeito)}
+    ${linha('Laudo técnico', work.laudo)}
+    ${linha('Condições', work.condicoes)}
+    ${itens ? `<table><thead><tr><th>Item</th><th class="r">Qtd</th><th class="r">Total</th></tr></thead><tbody>${itens}</tbody></table>` : ''}
+    <p class="tot">Total: ${money(work.subtotal || work.valor)}</p>
+    ${assina ? '<div class="assina">Assinatura do cliente</div>' : ''}
+    <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`);
+  win.document.close();
 }
 
 async function renderFiscal(route = {}) {
@@ -728,6 +781,25 @@ function printFiscalDocument(doc) {
     <table><thead><tr><th>Serviço</th><th class="r">Valor</th></tr></thead><tbody>${itens}</tbody></table>
     <p class="tot">Total: ${money(doc.valor_total)}</p>
     ${doc.motivo_rejeicao ? `<p><small>Retorno do fisco: ${escapeHtml(String(doc.motivo_rejeicao))}</small></p>` : ''}
+    <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
+function printSaleReceipt(sale, settings) {
+  const win = window.open('', '_blank');
+  if (!win) { toast('Habilite pop-ups para imprimir o recibo.', 'error'); return; }
+  const itens = (sale.items || []).map((item) => `<tr><td>${escapeHtml(item.produto_nome || '')}</td><td class="r">${number(item.quantidade)}</td><td class="r">${money(item.valor)}</td><td class="r">${money(item.total)}</td></tr>`).join('');
+  const assina = settings.assinatura_recibo === 'Sim';
+  win.document.write(`<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><title>Recibo venda ${sale.id}</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 2px}small{color:#555}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #ddd;padding:6px;font-size:13px;text-align:left}.r{text-align:right}.tot{text-align:right;font-weight:bold;margin-top:12px;font-size:15px}.assina{margin-top:48px;border-top:1px solid #333;width:60%;padding-top:6px;font-size:12px;color:#555}</style>
+    </head><body>
+    <h1>${escapeHtml(settings.nome || 'Empresa')}</h1>
+    <small>Recibo de venda nº ${sale.id} · ${date(sale.data_lanc)}</small>
+    <p><small>Cliente: ${escapeHtml(sale.cliente_nome || 'Não informado')} · Pagamento: ${sale.pago === 'Sim' ? 'Pago' : 'Pendente'}</small></p>
+    <table><thead><tr><th>Item</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>${itens}</tbody></table>
+    <p class="tot">Total: ${money(sale.total_venda || sale.valor)}</p>
+    ${assina ? '<div class="assina">Assinatura do cliente</div>' : ''}
     <script>window.onload=function(){window.print()}<\/script>
     </body></html>`);
   win.document.close();
