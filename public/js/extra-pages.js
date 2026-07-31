@@ -4,12 +4,6 @@ import { icon } from './icons.mjs';
 import { loading, pageHeader, table, pagination, openForm, confirmAction, toast } from './ui.js';
 import { attachmentButton, openAttachments } from './attachments.js';
 import { session } from './session.js';
-import { routes } from './router.mjs';
-
-const startPageOptions = () => [
-  { value: '', label: 'Dashboard (padrão)' },
-  ...Object.entries(routes).map(([value, label]) => ({ value, label }))
-];
 
 const root = () => document.querySelector('#page-root');
 const yesNo = () => [{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }];
@@ -841,7 +835,7 @@ const companySettingsFields = [
   { name: 'assinatura_cliente', label: 'Assinatura do cliente', type: 'select', options: yesNo() },
   { name: 'cobrar_automaticamente', label: 'Cobrança automática', type: 'select', options: yesNo() },
   { name: 'cobrar_duas_vezes', label: 'Segunda tentativa de cobrança', type: 'select', options: yesNo() },
-  { name: 'pagina_entrada', label: 'Página inicial após login', type: 'select', options: startPageOptions() },
+  { name: 'pagina_entrada', label: 'Página de entrada (visitante não logado)', type: 'select', options: [{ value: 'Site', label: 'Site' }, { value: 'Login', label: 'Login' }] },
   { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 },
   { name: 'multa_atraso', label: 'Multa por atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
   { name: 'juros_atraso', label: 'Juros por dia de atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },

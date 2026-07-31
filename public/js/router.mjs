@@ -1,4 +1,4 @@
-export const routes = {
+const routes = {
   dashboard: 'Dashboard',
   clients: 'Clientes',
   users: 'Usuários',
