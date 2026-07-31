@@ -770,6 +770,12 @@ INSERT INTO usuarios (id, nome, email, senha_crip, nivel, ativo, telefone, data,
 VALUES (1, 'Administrador de Teste', 'teste.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Administrador', 'Sim', '(00) 0000-0000', CURRENT_DATE, 'Sim', 'Sim', 1);
 INSERT INTO usuarios (id, nome, email, senha_crip, nivel, ativo, telefone, data, acessar_painel, mostrar_registros, empresa)
 VALUES (2, 'Administrador SaaS de Teste', 'sas.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Administrador', 'Sim', '(00) 0000-0001', CURRENT_DATE, 'Sim', 'Sim', 0);
+INSERT INTO usuarios (id, nome, email, senha_crip, nivel, ativo, telefone, data, acessar_painel, mostrar_registros, empresa) VALUES
+  (3, 'Gerente de Teste', 'gerente.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Gerente', 'Sim', '(00) 0000-0003', CURRENT_DATE, 'Sim', 'Sim', 1),
+  (4, 'Comum de Teste', 'comum.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Comum', 'Sim', '(00) 0000-0004', CURRENT_DATE, 'Sim', 'Sim', 1),
+  (5, 'Tecnico de Teste', 'tecnico.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Técnico', 'Sim', '(00) 0000-0005', CURRENT_DATE, 'Sim', 'Sim', 1),
+  (6, 'Tesoureiro de Teste', 'tesoureiro.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Tesoureiro', 'Sim', '(00) 0000-0006', CURRENT_DATE, 'Sim', 'Sim', 1),
+  (7, 'Financeiro de Teste', 'financeiro.local@saas2026.local', '$2b$12$UTs6lFN1arRukJ0VJrJLLOHePByL4BME8UiGQuXEHRxDPxL2RiOyu', 'Financeiro', 'Sim', '(00) 0000-0007', CURRENT_DATE, 'Sim', 'Sim', 1);
 INSERT INTO acessos (id, nome, chave, grupo) VALUES
   (1, 'Dashboard', 'home', 1), (2, 'Clientes', 'clientes', 1), (3, 'Usuários', 'usuarios', 1),
   (4, 'Produtos', 'produtos', 2), (5, 'Financeiro', 'financeiro', 3), (6, 'Ordens de Serviço', 'os', 4);
@@ -816,6 +822,7 @@ INSERT INTO acessos (id, nome, chave, grupo) VALUES
   (45, 'Relatório financeiro', 'rel_financeiro', 3),
   (46, 'Relatório de vendas', 'rel_vendas', 4);
 INSERT INTO usuarios_permissoes (usuario, permissao) SELECT 1, id FROM acessos;
+INSERT INTO usuarios_permissoes (usuario, permissao) SELECT u.id, a.id FROM usuarios u CROSS JOIN acessos a WHERE u.id IN (3, 4, 5, 6, 7);
 INSERT INTO acessos_sas (id, nome, chave, grupo) VALUES
   (1, 'Dashboard SaaS', 'home', 1),
   (2, 'Empresas', 'empresas', 1),
