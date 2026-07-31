@@ -1,6 +1,6 @@
 import { api } from './js/api.js';
 import { session } from './js/session.js';
-import { startRouter } from './js/router.mjs';
+import { startRouter, parseRoute } from './js/router.mjs';
 import { renderRoute } from './js/pages.js';
 import { toast, openForm } from './js/ui.js';
 
@@ -9,7 +9,17 @@ const appView = document.querySelector('#app-view');
 const loginForm = document.querySelector('#login-form');
 const loginError = document.querySelector('#login-error');
 
-function showApp() {
+async function resolveStartPage() {
+  try {
+    const settings = await api('/api/content/settings');
+    const parsed = parseRoute(`#/${settings?.pagina_entrada || ''}`);
+    return parsed.name;
+  } catch {
+    return 'dashboard';
+  }
+}
+
+async function showApp() {
   loginView.hidden = true;
   appView.hidden = false;
   const user = session.user;
@@ -21,7 +31,7 @@ function showApp() {
     const accepted = element.dataset.permission.split(',').map((value) => value.trim());
     element.hidden = user?.role !== 'Administrador' && !accepted.some((key) => permissions.has(key));
   });
-  if (!location.hash || location.hash === '#') location.hash = '#/dashboard';
+  if (!location.hash || location.hash === '#') location.hash = `#/${await resolveStartPage()}`;
   startRouter(async (route) => {
     document.querySelectorAll('[data-route]').forEach((link) => link.classList.toggle('active', link.dataset.route === route.name));
     document.querySelector('#page-title').textContent = route.title;

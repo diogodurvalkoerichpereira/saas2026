@@ -35,11 +35,11 @@ test('annualBalanceReport preenche os 12 meses mesmo sem lançamentos', async ()
   assert.deepEqual(rows[0], { mes: 1, receitas: 0, despesas: 0, saldo: 0 });
 });
 
-test('syntheticPayablesReport agrupa despesas por plano de contas', async () => {
+test('syntheticPayablesReport agrupa despesas por referência', async () => {
   let call;
   const db = { execute: async (sql, params) => { call = { sql, params }; return [[]]; } };
   await syntheticPayablesReport(4, { from: '2026-01-01', to: '2026-01-31' }, db);
-  assert.match(call.sql, /LEFT JOIN plano_contas/);
+  assert.match(call.sql, /GROUP BY categoria/);
   assert.deepEqual(call.params, [4, '2026-01-01', '2026-01-31']);
 });
 
