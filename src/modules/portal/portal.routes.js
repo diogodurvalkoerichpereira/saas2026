@@ -185,7 +185,7 @@ router.post('/contracts/:id/sign', async (req, res, next) => {
       `INSERT INTO node_contract_signatures
         (empresa, contrato, cliente, assinado_por, user_agent, assinado_em)
        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-       ON DUPLICATE KEY UPDATE assinado_por = VALUES(assinado_por), user_agent = VALUES(user_agent), assinado_em = CURRENT_TIMESTAMP`,
+       ON CONFLICT (empresa, contrato, cliente) DO UPDATE SET assinado_por = EXCLUDED.assinado_por, user_agent = EXCLUDED.user_agent, assinado_em = CURRENT_TIMESTAMP`,
       [Number(req.clientAuth.companyId), contractId, Number(req.clientAuth.sub), data.name, String(req.headers['user-agent'] || '').slice(0, 255)]
     );
     await pool.execute(`UPDATE node_contracts SET status = 'Ativo', atualizado_em = CURRENT_TIMESTAMP WHERE id = ? AND empresa = ?`, [contractId, Number(req.clientAuth.companyId)]);

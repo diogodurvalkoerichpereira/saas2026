@@ -6,5 +6,5 @@ npm-debug.log*
 test-results/
 playwright-report/
 *.sql
-!migrations/*.sql
-!docker/mysql/init/*.sql
+!db/migrations/*.sql
+!db/*.sql

@@ -60,7 +60,7 @@ async function inventoryReport(companyId, db = pool) {
 async function delinquencyReport(companyId, db = pool) {
   const [rows] = await db.execute(
     `SELECT r.id, r.descricao, r.vencimento, r.subtotal AS valor, r.pago, r.node_status,
-            DATEDIFF(CURRENT_DATE, r.vencimento) AS dias_atraso, c.nome AS cliente_nome,
+            (CURRENT_DATE - r.vencimento) AS dias_atraso, c.nome AS cliente_nome,
             c.telefone, c.email
        FROM receber r
        LEFT JOIN clientes c ON c.id = r.cliente AND c.empresa = r.empresa
@@ -101,15 +101,15 @@ async function topProductsReport(companyId, { from, to }, db = pool) {
 
 async function annualBalanceReport(companyId, year, db = pool) {
   const [income] = await db.execute(
-    `SELECT MONTH(data_pgto) AS mes, COALESCE(SUM(subtotal), 0) AS total
-       FROM receber WHERE empresa = ? AND pago = 'Sim' AND YEAR(data_pgto) = ?
-      GROUP BY MONTH(data_pgto)`,
+    `SELECT EXTRACT(MONTH FROM data_pgto)::int AS mes, COALESCE(SUM(subtotal), 0) AS total
+       FROM receber WHERE empresa = ? AND pago = 'Sim' AND EXTRACT(YEAR FROM data_pgto)::int = ?
+      GROUP BY 1`,
     [companyId, year]
   );
   const [expense] = await db.execute(
-    `SELECT MONTH(data_pgto) AS mes, COALESCE(SUM(subtotal), 0) AS total
-       FROM pagar WHERE empresa = ? AND pago = 'Sim' AND YEAR(data_pgto) = ?
-      GROUP BY MONTH(data_pgto)`,
+    `SELECT EXTRACT(MONTH FROM data_pgto)::int AS mes, COALESCE(SUM(subtotal), 0) AS total
+       FROM pagar WHERE empresa = ? AND pago = 'Sim' AND EXTRACT(YEAR FROM data_pgto)::int = ?
+      GROUP BY 1`,
     [companyId, year]
   );
   const incomeByMonth = new Map(income.map((row) => [row.mes, Number(row.total)]));

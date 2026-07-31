@@ -48,9 +48,9 @@ router.use(authenticate, saasOnly);
 router.get('/dashboard', async (_req, res, next) => {
   try {
     const [[companies], [plans], [users], [receivables]] = await Promise.all([
-      pool.execute(`SELECT COUNT(*) total, SUM(ativo = 'Sim') ativos, COALESCE(SUM(mensalidade), 0) mrr FROM empresas`),
-      pool.execute(`SELECT COUNT(*) total, SUM(ativo = 'Sim') ativos FROM planos`),
-      pool.execute(`SELECT COUNT(*) total, SUM(ativo = 'Sim') ativos FROM usuarios WHERE empresa = 0 OR empresa IS NULL`),
+      pool.execute(`SELECT COUNT(*) total, COUNT(*) FILTER (WHERE ativo = 'Sim') ativos, COALESCE(SUM(mensalidade), 0) mrr FROM empresas`),
+      pool.execute(`SELECT COUNT(*) total, COUNT(*) FILTER (WHERE ativo = 'Sim') ativos FROM planos`),
+      pool.execute(`SELECT COUNT(*) total, COUNT(*) FILTER (WHERE ativo = 'Sim') ativos FROM usuarios WHERE empresa = 0 OR empresa IS NULL`),
       pool.execute(`SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) recebido,
                            COALESCE(SUM(CASE WHEN (pago IS NULL OR pago <> 'Sim') THEN subtotal ELSE 0 END), 0) pendente
                       FROM receber_sas WHERE node_status = 'ativo'`)
@@ -172,7 +172,7 @@ router.get('/plans/:id/resources', async (req, res, next) => {
   try {
     const planId = id.parse(req.params.id);
     const [rows] = await pool.execute(
-      `SELECT r.id, r.nome, r.chave, IF(pr.id IS NULL, 'Não', 'Sim') selecionado
+      `SELECT r.id, r.nome, r.chave, CASE WHEN pr.id IS NULL THEN 'Não' ELSE 'Sim' END selecionado
          FROM recursos r LEFT JOIN planos_recursos pr ON pr.recurso = r.id AND pr.plano = ?
         ORDER BY r.nome`,
       [planId]
@@ -216,8 +216,8 @@ router.get('/companies/:id/resources', async (req, res, next) => {
     const companyId = id.parse(req.params.id);
     const [rows] = await pool.execute(
       `SELECT r.id, r.nome, r.chave,
-              IF(cr.id IS NOT NULL OR pr.id IS NOT NULL, 'Sim', 'Não') AS selecionado,
-              IF(cr.id IS NOT NULL, 'Exceção da empresa', IF(pr.id IS NOT NULL, 'Plano', 'Indisponível')) AS origem
+              CASE WHEN cr.id IS NOT NULL OR pr.id IS NOT NULL THEN 'Sim' ELSE 'Não' END AS selecionado,
+              CASE WHEN cr.id IS NOT NULL THEN 'Exceção da empresa' WHEN pr.id IS NOT NULL THEN 'Plano' ELSE 'Indisponível' END AS origem
          FROM recursos r
          LEFT JOIN empresas e ON e.id = ?
          LEFT JOIN planos_recursos pr ON pr.recurso = r.id AND pr.plano = e.plano

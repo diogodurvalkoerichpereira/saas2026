@@ -6,12 +6,12 @@ const fields = ['nome', 'cpf', 'telefone', 'email', 'endereco', 'numero', 'bairr
 async function listClients(companyId, restrictToUserId, db = pool) {
   const ownerFilter = restrictToUserId ? ' AND usuario = ?' : '';
   const params = restrictToUserId ? [companyId, restrictToUserId] : [companyId];
-  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, IF(senha_crip IS NULL OR senha_crip = '', 'Não', 'Sim') AS portal_ativo FROM clientes WHERE empresa = ?${ownerFilter} ORDER BY nome`, params);
+  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, CASE WHEN senha_crip IS NULL OR senha_crip = '' THEN 'Não' ELSE 'Sim' END AS portal_ativo FROM clientes WHERE empresa = ?${ownerFilter} ORDER BY nome`, params);
   return rows;
 }
 
 async function getClient(id, companyId, db = pool) {
-  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, IF(senha_crip IS NULL OR senha_crip = '', 'Não', 'Sim') AS portal_ativo FROM clientes WHERE id = ? AND empresa = ? LIMIT 1`, [id, companyId]);
+  const [rows] = await db.execute(`SELECT id, ${fields.join(', ')}, data_cad, empresa, CASE WHEN senha_crip IS NULL OR senha_crip = '' THEN 'Não' ELSE 'Sim' END AS portal_ativo FROM clientes WHERE id = ? AND empresa = ? LIMIT 1`, [id, companyId]);
   if (!rows[0]) throw Object.assign(new Error('Cliente não encontrado.'), { status: 404 });
   return rows[0];
 }

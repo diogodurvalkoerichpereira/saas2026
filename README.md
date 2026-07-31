@@ -1,6 +1,6 @@
 # SaaS 2026 — ERP em Node.js
 
-Migração do núcleo operacional do ERP legado para Node.js, Express, MySQL e um frontend JavaScript modular, sem etapa de build.
+Migração do núcleo operacional do ERP legado para Node.js, Express, PostgreSQL e um frontend JavaScript modular, sem etapa de build.
 
 ## Teste local com Docker
 
@@ -15,7 +15,7 @@ Acesse [http://localhost:3000](http://localhost:3000) e use somente a credencial
 - E-mail: `teste.local@saas2026.local`
 - Senha: `Teste@2026`
 
-O ambiente expõe o MySQL de teste em `127.0.0.1:3308`, contém apenas fixtures fictícias e não acessa produção. Para encerrar e remover os dados descartáveis:
+O ambiente expõe o PostgreSQL de teste em `127.0.0.1:5433`, contém apenas fixtures fictícias e não acessa produção. Para encerrar e remover os dados descartáveis:
 
 ```powershell
 docker compose -f compose.test.yml down -v
@@ -24,9 +24,9 @@ docker compose -f compose.test.yml down -v
 ## Desenvolvimento sem Docker
 
 1. Copie `.env.example` para `.env`.
-2. Configure um MySQL local e uma chave JWT própria.
+2. Configure um PostgreSQL local e uma chave JWT própria.
 3. Instale as dependências com `npm.cmd install`.
-4. Aplique `migrations/001_node_frontend_operations.sql` uma vez sobre uma cópia compatível do banco legado.
+4. Crie o banco e aplique `db/001-schema.sql` (e `db/002-seed-test.sql` só em ambiente de teste).
 5. Inicie com `npm.cmd run dev`.
 
 Nunca versione `.env`, backups, certificados, tokens ou chaves de API.
@@ -67,4 +67,4 @@ npm.cmd run test:browser
 npm.cmd audit
 ```
 
-O teste de navegador usa Microsoft Edge por padrão (`PLAYWRIGHT_CHANNEL=msedge`). Os testes integrados usam apenas bancos locais/de teste. Consulte `CONFIGURACAO_AMBIENTE.md`, `ENTREGAS.md` e `COBERTURA_MIGRACAO.md` para detalhes.
+O schema de produção é `db/001-schema.sql` (fonte única). O teste de navegador usa Microsoft Edge por padrão (`PLAYWRIGHT_CHANNEL=msedge`). Os testes integrados usam apenas bancos locais/de teste. Consulte `CONFIGURACAO_AMBIENTE.md`, `ENTREGAS.md` e `COBERTURA_MIGRACAO.md` para detalhes.

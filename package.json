@@ -8,11 +8,12 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test",
-    "test:integration": "node --test test/integration.mysql.test.js",
+    "test:integration": "node --test test/integration.db.test.js",
     "test:e2e": "node --test test/e2e.local.test.js",
     "test:browser": "playwright test",
     "docker:test:up": "docker compose -f compose.test.yml up --build -d",
-    "docker:test:down": "docker compose -f compose.test.yml down -v"
+    "docker:test:down": "docker compose -f compose.test.yml down -v",
+    "db:reset": "psql -v ON_ERROR_STOP=1 -f db/001-schema.sql && psql -v ON_ERROR_STOP=1 -f db/002-seed-test.sql"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.10",
@@ -22,8 +23,8 @@
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.14.3",
     "node-forge": "^1.4.0",
+    "pg": "^8.22.0",
     "xml-crypto": "^6.1.2",
     "zod": "^3.25.76"
   },

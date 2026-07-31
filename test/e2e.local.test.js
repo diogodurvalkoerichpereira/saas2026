@@ -177,7 +177,7 @@ test('anexo autorizado pode ser enviado, baixado e removido', { skip: !enabled }
   await request(`/api/files/clients/1/${uploaded.id}`, { method: 'DELETE', body: { reason: 'Limpeza E2E' } });
 });
 
-test('CRUD de cliente funciona da interface até o MySQL', { skip: !enabled }, async () => {
+test('CRUD de cliente funciona da interface até o banco', { skip: !enabled }, async () => {
   const created = await request('/api/clients', { method: 'POST', body: { nome: 'Cliente E2E Temporário', telefone: '' } });
   createdClientId = created.id;
   assert.equal((await request(`/api/clients/${createdClientId}`)).ativo, 'Sim');

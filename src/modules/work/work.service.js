@@ -57,7 +57,7 @@ function assertTransition(config, currentStatus, nextStatus) {
 async function listWorkItems(type, id, companyId, db = pool) {
   const relation = type === 'orders' ? 'os' : 'orcamento';
   const [products] = await db.execute(
-    `SELECT 'product' AS kind, po.id, po.produto AS itemId, po.quantidade AS quantity, po.valor AS unitPrice, po.total,
+    `SELECT 'product' AS kind, po.id, po.produto AS "itemId", po.quantidade AS quantity, po.valor AS "unitPrice", po.total,
             p.nome, p.codigo
        FROM produtos_orc po
        JOIN produtos p ON p.id = po.produto AND p.empresa = ?
@@ -65,7 +65,7 @@ async function listWorkItems(type, id, companyId, db = pool) {
     [companyId, id]
   );
   const [services] = await db.execute(
-    `SELECT 'service' AS kind, so.id, so.servico AS itemId, so.quantidade AS quantity, so.valor AS unitPrice, so.total,
+    `SELECT 'service' AS kind, so.id, so.servico AS "itemId", so.quantidade AS quantity, so.valor AS "unitPrice", so.total,
             s.nome
        FROM servicos_orc so
        JOIN servicos s ON s.id = so.servico AND s.empresa = ?
@@ -80,7 +80,7 @@ async function resolveItems(items, companyId, db) {
   for (const item of items || []) {
     const isProduct = item.kind === 'product';
     const [rows] = await db.execute(
-      `SELECT id, ${isProduct ? 'valor_venda' : 'valor'} AS unitPrice FROM ${isProduct ? 'produtos' : 'servicos'} WHERE id = ? AND empresa = ? AND ativo = 'Sim' LIMIT 1`,
+      `SELECT id, ${isProduct ? 'valor_venda' : 'valor'} AS "unitPrice" FROM ${isProduct ? 'produtos' : 'servicos'} WHERE id = ? AND empresa = ? AND ativo = 'Sim' LIMIT 1`,
       [item.itemId, companyId]
     );
     if (!rows[0]) throw Object.assign(new Error(`${isProduct ? 'Produto' : 'Serviço'} indisponível.`), { status: 404 });

@@ -12,10 +12,10 @@ const { createSale } = require('../src/modules/sales/sales.service');
 const enabled = process.env.INTEGRATION_DB === '1';
 
 test('backup legado contém as tabelas essenciais', { skip: !enabled }, async () => {
-  const [rows] = await pool.query("SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = DATABASE()");
-  assert.ok(Number(rows[0].quantidade) >= 62);
+  const [rows] = await pool.query("SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = current_schema()");
+  assert.ok(Number(rows[0].quantidade) >= 73);
   for (const table of ['usuarios', 'clientes', 'produtos', 'receber', 'pagar', 'os', 'orcamentos', 'node_audit_log']) {
-    const [found] = await pool.query('SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?', [table]);
+    const [found] = await pool.query('SELECT COUNT(*) quantidade FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ?', [table]);
     assert.equal(Number(found[0].quantidade), 1, `Tabela ausente: ${table}`);
   }
 });
@@ -39,7 +39,7 @@ test('gravações principais são compatíveis com o esquema legado', { skip: !e
   const product = products[0];
   await moveStock({ type: 'saida', productId: product.id, quantity: 1, reason: 'Teste integrado', userId: 1, companyId: 1 });
   await moveStock({ type: 'entrada', productId: product.id, quantity: 1, reason: 'Reversão teste integrado', userId: 1, companyId: 1 });
-  const sale = await createSale({ clientId, paymentMethodId: 0, dueDate: '2026-07-29', paid: false, items: [{ productId: product.id, quantity: 1 }], userId: 1, companyId: 1 });
+  const sale = await createSale({ clientId, paymentMethodId: 0, dueDate: '2026-07-29', paid: false, items: [{ type: 'produto', id: product.id, quantity: 1 }], userId: 1, companyId: 1 });
   assert.ok(sale.id > 0);
   await pool.execute('DELETE FROM itens_venda WHERE id_venda = ? AND empresa = 1', [sale.id]);
   await pool.execute('DELETE FROM receber WHERE id = ? AND empresa = 1', [sale.id]);

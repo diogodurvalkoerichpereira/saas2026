@@ -6,4 +6,4 @@ uploads
 npm-debug.log*
 work
 *.sql
-!docker/mysql/init/*.sql
+!db/*.sql

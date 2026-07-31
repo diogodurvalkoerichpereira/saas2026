@@ -55,10 +55,10 @@ router.use(authenticate, permit('rh', 'funcionarios'));
 router.get('/attendance', async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT j.id, j.funcionario AS employeeId, j.data, j.entrada AS clockIn, j.entrada_almoco AS lunchStart,
-              j.saida_almoco AS lunchEnd, j.saida AS clockOut, j.total_horas AS totalHours,
-              j.intervalo AS breakTime, j.hora_extra AS overtime, j.folga AS dayOff, j.feriado AS holiday,
-              j.falta AS absent, j.empresa, u.nome AS employeeName
+      `SELECT j.id, j.funcionario AS "employeeId", j.data, j.entrada AS "clockIn", j.entrada_almoco AS "lunchStart",
+              j.saida_almoco AS "lunchEnd", j.saida AS "clockOut", to_char(j.total_horas, 'HH24:MI:SS') AS "totalHours",
+              j.intervalo AS "breakTime", to_char(j.hora_extra, 'HH24:MI:SS') AS overtime, j.folga AS "dayOff", j.feriado AS holiday,
+              j.falta AS absent, j.empresa, u.nome AS "employeeName"
          FROM jornada j JOIN usuarios u ON u.id = j.funcionario AND u.empresa = j.empresa
         WHERE j.empresa = ? ORDER BY j.data DESC, u.nome`,
       [Number(req.auth.companyId)]
@@ -118,12 +118,16 @@ router.get('/payroll', authorize('Administrador', 'Gerente'), async (req, res, n
     const companyId = Number(req.auth.companyId);
     // Lançamentos manuais somam por competência (YYYY-MM) dentro do período consultado.
     const [rows] = await pool.execute(
+      // As durações somadas voltam em segundos e são formatadas por formatTime() abaixo. O Postgres
+      // não tem SEC_TO_TIME, e o tipo `time` estoura em 24h — o acumulado de um mês passa disso.
+      // O `faltas` continua com SUM(CASE...) de propósito: `jornada` entra por LEFT JOIN, então
+      // COUNT(*) FILTER contaria a linha nula e devolveria 1 para quem não tem apontamento.
       `SELECT u.id, u.nome, u.nivel, u.salario, u.valor_hora, u.jornada_horas,
-              COALESCE(SEC_TO_TIME(SUM(TIME_TO_SEC(j.total_horas))), '00:00:00') AS horas_trabalhadas,
-              COALESCE(SEC_TO_TIME(SUM(TIME_TO_SEC(j.hora_extra))), '00:00:00') AS horas_extras,
+              COALESCE(SUM(EXTRACT(EPOCH FROM j.total_horas)), 0)::bigint AS segundos_trabalhados,
+              COALESCE(SUM(EXTRACT(EPOCH FROM j.hora_extra)), 0)::bigint AS segundos_extras,
               SUM(CASE WHEN j.falta = 'Sim' THEN 1 ELSE 0 END) AS faltas,
               COALESCE(fl.proventos, 0) AS proventos, COALESCE(fl.descontos, 0) AS descontos,
-              ROUND(COALESCE(u.salario, 0) + (COALESCE(SUM(TIME_TO_SEC(j.hora_extra)), 0) / 3600) * COALESCE(u.valor_hora, 0)
+              ROUND(COALESCE(u.salario, 0) + (COALESCE(SUM(EXTRACT(EPOCH FROM j.hora_extra)), 0)::numeric / 3600) * COALESCE(u.valor_hora, 0)
                     + COALESCE(fl.proventos, 0) - COALESCE(fl.descontos, 0), 2) AS total_estimado
          FROM usuarios u
          LEFT JOIN jornada j ON j.funcionario = u.id AND j.empresa = u.empresa AND j.data BETWEEN ? AND ?
@@ -140,7 +144,13 @@ router.get('/payroll', authorize('Administrador', 'Gerente'), async (req, res, n
         ORDER BY u.nome`,
       [from, to, companyId, from.slice(0, 7), to.slice(0, 7), companyId]
     );
-    res.json({ from, to, items: rows });
+    // Mantém os nomes de campo que o frontend consome (public/js/extra-pages.js).
+    const items = rows.map(({ segundos_trabalhados, segundos_extras, ...rest }) => ({
+      ...rest,
+      horas_trabalhadas: formatTime(segundos_trabalhados),
+      horas_extras: formatTime(segundos_extras)
+    }));
+    res.json({ from, to, items });
   } catch (error) { next(error); }
 });
 
@@ -159,7 +169,7 @@ router.get('/payroll/entries', authorize('Administrador', 'Gerente'), async (req
     if (f.competencia) { where.push('competencia = ?'); params.push(f.competencia); }
     if (f.employeeId) { where.push('funcionario = ?'); params.push(f.employeeId); }
     const [rows] = await pool.execute(
-      `SELECT id, funcionario AS employeeId, competencia, tipo, descricao, valor FROM node_folha_lancamentos WHERE ${where.join(' AND ')} ORDER BY id DESC`,
+      `SELECT id, funcionario AS "employeeId", competencia, tipo, descricao, valor FROM node_folha_lancamentos WHERE ${where.join(' AND ')} ORDER BY id DESC`,
       params
     );
     res.json({ items: rows });

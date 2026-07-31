@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const mysql = require('mysql2/promise');
+const { Client } = require('pg');
 
 const testClientName = `Cliente Browser ${Date.now()}`;
 
@@ -158,18 +158,20 @@ test('loja pública carrega catálogo e carrinho sem pagamento externo', async (
 });
 
 test.afterAll(async () => {
-  if (process.env.DATABASE_PORT !== '3308' || !['127.0.0.1', 'localhost'].includes(process.env.DATABASE_HOST)) return;
-  const connection = await mysql.createConnection({
+  // Guarda de segurança: só limpa no banco de teste local, nunca em outro destino.
+  if (process.env.DATABASE_PORT !== '5433' || !['127.0.0.1', 'localhost'].includes(process.env.DATABASE_HOST)) return;
+  const connection = new Client({
     host: process.env.DATABASE_HOST,
     port: Number(process.env.DATABASE_PORT),
     user: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME
   });
-  const [rows] = await connection.execute('SELECT id FROM clientes WHERE nome = ? AND empresa = 1', [testClientName]);
+  await connection.connect();
+  const { rows } = await connection.query('SELECT id FROM clientes WHERE nome = $1 AND empresa = 1', [testClientName]);
   for (const row of rows) {
-    await connection.execute("DELETE FROM node_audit_log WHERE entidade = 'cliente' AND entidade_id = ? AND empresa = 1", [row.id]);
-    await connection.execute('DELETE FROM clientes WHERE id = ? AND empresa = 1', [row.id]);
+    await connection.query("DELETE FROM node_audit_log WHERE entidade = 'cliente' AND entidade_id = $1 AND empresa = 1", [row.id]);
+    await connection.query('DELETE FROM clientes WHERE id = $1 AND empresa = 1', [row.id]);
   }
   await connection.end();
 });

@@ -4,7 +4,7 @@ Crie um arquivo `.env` local a partir de `.env.example`. Nunca envie o `.env` ao
 
 ## Ambiente Docker descartável
 
-`compose.test.yml` inicia a aplicação e um MySQL 8.4 com fixtures fictícias. A aplicação fica disponível em `http://localhost:3000` e o banco em `127.0.0.1:3308`.
+`compose.test.yml` inicia a aplicação e um PostgreSQL 16 com fixtures fictícias. A aplicação fica disponível em `http://localhost:3000` e o banco em `127.0.0.1:5433`.
 
 Credencial exclusiva de teste: `teste.local@saas2026.local` / `Teste@2026`.
 
@@ -19,12 +19,12 @@ Esse ambiente não lê o backup real e não deve ser reutilizado em produção.
 | `CORS_ORIGIN` | URL permitida do frontend. |
 | `JWT_SECRET` | Chave longa e exclusiva para assinar sessões. |
 
-## Banco MySQL
+## Banco PostgreSQL
 
 | Variável | Uso |
 |---|---|
-| `DATABASE_HOST` | Servidor MySQL. |
-| `DATABASE_PORT` | Porta MySQL. |
+| `DATABASE_HOST` | Servidor PostgreSQL. |
+| `DATABASE_PORT` | Porta PostgreSQL (5432). |
 | `DATABASE_NAME` | Nome do banco do ERP. |
 | `DATABASE_USER` | Usuário do banco. |
 | `DATABASE_PASSWORD` | Senha do banco. |

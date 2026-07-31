@@ -108,7 +108,7 @@ router.get('/tasks', taskPermission, async (req, res, next) => {
   try {
     const config = req.taskConfig;
     const [rows] = await pool.execute(
-      `SELECT t.id, t.usuario AS targetId, t.usuario_lanc, t.data, t.hora, t.hora_mensagem, t.descricao,
+      `SELECT t.id, t.usuario AS "targetId", t.usuario_lanc, t.data, t.hora, t.hora_mensagem, t.descricao,
               t.status, t.prioridade, t.titulo, t.recorrencia, t.empresa, target.nome AS target_nome,
               creator.nome AS usuario_lanc_nome
          FROM ${config.table} t
@@ -223,7 +223,7 @@ router.post('/tickets/:id/replies', permit('chamados'), async (req, res, next) =
     if (!ticket[0]) throw Object.assign(new Error('Chamado não encontrado.'), { status: 404 });
     const [result] = await pool.execute(
       `INSERT INTO chamados_respostas (empresa, data, hora, usuario, texto, chamado)
-       VALUES (?, CURRENT_DATE, CURRENT_TIME, ?, ?, ?)`,
+       VALUES (?, CURRENT_DATE, LOCALTIME, ?, ?, ?)`,
       [Number(req.auth.companyId), Number(req.auth.sub), data.texto, ticketId]
     );
     await pool.execute(`UPDATE chamados SET respondido = 'Sim', status = CASE WHEN status = 'Aberto' THEN 'Em andamento' ELSE status END WHERE id = ? AND empresa = ?`, [ticketId, Number(req.auth.companyId)]);

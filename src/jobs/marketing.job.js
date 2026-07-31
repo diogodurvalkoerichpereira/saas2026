@@ -46,7 +46,7 @@ async function processDueDispatches({ companyId, limit = env.marketing.batchSize
         await connection.execute(
           `UPDATE node_marketing_dispatch
               SET status = CASE WHEN tentativas >= ? THEN 'falhou' ELSE 'pendente' END,
-                  erro = ?, agendado_para = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE),
+                  erro = ?, agendado_para = CURRENT_TIMESTAMP + make_interval(mins => ?),
                   atualizado_em = CURRENT_TIMESTAMP
             WHERE id = ?`,
           [env.marketing.maxAttempts, publicError(error), env.marketing.retryMinutes, dispatch.id]

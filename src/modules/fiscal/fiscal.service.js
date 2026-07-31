@@ -24,11 +24,11 @@ async function upsertFiscalConfig(companyId, userId, data, db = pool) {
     `INSERT INTO node_fiscal_config
        (empresa, ambiente, emite_nfse, emite_nfe, certificado_ref, certificado_senha_ref, certificado_validade, regime_especial, incentivo_fiscal, atualizado_por)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       ambiente = VALUES(ambiente), emite_nfse = VALUES(emite_nfse), emite_nfe = VALUES(emite_nfe),
-       certificado_ref = VALUES(certificado_ref), certificado_senha_ref = VALUES(certificado_senha_ref),
-       certificado_validade = VALUES(certificado_validade), regime_especial = VALUES(regime_especial),
-       incentivo_fiscal = VALUES(incentivo_fiscal), atualizado_por = VALUES(atualizado_por)`,
+     ON CONFLICT (empresa) DO UPDATE SET
+       ambiente = EXCLUDED.ambiente, emite_nfse = EXCLUDED.emite_nfse, emite_nfe = EXCLUDED.emite_nfe,
+       certificado_ref = EXCLUDED.certificado_ref, certificado_senha_ref = EXCLUDED.certificado_senha_ref,
+       certificado_validade = EXCLUDED.certificado_validade, regime_especial = EXCLUDED.regime_especial,
+       incentivo_fiscal = EXCLUDED.incentivo_fiscal, atualizado_por = EXCLUDED.atualizado_por`,
     [
       companyId, data.ambiente || 'homologacao', data.emiteNfse || 'Sim', data.emiteNfe || 'Nao',
       data.certificadoRef || null, data.certificadoSenhaRef || null, data.certificadoValidade || null,
@@ -76,8 +76,8 @@ async function saveCertificate(companyId, buffer, senha, nomeOriginal, userId, d
   await db.execute(
     `INSERT INTO node_fiscal_config (empresa, certificado_ref, certificado_senha_cifrada, certificado_validade, certificado_nome, atualizado_por)
      VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE certificado_ref = VALUES(certificado_ref), certificado_senha_cifrada = VALUES(certificado_senha_cifrada),
-       certificado_validade = VALUES(certificado_validade), certificado_nome = VALUES(certificado_nome), atualizado_por = VALUES(atualizado_por)`,
+     ON CONFLICT (empresa) DO UPDATE SET certificado_ref = EXCLUDED.certificado_ref, certificado_senha_cifrada = EXCLUDED.certificado_senha_cifrada,
+       certificado_validade = EXCLUDED.certificado_validade, certificado_nome = EXCLUDED.certificado_nome, atualizado_por = EXCLUDED.atualizado_por`,
     [companyId, absolutePath, encrypt(senha), validade, nome, userId || null]
   );
   return { validade, nome };
@@ -85,14 +85,15 @@ async function saveCertificate(companyId, buffer, senha, nomeOriginal, userId, d
 
 // Reserva o proximo numero de forma atomica dentro da conexao/transacao do chamador.
 async function reserveNumero(conn, companyId, modelo, serie) {
-  await conn.execute(
+  // O RETURNING devolve o número já reservado no mesmo statement. A versão anterior fazia
+  // INSERT e depois SELECT, o que abria uma janela em que outra transação podia incrementar
+  // o contador entre as duas consultas e devolver o mesmo número duas vezes.
+  const [rows] = await conn.execute(
     `INSERT INTO node_fiscal_numeracao (empresa, modelo, serie, ultimo_numero)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE ultimo_numero = ultimo_numero + 1`,
-    [companyId, modelo, serie]
-  );
-  const [rows] = await conn.execute(
-    'SELECT ultimo_numero FROM node_fiscal_numeracao WHERE empresa = ? AND modelo = ? AND serie = ?',
+     ON CONFLICT (empresa, modelo, serie)
+     DO UPDATE SET ultimo_numero = node_fiscal_numeracao.ultimo_numero + 1
+     RETURNING ultimo_numero`,
     [companyId, modelo, serie]
   );
   return rows[0].ultimo_numero;

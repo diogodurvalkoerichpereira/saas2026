@@ -96,7 +96,7 @@ router.post('/cash/:id/withdrawals', permit('caixas'), authorize('Administrador'
     const balance = await cashBalance(cashId, Number(req.auth.companyId));
     if (data.value > balance.saldo_esperado) throw Object.assign(new Error('A retirada é maior que o saldo esperado do caixa.'), { status: 409 });
     const [result] = await pool.execute(
-      'INSERT INTO sangrias (usuario, valor, data, hora, caixa) VALUES (?, ?, CURRENT_DATE, CURRENT_TIME, ?)',
+      'INSERT INTO sangrias (usuario, valor, data, hora, caixa) VALUES (?, ?, CURRENT_DATE, LOCALTIME, ?)',
       [Number(req.auth.sub), data.value, cashId]
     );
     await pool.execute('UPDATE caixas SET sangrias = COALESCE(sangrias, 0) + ? WHERE id = ? AND empresa = ?', [data.value, cashId, Number(req.auth.companyId)]);
@@ -111,7 +111,7 @@ router.post('/cash/:id/close', permit('caixas'), authorize('Administrador', 'Ger
     const balance = await cashBalance(cashId, Number(req.auth.companyId));
     const [result] = await pool.execute(
       `UPDATE caixas SET data_fechamento = CURRENT_DATE, valor_fechamento = ?, quebra = ?,
-                         usuario_fechamento = ?, obs = CONCAT_WS(' | ', NULLIF(obs, ''), NULLIF(?, ''))
+                         usuario_fechamento = ?, obs = CONCAT_WS(' | ', NULLIF(obs, ''), NULLIF(?::text, ''))
         WHERE id = ? AND empresa = ? AND data_fechamento IS NULL`,
       [data.closingValue, data.closingValue - balance.saldo_esperado, Number(req.auth.sub), data.notes ?? '', cashId, Number(req.auth.companyId)]
     );
@@ -276,7 +276,7 @@ router.get('/recurring', permit('cobrancas'), async (req, res, next) => {
               f.frequencia AS frequencia_nome, f.dias AS frequencia_dias
          FROM cobrancas c
          JOIN clientes cl ON cl.id = c.cliente AND cl.empresa = c.empresa
-         LEFT JOIN frequencias f ON CAST(f.id AS CHAR) = c.frequencia AND f.empresa = c.empresa
+         LEFT JOIN frequencias f ON f.id = c.frequencia AND f.empresa = c.empresa
         WHERE c.empresa = ? ORDER BY c.data_venc, c.id`,
       [Number(req.auth.companyId)]
     );
@@ -332,7 +332,7 @@ router.post('/recurring/:id/generate', permit('cobrancas'), authorize('Administr
     const recurringId = id.parse(req.params.id);
     const [rows] = await pool.execute(
       `SELECT c.*, f.dias FROM cobrancas c
-       JOIN frequencias f ON CAST(f.id AS CHAR) = c.frequencia AND f.empresa = c.empresa
+       JOIN frequencias f ON f.id = c.frequencia AND f.empresa = c.empresa
        WHERE c.id = ? AND c.empresa = ? AND c.node_status = 'ativo'`,
       [recurringId, Number(req.auth.companyId)]
     );

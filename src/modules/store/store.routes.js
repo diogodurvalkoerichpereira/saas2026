@@ -101,7 +101,7 @@ router.delete('/orders/:id', authorize('Administrador', 'Gerente'), async (req, 
           WHERE id = ? AND empresa = ?`,
         [reason, Number(req.auth.sub), order.recebivel, Number(req.auth.companyId)]
       );
-      await connection.execute(`UPDATE node_store_orders SET status = 'Cancelado', observacoes = CONCAT(COALESCE(observacoes, ''), ?), atualizado_em = CURRENT_TIMESTAMP WHERE id = ? AND empresa = ?`, [`\nCancelamento: ${reason}`, orderId, Number(req.auth.companyId)]);
+      await connection.execute(`UPDATE node_store_orders SET status = 'Cancelado', observacoes = CONCAT(COALESCE(observacoes, ''), ?::text), atualizado_em = CURRENT_TIMESTAMP WHERE id = ? AND empresa = ?`, [`\nCancelamento: ${reason}`, orderId, Number(req.auth.companyId)]);
       await audit(connection, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'cancelar', entity: 'pedido_loja', entityId: orderId, reason });
       await connection.commit();
     } catch (error) {

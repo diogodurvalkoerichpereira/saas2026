@@ -152,14 +152,15 @@ router.post('/campaigns/:id/queue', authorize('Administrador', 'Gerente'), async
       let inserted = 0;
       for (const contact of contacts) {
         const [result] = await connection.execute(
-          `INSERT IGNORE INTO node_marketing_dispatch
+          `INSERT INTO node_marketing_dispatch
             (campanha, cliente, nome, telefone, mensagem, empresa, status, tentativas, agendado_para, consentimento_confirmado, criado_em, atualizado_em)
-           VALUES (?, ?, ?, ?, ?, ?, 'pendente', 0, ?, 'Sim', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+           VALUES (?, ?, ?, ?, ?, ?, 'pendente', 0, ?, 'Sim', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           ON CONFLICT (campanha, cliente, agendado_para) DO NOTHING`,
           [campaignId, contact.id, contact.nome, contact.normalizedPhone, campaigns[0].mensagem, Number(req.auth.companyId), scheduledAt]
         );
         inserted += result.affectedRows;
       }
-      await connection.execute('UPDATE marketing SET data_envio = DATE(?), total_disparos = ? WHERE id = ? AND empresa = ?', [scheduledAt, inserted, campaignId, Number(req.auth.companyId)]);
+      await connection.execute('UPDATE marketing SET data_envio = ?::date, total_disparos = ? WHERE id = ? AND empresa = ?', [scheduledAt, inserted, campaignId, Number(req.auth.companyId)]);
       await audit(connection, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'agendar', entity: 'marketing', entityId: campaignId, details: { recipients: inserted, scheduledAt } });
       await connection.commit();
       res.status(201).json({ queued: inserted, eligible: contacts.length, dispatchEnabled: env.marketing.dispatchEnabled });

@@ -78,7 +78,7 @@ async function createSale({ clientId, paymentMethodId, dueDate, paid, items, des
     const cost = (costCents / 100).toFixed(2);
     const [sale] = await connection.execute(
       `INSERT INTO receber (descricao, cliente, valor, vencimento, data_pgto, data_lanc, forma_pgto, arquivo, referencia, subtotal, desconto, obs, usuario_lanc, usuario_pgto, pago, hora, empresa, total_venda, valor_custo)
-       VALUES ('Nova Venda', ?, ?, ?, ?, CURRENT_DATE, ?, 'sem-foto.png', 'Venda', ?, ?, ?, ?, ?, ?, CURRENT_TIME, ?, ?, ?)`,
+       VALUES ('Nova Venda', ?, ?, ?, ?, CURRENT_DATE, ?, 'sem-foto.png', 'Venda', ?, ?, ?, ?, ?, ?, LOCALTIME, ?, ?, ?)`,
       [clientId, total, dueDate, paid ? dueDate : null, paymentMethodId, gross, discount, obs ?? '', userId, paid ? userId : 0, paid ? 'Sim' : 'Não', companyId, gross, cost]
     );
     for (const line of lines) {
