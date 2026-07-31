@@ -498,6 +498,125 @@
   color: var(--ink);
 }
 
+/* ================= Visual mais vivo (conteúdo; sidebar e ícones do nav intactos) ================= */
+.button {
+  transition: transform .16s, box-shadow .16s, filter .16s, background .16s;
+}
+
+.button.primary {
+  background: linear-gradient(135deg, #12b886 0%, #0e9f6e 55%, #0d9488 100%);
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(16, 159, 110, .26);
+}
+
+.button.primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 26px rgba(16, 159, 110, .32);
+}
+
+.button.primary:active {
+  transform: translateY(0);
+}
+
+/* Cards de indicadores com faixa de cor, leve tonalizado e elevação no hover */
+.metric-grid .metric-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  transition: transform .18s, box-shadow .18s;
+}
+
+.metric-grid .metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent, #10b981);
+}
+
+.metric-grid .metric-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130% 90% at 100% 0, color-mix(in srgb, var(--accent, #10b981) 13%, transparent), transparent 62%);
+  pointer-events: none;
+}
+
+.metric-grid .metric-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.metric-grid .metric-card span {
+  color: var(--accent, #0e9f6e);
+  font-weight: 800;
+}
+
+.metric-grid .metric-card strong {
+  font-size: 1.9rem;
+}
+
+.metric-grid .metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px rgba(26, 56, 46, .15);
+}
+
+.metric-grid .metric-card:nth-of-type(5n+1) { --accent: #10b981; }
+.metric-grid .metric-card:nth-of-type(5n+2) { --accent: #0ea5e9; }
+.metric-grid .metric-card:nth-of-type(5n+3) { --accent: #8b5cf6; }
+.metric-grid .metric-card:nth-of-type(5n+4) { --accent: #f59e0b; }
+.metric-grid .metric-card:nth-of-type(5n+5) { --accent: #ef4476; }
+.metric-grid .metric-card.warn { --accent: #f59e0b; }
+
+/* Tabelas com cabeçalho tonalizado e destaque de linha */
+.data-table th {
+  background: linear-gradient(180deg, #eef7f2, #e6f2eb);
+  color: #15633f;
+  border-bottom: 2px solid #d3e7dd;
+}
+
+.data-table tbody tr {
+  transition: background .12s;
+}
+
+.data-table tbody tr:hover {
+  background: #f1f9f5;
+}
+
+/* Foco vívido nos campos */
+input:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.toolbar input:focus,
+.toolbar select:focus,
+.search:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .16);
+}
+
+.panel {
+  border-radius: 16px;
+}
+
+/* Realces vivos no tema escuro */
+:root[data-theme="dark"] .data-table th {
+  background: linear-gradient(180deg, #17271f, #132019);
+  color: #6fd6a6;
+  border-bottom-color: #294036;
+}
+
+:root[data-theme="dark"] .data-table tbody tr:hover {
+  background: #16241f;
+}
+
+:root[data-theme="dark"] .metric-grid .metric-card:hover {
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .5);
+}
+
 @media (max-width: 700px) {
   .sidebar-nav a {
     font-size: .89rem;
