@@ -124,12 +124,11 @@ async function annualBalanceReport(companyId, year, db = pool) {
 
 async function syntheticPayablesReport(companyId, { from, to }, db = pool) {
   const [rows] = await db.execute(
-    `SELECT COALESCE(pc.nome, 'Sem categoria') AS categoria, COUNT(*) AS quantidade,
-            COALESCE(SUM(CASE WHEN p.pago = 'Sim' THEN p.subtotal ELSE 0 END), 0) AS pago,
-            COALESCE(SUM(CASE WHEN p.pago IS NULL OR p.pago <> 'Sim' THEN p.subtotal ELSE 0 END), 0) AS pendente
-       FROM pagar p
-       LEFT JOIN plano_contas pc ON pc.id = p.plano_contas AND pc.empresa = p.empresa
-      WHERE p.empresa = ? AND p.data_lanc BETWEEN ? AND ?
+    `SELECT COALESCE(referencia, 'Outros') AS categoria, COUNT(*) AS quantidade,
+            COALESCE(SUM(CASE WHEN pago = 'Sim' THEN subtotal ELSE 0 END), 0) AS pago,
+            COALESCE(SUM(CASE WHEN pago IS NULL OR pago <> 'Sim' THEN subtotal ELSE 0 END), 0) AS pendente
+       FROM pagar
+      WHERE empresa = ? AND data_lanc BETWEEN ? AND ?
       GROUP BY categoria
       ORDER BY pendente DESC, pago DESC`,
     [companyId, from, to]
