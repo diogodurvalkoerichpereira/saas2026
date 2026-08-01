@@ -1,4 +1,8 @@
-const router = require('express').Router();
+const { randomUUID } = require('node:crypto');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const express = require('express');
+const router = express.Router();
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
@@ -29,6 +33,11 @@ const resources = {
   }
 };
 const idSchema = z.coerce.number().int().positive();
+
+// Imagem de produto/serviço (espelha o legado: coluna `foto` guarda o nome do arquivo).
+const uploadRoot = path.resolve(__dirname, '..', '..', '..', 'uploads');
+const imageTables = { products: 'produtos', services: 'servicos' };
+const imageExtensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 
 router.use(authenticate, permit('fornecedores', 'produtos', 'servicos'));
 router.param('resource', (req, res, next, value) => {
@@ -77,5 +86,40 @@ router.post('/:resource/:id/restore', authorize('Administrador', 'Gerente'), asy
     res.status(204).end();
   } catch (error) { next(error); }
 });
+
+// Upload da imagem do produto/serviço. Guarda o arquivo em uploads/<empresa>/catalog/<uuid> e
+// grava o nome na coluna `foto`. A exibição usa a rota pública /api/media/catalog (media.routes.js).
+router.post(
+  '/:resource/:id/image',
+  authorize('Administrador', 'Gerente', 'Comum'),
+  express.raw({ type: 'application/octet-stream', limit: '6mb' }),
+  async (req, res, next) => {
+    try {
+      const table = imageTables[req.params.resource];
+      if (!table) throw Object.assign(new Error('Este recurso não aceita imagem.'), { status: 400 });
+      const id = idSchema.parse(req.params.id);
+      const mimeType = String(req.headers['x-file-type'] || '').toLowerCase();
+      if (!imageExtensions[mimeType]) throw Object.assign(new Error('Envie uma imagem JPEG, PNG ou WebP.'), { status: 415 });
+      if (!Buffer.isBuffer(req.body) || !req.body.length) throw Object.assign(new Error('A imagem está vazia.'), { status: 400 });
+
+      const companyId = Number(req.auth.companyId);
+      const [rows] = await pool.execute(`SELECT foto FROM ${table} WHERE id = ? AND empresa = ?`, [id, companyId]);
+      if (!rows[0]) throw Object.assign(new Error('Registro não encontrado.'), { status: 404 });
+
+      const folder = path.join(uploadRoot, String(companyId), 'catalog');
+      await fs.mkdir(folder, { recursive: true });
+      const storedName = `${randomUUID()}${imageExtensions[mimeType]}`;
+      await fs.writeFile(path.join(folder, storedName), req.body, { flag: 'wx' });
+      await pool.execute(`UPDATE ${table} SET foto = ? WHERE id = ? AND empresa = ?`, [storedName, id, companyId]);
+
+      const previous = rows[0].foto;
+      if (previous && !/^sem-foto/i.test(previous)) {
+        await fs.unlink(path.join(folder, previous)).catch(() => {});
+      }
+      await audit(pool, { companyId, userId: Number(req.auth.sub), action: 'imagem', entity: req.params.resource, entityId: id });
+      res.status(201).json({ foto: storedName });
+    } catch (error) { next(error); }
+  }
+);
 
 module.exports = router;

@@ -1,7 +1,7 @@
-import { api, uploadCertificate } from './api.js';
+import { api, uploadCertificate, uploadAttachment } from './api.js';
 import { money, number, date, text, escapeHtml, badge } from './format.mjs';
 import { icon } from './icons.mjs';
-import { loading, pageHeader, table, pagination, openForm, confirmAction, toast } from './ui.js';
+import { loading, pageHeader, table, pagination, openForm, confirmAction, toast, catalogImageUrl } from './ui.js';
 import { renderExtraRoute } from './extra-pages.js';
 import { attachmentButton, openAttachments } from './attachments.js';
 
@@ -49,8 +49,9 @@ const entityConfigs = {
     ]
   },
   products: {
-    title: 'Produtos', singular: 'produto', path: '/api/catalog/products', subtitle: 'Catálogo, preço de venda e níveis de estoque.',
+    title: 'Produtos', singular: 'produto', path: '/api/catalog/products', subtitle: 'Catálogo, preço de venda e níveis de estoque.', hasImage: true,
     columns: [
+      { key: 'foto', label: '', render: (value) => { const url = catalogImageUrl(value); return url ? `<img src="${url}" alt="" class="thumb">` : '<span class="thumb thumb-empty"></span>'; } },
       { key: 'codigo', label: 'Código', render: text }, { key: 'nome', label: 'Produto' }, { key: 'valor_venda', label: 'Venda', render: (value) => `<span class="money">${money(value)}</span>` },
       { key: 'estoque', label: 'Estoque', render: number }, { key: 'fornecedor_nome', label: 'Fornecedor', render: text }, { key: 'ativo', label: 'Situação', render: badge }
     ],
@@ -79,13 +80,15 @@ const entityConfigs = {
         { name: 'unidade_fiscal', label: 'Unidade fiscal (mercadoria)', optional: true, max: 6 },
         { name: 'codigo_lc116', label: 'Código LC 116 (serviço)', optional: true, max: 10 },
         { name: 'codigo_tributacao_municipio', label: 'Cód. tributação município (serviço)', optional: true, max: 20 },
-        { name: 'aliquota_iss', label: 'Alíquota ISS % (serviço)', type: 'number', step: '.01', min: 0, numeric: true, optional: true }
+        { name: 'aliquota_iss', label: 'Alíquota ISS % (serviço)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+        { name: 'foto', label: 'Imagem do produto', type: 'image', full: true }
       ];
     }
   },
   services: {
-    title: 'Serviços', singular: 'serviço', path: '/api/catalog/services', subtitle: 'Serviços, valores e prazos praticados.',
+    title: 'Serviços', singular: 'serviço', path: '/api/catalog/services', subtitle: 'Serviços, valores e prazos praticados.', hasImage: true,
     columns: [
+      { key: 'foto', label: '', render: (value) => { const url = catalogImageUrl(value); return url ? `<img src="${url}" alt="" class="thumb">` : '<span class="thumb thumb-empty"></span>'; } },
       { key: 'nome', label: 'Serviço' }, { key: 'valor', label: 'Valor', render: (value) => `<span class="money">${money(value)}</span>` },
       { key: 'dias', label: 'Prazo (dias)', render: number }, { key: 'comissao', label: 'Comissão %', render: number }, { key: 'ativo', label: 'Situação', render: badge }
     ],
@@ -97,7 +100,8 @@ const entityConfigs = {
       { name: 'descricao', label: 'Descrição', type: 'textarea', optional: true, full: true, max: 5000 },
       { name: 'codigo_lc116', label: 'Código da LC 116 (NFS-e)', optional: true, max: 10 },
       { name: 'codigo_tributacao_municipio', label: 'Cód. tributação município (NFS-e)', optional: true, max: 20 },
-      { name: 'aliquota_iss', label: 'Alíquota ISS % (NFS-e)', type: 'number', step: '.01', min: 0, numeric: true, optional: true }
+      { name: 'aliquota_iss', label: 'Alíquota ISS % (NFS-e)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+      { name: 'foto', label: 'Imagem do serviço', type: 'image', full: true }
     ]
   },
   users: {
@@ -177,8 +181,13 @@ async function renderCrud(config) {
           title: edit ? `Editar ${config.singular}` : `Novo ${config.singular}`,
           fields: normalizedFields,
           record: edit ? item : {},
-          onSubmit: async (data) => {
-            await api(edit ? `${config.path}/${item.id}` : config.path, { method: edit ? 'PATCH' : 'POST', body: data });
+          onSubmit: async (data, form) => {
+            const saved = await api(edit ? `${config.path}/${item.id}` : config.path, { method: edit ? 'PATCH' : 'POST', body: data });
+            const recordId = edit ? item.id : saved.id;
+            if (config.hasImage && form) {
+              const file = form.querySelector('input[type="file"]')?.files?.[0];
+              if (file) await uploadAttachment(`${config.path}/${recordId}/image`, file);
+            }
             toast(edit ? 'Registro atualizado.' : 'Registro criado.');
             await load();
           }

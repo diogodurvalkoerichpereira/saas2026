@@ -730,3 +730,29 @@ input:focus,
     pointer-events: none;
   }
 }
+
+/* Miniaturas e preview de imagem de produto/serviço */
+.thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #edf3f0;
+}
+
+.thumb-empty {
+  display: inline-block;
+  border: 1px dashed var(--line);
+}
+
+.image-preview-wrap {
+  margin-top: 8px;
+}
+
+.image-preview {
+  max-width: 140px;
+  max-height: 140px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}

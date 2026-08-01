@@ -1,6 +1,13 @@
 import { escapeHtml } from './format.mjs';
 import { normalizeFormValues, validateFormValues } from './form-values.mjs';
 import { icon } from './icons.mjs';
+import { session } from './session.js';
+
+export function catalogImageUrl(foto) {
+  if (!foto || /^sem-foto/i.test(String(foto))) return '';
+  const companyId = session.user?.companyId ?? 0;
+  return `/api/media/catalog/${companyId}/${encodeURIComponent(foto)}`;
+}
 
 export function toast(message, type = 'success') {
   const region = document.querySelector('#toast-region');
@@ -36,6 +43,14 @@ function fieldMarkup(field, value) {
     return `<label class="field ${full}">${escapeHtml(field.label)}<select name="${field.name}" ${required}>${(field.options || []).map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value ?? field.default ?? '') ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
   }
   if (field.type === 'textarea') return `<label class="field ${full}">${escapeHtml(field.label)}<textarea name="${field.name}" maxlength="${field.max || 1000}" ${required}>${escapeHtml(safe)}</textarea></label>`;
+  if (field.type === 'image') {
+    const url = catalogImageUrl(safe);
+    const preview = url ? `<img src="${url}" alt="" class="image-preview">` : '<span class="muted">Sem imagem</span>';
+    return `<label class="field ${full}">${escapeHtml(field.label)}
+      <input name="${field.name}__file" type="file" accept="image/jpeg,image/png,image/webp">
+      <div class="image-preview-wrap" data-image-preview>${preview}</div>
+      <small class="muted">JPEG, PNG ou WebP, até 6 MB.</small></label>`;
+  }
   return `<label class="field ${full}">${escapeHtml(field.label)}<input name="${field.name}" type="${field.type || 'text'}" value="${escapeHtml(safe)}" ${field.step ? `step="${field.step}"` : ''} ${field.min !== undefined ? `min="${field.min}"` : ''} ${field.max ? `maxlength="${field.max}"` : ''} ${required}></label>`;
 }
 
@@ -47,16 +62,19 @@ export function openForm({ title, eyebrow = 'Cadastro', fields, record = {}, sub
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">${fields.map((field) => fieldMarkup(field, record[field.name])).join('')}</div>`;
   document.querySelector('#modal-error').textContent = '';
   document.querySelector('#modal-submit-label').textContent = submitLabel;
+  // Campos de imagem só renderizam/enviam arquivo; ficam fora da validação e do corpo JSON.
+  const dataFields = fields.filter((field) => field.type !== 'image');
   const handler = async (event) => {
     event.preventDefault();
     const submit = document.querySelector('#modal-submit');
     submit.disabled = true;
     try {
       const rawValues = Object.fromEntries(new FormData(form));
-      const errors = validateFormValues(rawValues, fields);
+      fields.filter((field) => field.type === 'image').forEach((field) => delete rawValues[`${field.name}__file`]);
+      const errors = validateFormValues(rawValues, dataFields);
       if (errors.length) throw new Error(errors[0]);
-      const values = normalizeFormValues(rawValues, fields);
-      await onSubmit(values);
+      const values = normalizeFormValues(rawValues, dataFields);
+      await onSubmit(values, form);
       dialog.close();
     } catch (error) {
       document.querySelector('#modal-error').textContent = error.message;
