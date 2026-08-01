@@ -290,11 +290,15 @@ async function openPermissions(user) {
 
 async function renderDashboard() {
   loading();
-  const [finance, operations] = await Promise.all([api('/api/reports/financial'), api('/api/reports/operational')]);
+  // Os indicadores financeiros são restritos a alguns perfis (Comum e Técnico recebem 403).
+  // A visão geral precisa continuar abrindo para eles, mostrando só o que podem ver.
+  const [financeResult, operationsResult] = await Promise.allSettled([api('/api/reports/financial'), api('/api/reports/operational')]);
+  const finance = financeResult.status === 'fulfilled' ? financeResult.value : null;
+  const operations = operationsResult.status === 'fulfilled' ? operationsResult.value : {};
   root().innerHTML = `${pageHeader('Visão geral', 'Indicadores atualizados da empresa e atalhos operacionais.')}
     <section class="metric-grid">
-      ${metric('A receber', money(finance.a_receber), 'Contas pendentes', '#/finance?type=receivables')}
-      ${metric('A pagar', money(finance.a_pagar), 'Compromissos pendentes', '#/finance?type=payables')}
+      ${finance ? `${metric('A receber', money(finance.a_receber), 'Contas pendentes', '#/finance?type=receivables')}
+      ${metric('A pagar', money(finance.a_pagar), 'Compromissos pendentes', '#/finance?type=payables')}` : ''}
       ${metric('Produtos', number(operations.stock?.produtos), 'Itens cadastrados', '#/products')}
       ${metric('Estoque baixo', number(operations.stock?.estoque_baixo), 'Requer atenção', '#/inventory')}
     </section>

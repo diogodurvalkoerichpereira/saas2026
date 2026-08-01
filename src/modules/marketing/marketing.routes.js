@@ -8,6 +8,8 @@ const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { processDueDispatches } = require('../../jobs/marketing.job');
+const { sendMessage, resolveConfig } = require('../../integrations/whatsapp.client');
+const { providers, isDisabled } = require('../../integrations/whatsapp.providers');
 
 const id = z.coerce.number().int().positive();
 const yesNo = z.enum(['Sim', 'Não']);
@@ -36,12 +38,38 @@ function phone(value) {
 
 router.use(authenticate, permit('marketing', 'grupos_disparos', 'dispositivos'));
 
-router.get('/status', (_req, res) => {
-  res.json({
-    configured: Boolean(env.integrations.whatsappUrl && env.integrations.whatsappToken),
-    dispatchEnabled: env.marketing.dispatchEnabled,
-    provider: env.integrations.whatsappUrl ? 'Configurado por ambiente' : 'Não configurado'
-  });
+// Situação da integração DESTA empresa: qual provedor escolheu e se já tem token.
+router.get('/status', async (req, res, next) => {
+  try {
+    const config = await resolveConfig({ companyId: Number(req.auth.companyId) });
+    const label = config.provider === 'env'
+      ? 'Configurado por ambiente'
+      : providers[config.provider]?.label || 'Não configurado';
+    res.json({
+      configured: !isDisabled(config.provider) && Boolean(config.token),
+      dispatchEnabled: env.marketing.dispatchEnabled,
+      provider: label,
+      providerKey: config.provider || '',
+      instancia: config.instance || ''
+    });
+  } catch (error) { next(error); }
+});
+
+// Envio de teste para o telefone do próprio usuário (espelha teste_whatsapp.php do legado),
+// para conferir credenciais sem disparar uma campanha.
+router.post('/test-message', authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const [rows] = await pool.execute('SELECT telefone FROM usuarios WHERE id = ? AND empresa = ? LIMIT 1', [Number(req.auth.sub), Number(req.auth.companyId)]);
+    const destino = phone(rows[0]?.telefone);
+    if (!destino) throw Object.assign(new Error('Cadastre um telefone válido no seu usuário para testar o envio.'), { status: 400 });
+    await sendMessage({
+      phone: destino,
+      message: String(req.body?.message || '').trim() || 'Teste de integração do WhatsApp.',
+      companyId: Number(req.auth.companyId)
+    });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'testar', entity: 'whatsapp' });
+    res.json({ sent: true, phone: destino });
+  } catch (error) { next(error); }
 });
 
 router.get('/campaigns', async (req, res, next) => {

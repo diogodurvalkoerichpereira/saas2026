@@ -33,7 +33,8 @@ async function processDueDispatches({ companyId, limit = env.marketing.batchSize
       if (!locked.affectedRows) continue;
       result.processed += 1;
       try {
-        await sendMessage({ phone: dispatch.telefone, message: dispatch.mensagem });
+        // Cada disparo sai pelo provedor da empresa dona da campanha, não por um global.
+        await sendMessage({ phone: dispatch.telefone, message: dispatch.mensagem, companyId: dispatch.empresa, db: connection });
         await connection.execute(
           `UPDATE node_marketing_dispatch
               SET status = 'enviado', enviado_em = CURRENT_TIMESTAMP, erro = NULL, atualizado_em = CURRENT_TIMESTAMP

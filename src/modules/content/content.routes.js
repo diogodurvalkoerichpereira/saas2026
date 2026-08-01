@@ -6,6 +6,7 @@ const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
+const { providers } = require('../../integrations/whatsapp.providers');
 
 const id = z.coerce.number().int().positive();
 const optional = (max) => z.string().trim().max(max).optional();
@@ -41,7 +42,9 @@ const settingsSchema = z.object({
   avarias_orc: optional(100), acessorios_orc: optional(100), laudo_orc: optional(100),
   mao_obra_os: optional(100), senha_aparelho_os: optional(100), defeito_os: optional(100),
   avarias_os: optional(100), acessorios_os: optional(100), laudo_os: optional(100),
-  api_whatsapp: optional(60), token_whatsapp: optional(70), instancia_whatsapp: optional(70)
+  // Provedor de WhatsApp da empresa: só os valores suportados (espelha o select do legado).
+  api_whatsapp: z.enum(['Não', ...Object.keys(providers)]).optional(),
+  token_whatsapp: optional(70), instancia_whatsapp: optional(70)
 });
 
 router.use(authenticate);

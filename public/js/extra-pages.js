@@ -303,7 +303,7 @@ async function renderMarketing(route) {
   const load = async () => {
     const result = await api(`/api/marketing/campaigns?page=${state.page}&pageSize=25&search=${encodeURIComponent(state.search)}`);
     root().innerHTML = `${pageHeader('Comunicação por WhatsApp', 'Campanhas com consentimento, grupos, agendamento e fila persistente.', `<button class="button primary" data-new>${icon('plus')}Nova campanha</button>`)}
-      ${tabs}<div class="integration-state ${status.dispatchEnabled ? 'enabled' : 'disabled'}"><strong>${status.dispatchEnabled ? 'Envio habilitado' : 'Modo seguro: envio real desabilitado'}</strong><span>${status.configured ? 'Integração configurada por ambiente.' : 'Nenhuma credencial de provedor configurada.'}</span></div>
+      ${tabs}<div class="integration-state ${status.dispatchEnabled ? 'enabled' : 'disabled'}"><strong>${status.dispatchEnabled ? 'Envio habilitado' : 'Modo seguro: envio real desabilitado'}</strong><span>${status.configured ? `Provedor: ${escapeHtml(status.provider)}${status.instancia ? ` · instância ${escapeHtml(status.instancia)}` : ''}.` : 'Nenhum provedor de WhatsApp configurado — escolha em Configurações.'}</span>${status.configured ? `<button class="button ghost small" data-test-whatsapp>${icon('megaphone')}Enviar teste</button>` : ''}</div>
       <section class="panel"><form class="toolbar" data-filter><input class="search" name="search" value="${escapeHtml(state.search)}" placeholder="Buscar campanha"><button class="button ghost">${icon('filter')}Filtrar</button></form>
       ${table([
         { key: 'data', label: 'Criação', render: date }, { key: 'titulo', label: 'Campanha' }, { key: 'data_envio', label: 'Agendada', render: date },
@@ -311,6 +311,17 @@ async function renderMarketing(route) {
         { key: 'pendentes', label: 'Pendentes', render: number }, { key: 'falhas', label: 'Falhas', render: number }
       ], result.items, (item) => `${editButton(item.id)}${attachmentButton('campaigns', item.id)}<button class="button ghost small" data-action="queue" data-id="${item.id}">${icon('calendar')}Agendar</button><button class="button ghost small" data-action="log" data-id="${item.id}">${icon('list')}Fila</button><button class="button danger small" data-action="delete" data-id="${item.id}">${icon('trash')}Excluir</button>`)}${pagination(result.pagination)}</section>`;
     const byId = new Map(result.items.map((item) => [String(item.id), item]));
+    // Envio de teste para o telefone do próprio usuário, para validar o provedor escolhido.
+    root().querySelector('[data-test-whatsapp]')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const sent = await api('/api/marketing/test-message', { method: 'POST', body: {} });
+        toast(`Mensagem de teste enviada para ${sent.phone}.`);
+      } catch (error) {
+        toast(error.message, 'error');
+      } finally { button.disabled = false; }
+    });
     const campaignForm = (record = {}) => openForm({
       title: record.id ? 'Editar campanha' : 'Nova campanha', eyebrow: 'WhatsApp', record,
       fields: [
@@ -818,6 +829,14 @@ async function openPayrollEntries(employeeId, competencia, onChange) {
   dialog.showModal();
 }
 
+// Precisa espelhar src/integrations/whatsapp.providers.js — o backend valida contra a mesma lista.
+const whatsappProviderOptions = [
+  { value: 'Não', label: 'Não enviar' },
+  { value: 'menuia', label: 'Menuia' },
+  { value: 'wm', label: 'WordMensagens' },
+  { value: 'newtek', label: 'NewTek' }
+];
+
 const companySettingsFields = [
   { name: 'nome', label: 'Nome da empresa', optional: true, max: 50 },
   { name: 'email', label: 'E-mail', type: 'email', optional: true, max: 50 },
@@ -852,7 +871,8 @@ const companySettingsFields = [
   { name: 'senha_aparelho_os', label: 'Texto padrão · Senha do aparelho (OS)', optional: true, max: 100 },
   { name: 'avarias_os', label: 'Texto padrão · Avarias (OS)', optional: true, max: 100 },
   { name: 'mao_obra_os', label: 'Texto padrão · Condições de mão de obra (OS)', optional: true, max: 100 },
-  { name: 'api_whatsapp', label: 'WhatsApp · URL da API', optional: true, max: 60, full: true },
+  // Provedor de WhatsApp da empresa — mesmas opções do legado.
+  { name: 'api_whatsapp', label: 'WhatsApp · Provedor', type: 'select', full: true, options: whatsappProviderOptions },
   { name: 'instancia_whatsapp', label: 'WhatsApp · Instância', optional: true, max: 70 },
   { name: 'token_whatsapp', label: 'WhatsApp · Token (deixe em branco para manter o atual)', optional: true, max: 70 }
 ];
@@ -870,6 +890,7 @@ async function renderSettings() {
       <div><small>Site</small><strong>${escapeHtml(settings.url_site || 'Não configurado')}</strong></div>
       <div><small>Multa por atraso</small><strong>${settings.multa_atraso != null ? `${settings.multa_atraso}%` : 'Não configurada'}</strong></div>
       <div><small>Juros por dia de atraso</small><strong>${settings.juros_atraso != null ? `${settings.juros_atraso}%` : 'Não configurado'}</strong></div>
+      <div><small>WhatsApp (provedor)</small><strong>${escapeHtml(whatsappProviderOptions.find((option) => option.value === settings.api_whatsapp)?.label || 'Não configurado')}</strong></div>
       <div><small>WhatsApp (instância)</small><strong>${escapeHtml(settings.instancia_whatsapp || 'Não configurado')}</strong></div>
       <div><small>Token WhatsApp</small><strong>${settings.token_whatsapp_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
     </div></section>`;
