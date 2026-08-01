@@ -51,6 +51,20 @@ router.get('/:resource', async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['nome', 'codigo', 'email', 'telefone', 'cnpj', 'descricao'], defaultSort: 'nome' }));
   } catch (error) { next(error); }
 });
+// Busca de produto por código de barras, para o PDV (espelha buscar_produto.php do legado).
+router.get('/:resource/by-code/:codigo', async (req, res, next) => {
+  try {
+    if (req.params.resource !== 'products') throw Object.assign(new Error('Busca por código é apenas para produtos.'), { status: 400 });
+    const codigo = String(req.params.codigo || '').trim();
+    if (!codigo) throw Object.assign(new Error('Informe o código.'), { status: 400 });
+    const [rows] = await pool.execute(
+      "SELECT id, codigo, nome, valor_venda, valor_promocional, foto, estoque, tem_estoque FROM produtos WHERE codigo = ? AND empresa = ? AND ativo = 'Sim' LIMIT 1",
+      [codigo, Number(req.auth.companyId)]
+    );
+    if (!rows[0]) throw Object.assign(new Error('Produto não encontrado para este código.'), { status: 404 });
+    res.json(normalizeRecord(rows[0]));
+  } catch (error) { next(error); }
+});
 router.get('/:resource/:id', async (req, res, next) => {
   try { res.json(normalizeRecord(await req.resource.repository.get(idSchema.parse(req.params.id), Number(req.auth.companyId)))); } catch (error) { next(error); }
 });

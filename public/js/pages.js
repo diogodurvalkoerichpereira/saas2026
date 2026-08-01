@@ -383,43 +383,118 @@ function openSaleForm(clients, products, services, paymentMethods, reload) {
   }
   const dialog = document.querySelector('#app-modal');
   const form = document.querySelector('#modal-form');
-  const firstKind = products.length ? 'produto' : 'servico';
-  const lines = [{ kind: firstKind, itemId: (firstKind === 'produto' ? products : services)[0].id, quantity: 1 }];
+  const productById = new Map(products.map((entry) => [String(entry.id), entry]));
+  const lines = []; // { kind: 'produto'|'servico', itemId, quantity } — o caixa começa vazio e escaneia.
   document.querySelector('#modal-title').textContent = 'Nova venda';
-  document.querySelector('#modal-eyebrow').textContent = 'PDV';
+  document.querySelector('#modal-eyebrow').textContent = 'PDV / Caixa';
   document.querySelector('#modal-submit-label').textContent = 'Concluir venda';
   document.querySelector('#modal-error').textContent = '';
+
+  const entryOf = (line) => (line.kind === 'produto' ? productById.get(String(line.itemId)) : services.find((s) => String(s.id) === String(line.itemId)));
+  // Usa valor_venda para bater exatamente com o que o servidor cobra em createSale.
+  const unitOf = (line) => { const e = entryOf(line); return e ? (Number(line.kind === 'produto' ? e.valor_venda : e.valor) || 0) : 0; };
+
+  const computeTotals = () => {
+    const subtotal = lines.reduce((sum, line) => sum + unitOf(line) * line.quantity, 0);
+    const descInput = Number(form.querySelector('[name="desconto"]').value || 0);
+    const tipo = form.querySelector('[name="tipo_desconto"]').value;
+    const desconto = tipo === 'Percentual' ? subtotal * (descInput / 100) : descInput;
+    const total = Math.max(0, subtotal - desconto);
+    const paid = form.querySelector('[name="paid"]').value === 'true';
+    const pago = Number(form.querySelector('[name="valorPago"]').value || 0);
+    return { subtotal, desconto, total, paid, troco: paid ? Math.max(0, pago - total) : 0 };
+  };
+  const renderTotals = () => {
+    const t = computeTotals();
+    form.querySelector('#sale-totals').innerHTML = `
+      <div><span>Subtotal</span><strong>${money(t.subtotal)}</strong></div>
+      <div><span>Desconto</span><strong>${money(t.desconto)}</strong></div>
+      <div class="sale-total-main"><span>Total</span><strong>${money(t.total)}</strong></div>
+      ${t.paid ? `<div class="sale-troco"><span>Troco</span><strong>${money(t.troco)}</strong></div>` : ''}`;
+    form.querySelector('#valor-pago-wrap').hidden = !t.paid;
+  };
+
   const renderLines = () => {
     const container = form.querySelector('#sale-lines');
-    container.innerHTML = lines.map((line, index) => {
-      const catalog = line.kind === 'produto' ? products : services;
-      const label = line.kind === 'produto' ? 'Produto' : 'Serviço';
-      return `<div class="line-item" data-sale-line="${index}" data-kind="${line.kind}">
-      <label class="field">${label}<select data-line-item required>${catalog.map((entry) => `<option value="${entry.id}" ${String(entry.id) === String(line.itemId) ? 'selected' : ''}>${escapeHtml(entry.nome)} · ${money(line.kind === 'produto' ? entry.valor_venda : entry.valor)}${line.kind === 'produto' ? ` · saldo ${number(entry.estoque)}` : ''}</option>`).join('')}</select></label>
-      <label class="field quantity">Quantidade<input data-line-quantity type="number" min="1" step="1" value="${line.quantity}" required></label>
-      <button class="button danger small" type="button" data-remove-line="${index}" ${lines.length === 1 ? 'disabled' : ''}>${icon('trash')}Remover</button>
-    </div>`;
-    }).join('');
+    if (!lines.length) {
+      container.innerHTML = '<div class="sale-empty muted">Escaneie um código de barras ou adicione um item pelos botões acima.</div>';
+    } else {
+      container.innerHTML = lines.map((line, index) => {
+        const e = entryOf(line);
+        const url = line.kind === 'produto' ? catalogImageUrl(e && e.foto) : '';
+        const thumb = url ? `<img src="${url}" alt="" class="thumb">` : '<span class="thumb thumb-empty"></span>';
+        return `<div class="sale-line" data-sale-line="${index}">
+          ${thumb}
+          <div class="sale-line-info"><strong>${escapeHtml(e ? e.nome : '—')}</strong><small>${money(unitOf(line))}${line.kind === 'produto' && e ? ` · saldo ${number(e.estoque)}` : ''}</small></div>
+          <input class="sale-line-qty" data-line-quantity type="number" min="1" step="1" value="${line.quantity}" aria-label="Quantidade">
+          <strong class="sale-line-total">${money(unitOf(line) * line.quantity)}</strong>
+          <button class="button danger small" type="button" data-remove-line="${index}" aria-label="Remover">${icon('trash')}</button>
+        </div>`;
+      }).join('');
+    }
     container.querySelectorAll('[data-remove-line]').forEach((button) => button.addEventListener('click', () => { lines.splice(Number(button.dataset.removeLine), 1); renderLines(); }));
+    container.querySelectorAll('[data-line-quantity]').forEach((input, i) => input.addEventListener('input', () => {
+      lines[i].quantity = Math.max(1, Math.floor(Number(input.value) || 1));
+      input.closest('.sale-line').querySelector('.sale-line-total').textContent = money(unitOf(lines[i]) * lines[i].quantity);
+      renderTotals();
+    }));
+    renderTotals();
   };
+
+  const addProduct = (id) => {
+    const existing = lines.find((line) => line.kind === 'produto' && String(line.itemId) === String(id));
+    if (existing) existing.quantity += 1;
+    else lines.push({ kind: 'produto', itemId: Number(id), quantity: 1 });
+    renderLines();
+  };
+
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">
+    <label class="field full">Código de barras<input name="barcode" placeholder="Escaneie ou digite o código e tecle Enter" autocomplete="off"></label>
+    <div class="full sale-add-manual">${products.length ? `<button class="button ghost small" type="button" data-add-line="produto">${icon('plus')}Produto</button> ` : ''}${services.length ? `<button class="button ghost small" type="button" data-add-line="servico">${icon('plus')}Serviço</button>` : ''}</div>
+    <div class="full" id="sale-lines"></div>
+    <div class="full sale-totals" id="sale-totals"></div>
     <label class="field full">Cliente<select name="clientId" required>${clients.map((client) => `<option value="${client.id}">${escapeHtml(client.nome)}</option>`).join('')}</select></label>
-    <label class="field">Vencimento<input name="dueDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
-    <label class="field">Pagamento imediato<select name="paid"><option value="false">Não</option><option value="true">Sim</option></select></label>
-    <label class="field full">Forma de pagamento<select name="paymentMethodId"><option value="0">Não informado</option>${paymentMethods.map((method) => `<option value="${method.id}">${escapeHtml(method.nome)}</option>`).join('')}</select></label>
     <label class="field">Desconto<input name="desconto" type="number" step=".01" min="0" value="0"></label>
     <label class="field">Tipo do desconto<select name="tipo_desconto"><option value="Valor">Valor</option><option value="Percentual">Percentual</option></select></label>
+    <label class="field">Pagamento imediato<select name="paid"><option value="false">Não</option><option value="true">Sim</option></select></label>
+    <label class="field">Forma de pagamento<select name="paymentMethodId"><option value="0">Não informado</option>${paymentMethods.map((method) => `<option value="${method.id}">${escapeHtml(method.nome)}</option>`).join('')}</select></label>
+    <label class="field" id="valor-pago-wrap" hidden>Valor pago<input name="valorPago" type="number" step=".01" min="0" value="0"></label>
+    <label class="field">Vencimento<input name="dueDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
     <label class="field full">Observações<textarea name="obs" maxlength="100"></textarea></label>
-    <div class="full line-items-header"><strong>Itens da venda</strong><span>${products.length ? `<button class="button ghost small" type="button" data-add-line="produto">${icon('plus')}Produto</button> ` : ''}${services.length ? `<button class="button ghost small" type="button" data-add-line="servico">${icon('plus')}Serviço</button>` : ''}</span></div>
-    <div class="full" id="sale-lines"></div>
   </div>`;
   renderLines();
+
+  const barcodeInput = form.querySelector('[name="barcode"]');
+  barcodeInput.addEventListener('keydown', async (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const codigo = barcodeInput.value.trim();
+    if (!codigo) return;
+    barcodeInput.value = '';
+    try {
+      let product = products.find((p) => String(p.codigo) === codigo);
+      if (!product) {
+        product = await api(`/api/catalog/products/by-code/${encodeURIComponent(codigo)}`);
+        if (!productById.has(String(product.id))) { products.push(product); productById.set(String(product.id), product); }
+      }
+      document.querySelector('#modal-error').textContent = '';
+      addProduct(product.id);
+    } catch (error) {
+      document.querySelector('#modal-error').textContent = error.message;
+    }
+    barcodeInput.focus();
+  });
+
   form.querySelectorAll('[data-add-line]').forEach((button) => button.addEventListener('click', () => {
     const kind = button.dataset.addLine;
     const catalog = kind === 'produto' ? products : services;
-    lines.push({ kind, itemId: catalog[0].id, quantity: 1 });
-    renderLines();
+    if (catalog.length) { lines.push({ kind, itemId: catalog[0].id, quantity: 1 }); renderLines(); }
   }));
+  form.querySelector('[name="desconto"]').addEventListener('input', renderTotals);
+  form.querySelector('[name="tipo_desconto"]').addEventListener('change', renderTotals);
+  form.querySelector('[name="paid"]').addEventListener('change', renderTotals);
+  form.querySelector('[name="valorPago"]').addEventListener('input', renderTotals);
+
   const handler = async (event) => {
     event.preventDefault();
     const submit = document.querySelector('#modal-submit');
@@ -427,11 +502,8 @@ function openSaleForm(clients, products, services, paymentMethods, reload) {
     document.querySelector('#modal-error').textContent = '';
     try {
       const values = Object.fromEntries(new FormData(form));
-      const items = [...form.querySelectorAll('[data-sale-line]')].map((row) => ({
-        type: row.dataset.kind,
-        id: Number(row.querySelector('[data-line-item]').value),
-        quantity: Number(row.querySelector('[data-line-quantity]').value)
-      }));
+      const items = lines.map((line) => ({ type: line.kind, id: Number(line.itemId), quantity: Number(line.quantity) }));
+      if (!items.length) throw new Error('Adicione ao menos um item à venda.');
       if (items.some((item) => !item.id || !Number.isInteger(item.quantity) || item.quantity < 1)) throw new Error('Revise os itens e as quantidades.');
       await api('/api/sales', { method: 'POST', body: { clientId: Number(values.clientId), paymentMethodId: Number(values.paymentMethodId), dueDate: values.dueDate, paid: values.paid === 'true', desconto: Number(values.desconto || 0), tipo_desconto: values.tipo_desconto, obs: values.obs, items } });
       toast('Venda concluída.');
@@ -445,6 +517,7 @@ function openSaleForm(clients, products, services, paymentMethods, reload) {
   form._submitHandler = handler;
   form.addEventListener('submit', handler);
   dialog.showModal();
+  setTimeout(() => barcodeInput.focus(), 80);
 }
 
 function openWorkForm({ type, config, item, clients, products, services, users, reload }) {
