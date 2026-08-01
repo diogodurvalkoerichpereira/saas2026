@@ -654,3 +654,79 @@ input:focus,
     padding: 18px;
   }
 }
+
+/* ===== Responsividade mobile: topbar enxuta e modal centralizado ===== */
+/* O transbordo da topbar (greeting + "Alterar senha" + "Sair") gerava rolagem
+   horizontal na página, e isso empurrava o <dialog> para fora da tela no celular.
+   Enxugando a topbar, o modal volta a centralizar sozinho. */
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-greeting {
+    display: none;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* "Alterar senha" e "Sair" viram apenas ícone no celular */
+  #change-password,
+  #logout {
+    gap: 0;
+    padding: 0;
+    width: 38px;
+    height: 38px;
+    font-size: 0;
+    justify-content: center;
+  }
+
+  /* trava qualquer rolagem horizontal residual da área de trabalho */
+  .workspace {
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 430px) {
+  .icon-button,
+  #change-password,
+  #logout {
+    width: 34px;
+    height: 34px;
+  }
+
+  .content {
+    padding: 12px 10px;
+  }
+
+  /* modal ocupa quase toda a largura em telas bem estreitas */
+  .modal {
+    width: calc(100vw - 16px);
+    border-radius: 14px;
+  }
+}
+
+/* Escurece o fundo quando a sidebar está aberta no celular (deixa claro que dá
+   para tocar fora e fechar). pointer-events:none garante que o toque passe para
+   o conteúdo, onde o listener de fechar está. */
+@media (max-width: 700px) {
+  body:has(#sidebar.open)::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(15, 30, 25, .45);
+    pointer-events: none;
+  }
+}

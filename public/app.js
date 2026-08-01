@@ -165,9 +165,18 @@ document.querySelector('#logout').addEventListener('click', () => {
   location.hash = '';
   location.reload();
 });
-document.querySelector('#menu-toggle').addEventListener('click', () => {
+document.querySelector('#menu-toggle').addEventListener('click', (event) => {
   if (innerWidth <= 700) document.querySelector('#sidebar').classList.toggle('open');
   else document.body.classList.toggle('sidebar-collapsed');
+  event.stopPropagation();
+});
+// No celular, tocar fora da sidebar aberta fecha o menu (o hambúrguer fica coberto por ela).
+document.addEventListener('click', (event) => {
+  if (innerWidth > 700) return;
+  const sidebar = document.querySelector('#sidebar');
+  if (sidebar.classList.contains('open') && !sidebar.contains(event.target)) {
+    sidebar.classList.remove('open');
+  }
 });
 document.querySelectorAll('[data-modal-close]').forEach((button) => {
   button.addEventListener('click', () => document.querySelector('#app-modal').close());
