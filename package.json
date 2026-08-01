@@ -13,7 +13,8 @@
     "test:browser": "playwright test",
     "docker:test:up": "docker compose -f compose.test.yml up --build -d",
     "docker:test:down": "docker compose -f compose.test.yml down -v",
-    "db:reset": "psql -v ON_ERROR_STOP=1 -f db/001-schema.sql && psql -v ON_ERROR_STOP=1 -f db/002-seed-test.sql"
+    "db:reset": "psql -v ON_ERROR_STOP=1 -f db/001-schema.sql && psql -v ON_ERROR_STOP=1 -f db/002-seed-test.sql",
+    "test:db": "node --test test/integration.db.test.js test/postgres-regressao.test.js"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.10",
