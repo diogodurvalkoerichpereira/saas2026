@@ -2,10 +2,40 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// Plataformas de deploy (Coolify, Railway, Render) injetam UMA string de conexão em vez das cinco
+// variáveis separadas. Aceitar as duas formas evita erro de digitação na configuração do serviço.
+function databaseFromUrl(value) {
+  const url = new URL(value);
+  return {
+    host: decodeURIComponent(url.hostname),
+    port: Number(url.port || 5432),
+    database: decodeURIComponent(url.pathname.replace(/^\//, '')),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password || '')
+  };
+}
+
+function databaseConfig() {
+  const base = process.env.DATABASE_URL
+    ? databaseFromUrl(process.env.DATABASE_URL)
+    : {
+      host: process.env.DATABASE_HOST,
+      port: Number(process.env.DATABASE_PORT || 5432),
+      database: process.env.DATABASE_NAME,
+      user: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD || ''
+    };
+  // Postgres gerenciado costuma exigir TLS sem cadeia de confiança pública.
+  return process.env.DATABASE_SSL === 'true'
+    ? { ...base, ssl: { rejectUnauthorized: false } }
+    : base;
+}
+
 const required = ['DATABASE_HOST', 'DATABASE_NAME', 'DATABASE_USER', 'JWT_SECRET'];
 
 function assertEnvironment() {
-  const missing = required.filter((key) => !process.env[key]);
+  const missing = (process.env.DATABASE_URL ? ['JWT_SECRET'] : required)
+    .filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(`Variáveis de ambiente ausentes: ${missing.join(', ')}`);
   }
@@ -35,12 +65,6 @@ module.exports = {
       enabled: process.env.JOBS_ENABLED === 'true',
       intervalMinutes: Math.min(Math.max(Number(process.env.JOBS_INTERVAL_MINUTES || 5), 1), 1440)
     },
-    database: {
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT || 5432),
-      database: process.env.DATABASE_NAME,
-      user: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD || ''
-    }
+    database: databaseConfig()
   }
 };

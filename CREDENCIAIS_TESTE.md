@@ -4,7 +4,7 @@ Estas são credenciais de TESTE do ambiente local de homologação (docker compo
 dados fictícios e descartáveis. NÃO são de produção e não devem existir em produção. Servem
 para validar o sistema e o controle de acesso por perfil.
 
-Ambiente: `http://localhost:3000` (ou `http://127.0.0.1:3000`), banco MySQL local via
+Ambiente: `http://localhost:3000` (ou `http://127.0.0.1:3000`), banco PostgreSQL local via
 `docker compose -f compose.test.yml`. Todos os usuários usam a mesma senha de teste.
 
 Senha para todos: `Teste@2026`
@@ -47,7 +47,6 @@ Login em `http://localhost:3000/admin.html`.
 
 ## Como os usuários de teste são criados
 
-- Seed inicial (bancos novos): `docker/mysql/init/001-test-schema.sql`.
-- Bancos já existentes: `migrations/006_usuarios_teste.sql` (perfis Gerente, Comum, Técnico,
-  Tesoureiro e Financeiro) — executar uma única vez.
+- Seed inicial (bancos novos): `db/001-schema.sql` + `db/002-seed-test.sql`.
+- Os perfis Gerente, Comum, Técnico, Tesoureiro e Financeiro já vêm no seed.
 - Todos com o mesmo hash bcrypt da senha `Teste@2026`.

@@ -11,6 +11,22 @@ async function login(page) {
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
 }
 
+// A sidebar agrupa os links em seções recolhíveis, fechadas por padrão. Clicar direto no link
+// falha porque ele fica com tamanho zero dentro do grupo fechado — é preciso abrir a seção antes.
+async function abrirRota(page, route) {
+  // Casa o href exato, não o data-route: grupos como "Ordens de serviço" repetem o mesmo
+  // data-route em dez links (a entrada principal e nove filtros por status, `#/orders?status=...`).
+  const link = page.locator(`#sidebar a[href="#/${route}"]`);
+  if (!(await link.isVisible())) {
+    const grupo = page.locator('.side-group').filter({ has: link });
+    if (await grupo.count()) {
+      await grupo.locator('button').first().click();
+      await expect(link).toBeVisible();
+    }
+  }
+  await link.click();
+}
+
 test('login e todas as guias abrem o módulo correto', async ({ page }) => {
   await login(page);
   const routes = [
@@ -63,7 +79,7 @@ test('login e todas as guias abrem o módulo correto', async ({ page }) => {
 
 test('cadastro, edição e inativação de cliente funcionam pela interface', async ({ page }) => {
   await login(page);
-  await page.locator('[data-route="clients"]').click();
+  await abrirRota(page, 'clients');
   await page.getByRole('button', { name: 'Novo cliente' }).click();
   await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(testClientName);
   await page.getByRole('textbox', { name: 'Cidade', exact: true }).fill('Cidade Browser');
@@ -93,7 +109,7 @@ test('formulários operacionais principais abrem sem erro', async ({ page }) => 
     ['finance', 'Novo lançamento', 'Novo lançamento']
   ];
   for (const [route, button, dialogTitle] of forms) {
-    await page.locator(`[data-route="${route}"]`).click();
+    await abrirRota(page, route);
     await page.getByRole('button', { name: button, exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('heading', { name: dialogTitle })).toBeVisible();
     await page.getByRole('button', { name: 'Fechar', exact: true }).click();
@@ -105,7 +121,7 @@ test('menu, tabela e modal permanecem utilizáveis no celular', async ({ page })
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Abrir ou fechar menu' }).click();
   await expect(page.locator('#sidebar')).toHaveClass(/open/);
-  await page.locator('[data-route="clients"]').click();
+  await abrirRota(page, 'clients');
   await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
   await expect(page.locator('.table-wrap')).toBeVisible();
   await page.getByRole('button', { name: 'Novo cliente' }).click();
@@ -117,6 +133,9 @@ test('menu, tabela e modal permanecem utilizáveis no celular', async ({ page })
 
 test('portal do cliente autentica e abre todos os dados isolados', async ({ page }) => {
   await page.goto('/portal.html');
+  await page.getByRole('textbox', { name: 'E-mail' }).fill('cliente@exemplo.local');
+  await page.getByRole('spinbutton', { name: 'Código da empresa' }).fill('1');
+  await page.getByLabel('Senha').fill('Teste@2026');
   await page.getByRole('button', { name: 'Entrar no portal' }).click();
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
   const tabs = [
@@ -134,6 +153,8 @@ test('portal do cliente autentica e abre todos os dados isolados', async ({ page
 
 test('administração SaaS autentica e abre os módulos globais', async ({ page }) => {
   await page.goto('/admin.html');
+  await page.getByRole('textbox', { name: 'E-mail' }).fill('sas.local@saas2026.local');
+  await page.getByLabel('Senha').fill('Teste@2026');
   await page.getByRole('button', { name: 'Entrar na administração' }).click();
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
   const tabs = [

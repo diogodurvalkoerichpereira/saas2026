@@ -130,14 +130,8 @@ async function run(client, sql, params = []) {
   return [header, result.fields];
 }
 
-const pool = new Pool({
-  host: env.database.host,
-  port: env.database.port,
-  database: env.database.database,
-  user: env.database.user,
-  password: env.database.password,
-  max: 10
-});
+// Espalha a config inteira para não perder campos opcionais como `ssl`, que o deploy gerenciado usa.
+const pool = new Pool({ ...env.database, max: 10 });
 
 // Conexão dedicada para transações. Espelha a API do `PoolConnection` do mysql2 — inclusive a
 // presença dos métodos, de que `work.service.js` depende para detectar se pode transacionar.

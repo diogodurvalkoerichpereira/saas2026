@@ -7,3 +7,5 @@ npm-debug.log*
 work
 *.sql
 !db/*.sql
+db/legacy-mysql-migrations
+db/002-seed-test.sql
