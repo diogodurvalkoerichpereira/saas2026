@@ -18,9 +18,11 @@ async function abrirRota(page, route) {
   // data-route em dez links (a entrada principal e nove filtros por status, `#/orders?status=...`).
   const link = page.locator(`#sidebar a[href="#/${route}"]`);
   if (!(await link.isVisible())) {
-    const grupo = page.locator('.side-group').filter({ has: link });
+    // O filtro `has` consulta o seletor DENTRO de cada .side-group, então precisa ser relativo:
+    // um locator começando por #sidebar nunca casaria aqui.
+    const grupo = page.locator('.side-group').filter({ has: page.locator(`a[href="#/${route}"]`) });
     if (await grupo.count()) {
-      await grupo.locator('button').first().click();
+      await grupo.first().locator('button').first().click();
       await expect(link).toBeVisible();
     }
   }
