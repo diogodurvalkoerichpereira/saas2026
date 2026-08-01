@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { requireAsaasConfig } = require('../src/integrations/asaas.client');
+const { requireAsaasConfig } = require('../src/integrations/payments.client');
 const { sendMessage } = require('../src/integrations/whatsapp.client');
 
 test('Asaas falha de forma segura quando a chave não está configurada', () => {

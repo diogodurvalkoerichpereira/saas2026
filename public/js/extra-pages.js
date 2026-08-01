@@ -837,6 +837,13 @@ const whatsappProviderOptions = [
   { value: 'newtek', label: 'NewTek' }
 ];
 
+// Precisa espelhar src/integrations/payment.providers.js — validado no backend contra a mesma lista.
+const paymentProviderOptions = [
+  { value: '', label: 'Nenhuma (cobrança manual)' },
+  { value: 'Mercado Pago', label: 'Mercado Pago' },
+  { value: 'Asaas', label: 'Asaas' }
+];
+
 const companySettingsFields = [
   { name: 'nome', label: 'Nome da empresa', optional: true, max: 50 },
   { name: 'email', label: 'E-mail', type: 'email', optional: true, max: 50 },
@@ -854,7 +861,10 @@ const companySettingsFields = [
   { name: 'assinatura_cliente', label: 'Assinatura do cliente', type: 'select', options: yesNo() },
   { name: 'cobrar_automaticamente', label: 'Cobrança automática', type: 'select', options: yesNo() },
   { name: 'cobrar_duas_vezes', label: 'Segunda tentativa de cobrança', type: 'select', options: yesNo() },
-  { name: 'pagina_entrada', label: 'Página de entrada (visitante não logado)', type: 'select', options: [{ value: 'Site', label: 'Site' }, { value: 'Login', label: 'Login' }] },
+  // 'Login' é a primeira opção de propósito: é o default quando o valor está vazio, igual ao
+  // fallback do backend (/api/public/entry). Se 'Site' fosse o primeiro, salvar as configurações
+  // sem tocar neste campo trocaria a entrada para o site e esconderia a tela de login.
+  { name: 'pagina_entrada', label: 'Página de entrada (visitante não logado)', type: 'select', options: [{ value: 'Login', label: 'Login (tela de acesso)' }, { value: 'Site', label: 'Site (página de planos)' }] },
   { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 },
   { name: 'multa_atraso', label: 'Multa por atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
   { name: 'juros_atraso', label: 'Juros por dia de atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
@@ -874,7 +884,13 @@ const companySettingsFields = [
   // Provedor de WhatsApp da empresa — mesmas opções do legado.
   { name: 'api_whatsapp', label: 'WhatsApp · Provedor', type: 'select', full: true, options: whatsappProviderOptions },
   { name: 'instancia_whatsapp', label: 'WhatsApp · Instância', optional: true, max: 70 },
-  { name: 'token_whatsapp', label: 'WhatsApp · Token (deixe em branco para manter o atual)', optional: true, max: 70 }
+  { name: 'token_whatsapp', label: 'WhatsApp · Token (deixe em branco para manter o atual)', optional: true, max: 255 },
+  // Pagamento por empresa — os segredos nunca voltam preenchidos; em branco mantém o atual.
+  { name: 'api_pagamento', label: 'Pagamento · Provedor', type: 'select', full: true, options: paymentProviderOptions },
+  { name: 'chave_api_asaas', label: 'Asaas · Chave da API (em branco mantém a atual)', optional: true, max: 255 },
+  { name: 'access_token', label: 'Mercado Pago · Access Token (em branco mantém o atual)', optional: true, max: 255 },
+  { name: 'public_key', label: 'Mercado Pago · Public Key', optional: true, max: 255 },
+  { name: 'dados_pagamento', label: 'Dados para pagamento manual (usado quando não há provedor)', type: 'textarea', optional: true, full: true, max: 5000 }
 ];
 
 async function renderSettings() {
@@ -893,6 +909,9 @@ async function renderSettings() {
       <div><small>WhatsApp (provedor)</small><strong>${escapeHtml(whatsappProviderOptions.find((option) => option.value === settings.api_whatsapp)?.label || 'Não configurado')}</strong></div>
       <div><small>WhatsApp (instância)</small><strong>${escapeHtml(settings.instancia_whatsapp || 'Não configurado')}</strong></div>
       <div><small>Token WhatsApp</small><strong>${settings.token_whatsapp_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
+      <div><small>Pagamento (provedor)</small><strong>${escapeHtml(paymentProviderOptions.find((option) => option.value === (settings.api_pagamento || ''))?.label || 'Nenhuma (cobrança manual)')}</strong></div>
+      <div><small>Chave Asaas</small><strong>${settings.chave_api_asaas_configurado ? 'Configurada' : 'Não configurada'}</strong></div>
+      <div><small>Access Token Mercado Pago</small><strong>${settings.access_token_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
     </div></section>`;
   root().querySelector('[data-edit]').addEventListener('click', () => openForm({
     title: 'Configurações da empresa', eyebrow: 'Administração', fields: companySettingsFields, record: settings,

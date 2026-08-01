@@ -48,6 +48,7 @@ lançamento de venda** de retaguarda (funciona, integra estoque e financeiro, ma
    cópias e impressão. Encoder próprio em `public/js/barcode.mjs`, sem dependência externa,
    validado por round-trip de decodificação. *(commit `8585a82`)*
 5. ✅ **Provedor de WhatsApp por empresa** — ver seção 5 abaixo.
+6. ✅ **Provedor de pagamento por empresa (Asaas + Mercado Pago)** — ver seção 6 abaixo.
 
 ## Auditoria da sidebar / navbar / APIs
 
@@ -120,8 +121,52 @@ Pendências conscientes desta parte:
 - O endpoint do WordMensagens é **http://** no legado (token em texto puro). Mantido como padrão para
   não quebrar quem já usa, mas sobrescrevível por `WHATSAPP_WM_URL`.
 - `licence` da menuia variava por instalação no legado; virou `WHATSAPP_MENUIA_LICENCE`.
-- Chaves de **pagamento** por empresa (`chave_api_asaas`, `access_token`, `public_key`) continuam
-  pendentes — e exigem criptografia em repouso antes de sair do ambiente.
+
+## 6. Provedor de pagamento por empresa (Asaas + Mercado Pago)
+
+O legado deixava cada empresa escolher o processador em `config.api_pagamento`
+(`painel/index.php:1325-1328`): **Nenhuma** (cobrança manual), **Mercado Pago** ou **Asaas**. Cada
+um com credenciais e formato próprios (`painel/pagamentos/consultar_pagamento.php`,
+`painel/asaas/`):
+
+| `api_pagamento` | Credencial na `config` | Autenticação | Situação de "pago" |
+|---|---|---|---|
+| `''` (Nenhuma) | `dados_pagamento` (texto de cobrança manual) | — | — |
+| `Mercado Pago` | `access_token` (segredo) + `public_key` (pública) | `Bearer` | `status = approved` |
+| `Asaas` | `chave_api_asaas` (segredo) | header `access_token` | `RECEIVED`/`CONFIRMED` |
+
+O Node só tinha um cliente Asaas por **variável de ambiente global** — nenhuma escolha por empresa,
+nenhum Mercado Pago, e as colunas `api_pagamento`/`dados_pagamento` nem existiam no schema.
+
+**Implementado** (`src/integrations/payment.providers.js` + `payments.client.js`):
+
+- Os dois provedores reais, cada um consultado no formato da sua API e devolvendo um resultado
+  **normalizado** (`{ provider, status, paid, amount, method }`), com testes travando o corpo.
+- `api_pagamento` virou **seleção** na tela de Configurações, validada no backend; cada consulta usa
+  o provedor e as credenciais **da empresa**, com fallback para a chave de ambiente.
+- Migração `db/migrations/001_pagamento_por_empresa.sql` cria `api_pagamento`/`dados_pagamento` e
+  alarga para `TEXT` as colunas de segredo (a cifra é maior que o valor original).
+
+### Segredos cifrados em repouso — cofre compartilhado
+
+O ponto de segurança que a nota do levantamento pedia. O AES-256-GCM que já existia para o
+certificado A1 (`fiscal/crypto.js`) virou utilitário compartilhado (`src/lib/secrets.js`); o módulo
+fiscal passou a delegar nele, sem re-chavear nada.
+
+- `token_whatsapp`, `chave_api_asaas` e `access_token` são **cifrados antes de tocar no banco** e
+  **nunca voltam** pela API — só um indicador `*_configurado`. Verificado lendo a coluna crua: no
+  banco fica base64 cifrado; o app decifra na hora de usar.
+- `public_key` **não** é cifrada de propósito: a chave pública do Mercado Pago existe para aparecer
+  no checkout.
+- `decryptMaybe` tolera valor em texto puro gravado antes da cifra existir (a tag GCM rejeita o que
+  não ciframos e o texto puro passa direto), então a leitura não quebra na transição.
+
+Pendências conscientes desta parte:
+
+- **Gerar** cobrança (criar PIX/boleto) e **webhook** de confirmação não foram portados — só a
+  **consulta** de situação, que é o que o app já consumia. Criar cobrança e receber webhook por
+  empresa é o próximo passo natural, com a infra de provedor já pronta.
+- `taxa_cartao_api` e `endereco_checkout` do legado ficaram de fora (fora do escopo da escolha por empresa).
 
 ## Cabeçalho (navbar) — auditado em todos os perfis
 
@@ -139,6 +184,12 @@ restrito a Administrador/Gerente/Tesoureiro/Financeiro. Nos perfis **Comum** e *
 dava 403 e, por estar num `Promise.all`, derrubava a tela inteira — os dois perfis viam
 *"Não foi possível abrir este módulo"* como página inicial. Agora os indicadores financeiros são
 opcionais e cada perfil vê o que pode. Coberto por `e2e/header.spec.js`, que exercita os 6 perfis.
+
+**Segundo footgun corrigido:** o select "Página de entrada" listava **Site** primeiro, então para uma
+empresa com `pagina_entrada` vazio o campo assumia "Site" — e salvar as Configurações sem tocar nele
+trocava a raiz `/` para a página de planos, **escondendo a tela de login**. O backend
+(`/api/public/entry`) já tratava vazio como "Login"; o select agora reflete isso, com **Login**
+como primeira opção (padrão).
 
 ## Notas
 

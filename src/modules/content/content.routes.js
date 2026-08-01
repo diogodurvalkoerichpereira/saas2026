@@ -7,6 +7,8 @@ const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { providers } = require('../../integrations/whatsapp.providers');
+const { providers: paymentProviders } = require('../../integrations/payment.providers');
+const { encrypt } = require('../../lib/secrets');
 
 const id = z.coerce.number().int().positive();
 const optional = (max) => z.string().trim().max(max).optional();
@@ -44,8 +46,16 @@ const settingsSchema = z.object({
   avarias_os: optional(100), acessorios_os: optional(100), laudo_os: optional(100),
   // Provedor de WhatsApp da empresa: só os valores suportados (espelha o select do legado).
   api_whatsapp: z.enum(['Não', ...Object.keys(providers)]).optional(),
-  token_whatsapp: optional(70), instancia_whatsapp: optional(70)
+  token_whatsapp: optional(255), instancia_whatsapp: optional(70),
+  // Provedor de pagamento da empresa: '' = nenhuma (cobrança manual), como no legado.
+  api_pagamento: z.enum(['', ...Object.keys(paymentProviders)]).optional(),
+  chave_api_asaas: optional(255), access_token: optional(255),
+  public_key: optional(255), dados_pagamento: optional(5000)
 });
+
+// Segredos: cifrados em repouso, nunca devolvidos pela API — só um indicador de "configurado".
+// `public_key` não entra: a chave pública do Mercado Pago existe para aparecer no checkout.
+const SECRET_FIELDS = ['token_whatsapp', 'chave_api_asaas', 'access_token'];
 
 router.use(authenticate);
 
@@ -58,23 +68,30 @@ router.get('/settings', permit('configuracoes', 'home'), async (req, res, next) 
               multa_atraso, juros_atraso, dias_lembrete,
               mao_obra_orc, senha_aparelho_orc, defeito_orc, avarias_orc, acessorios_orc, laudo_orc,
               mao_obra_os, senha_aparelho_os, defeito_os, avarias_os, acessorios_os, laudo_os,
-              api_whatsapp, token_whatsapp, instancia_whatsapp
+              api_whatsapp, token_whatsapp, instancia_whatsapp,
+              api_pagamento, chave_api_asaas, access_token, public_key, dados_pagamento
          FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1`,
       [Number(req.auth.companyId)]
     );
     if (!rows[0]) return res.json(null);
     const record = normalizeRecord(rows[0]);
-    // Token do WhatsApp é write-only: nunca reexibido, só um indicador de configurado.
-    record.token_whatsapp_configurado = Boolean(record.token_whatsapp);
-    delete record.token_whatsapp;
+    // Segredos são write-only: nunca reexibidos, só o indicador de configurado.
+    for (const field of SECRET_FIELDS) {
+      record[`${field}_configurado`] = Boolean(record[field]);
+      delete record[field];
+    }
     res.json(record);
   } catch (error) { next(error); }
 });
 router.put('/settings', permit('configuracoes', 'home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const data = settingsSchema.parse(req.body);
-    // Token vazio significa "manter o atual" (write-only), não apagar.
-    if (data.token_whatsapp === '') delete data.token_whatsapp;
+    // Segredo vazio significa "manter o atual" (write-only), não apagar; e o que vier
+    // preenchido é cifrado antes de encostar no banco.
+    for (const field of SECRET_FIELDS) {
+      if (data[field] === '') delete data[field];
+      else if (data[field] !== undefined) data[field] = encrypt(data[field]);
+    }
     const fields = Object.keys(data);
     if (!fields.length) return res.status(204).end();
     const [existing] = await pool.execute('SELECT id FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1', [Number(req.auth.companyId)]);

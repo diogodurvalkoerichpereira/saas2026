@@ -709,12 +709,16 @@ CREATE TABLE config (
   pagina_entrada VARCHAR(25) NULL,
   url_site VARCHAR(255) NULL,
   meta_descricao VARCHAR(255) NULL,
-  token_whatsapp VARCHAR(70) NULL,
+  -- Segredos de integração ficam cifrados em repouso (AES-256-GCM/base64), por isso TEXT:
+  -- a cifra é bem maior que o valor original e um VARCHAR curto truncaria a chave em silêncio.
+  token_whatsapp TEXT NULL,
   instancia_whatsapp VARCHAR(70) NULL,
-  access_token VARCHAR(255) NULL,
-  public_key VARCHAR(255) NULL,
-  chave_api_asaas VARCHAR(255) NULL,
+  access_token TEXT NULL,
+  public_key VARCHAR(255) NULL, -- chave pública do Mercado Pago: não é segredo, fica em texto
+  chave_api_asaas TEXT NULL,
   api_whatsapp VARCHAR(60) NULL,
+  api_pagamento VARCHAR(30) NULL,
+  dados_pagamento TEXT NULL,
   multa_atraso DECIMAL(8,2) NULL,
   juros_atraso DECIMAL(8,2) NULL,
   dias_lembrete INT NULL,

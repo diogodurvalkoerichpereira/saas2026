@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { env } = require('../config/env');
 const { requestJson } = require('./http-client');
+const { loadIntegrations } = require('../services/company-integrations');
 const { providers, isDisabled } = require('./whatsapp.providers');
 
 // Configuração POR EMPRESA (config.api_whatsapp / token_whatsapp / instancia_whatsapp), como no
@@ -8,11 +9,8 @@ const { providers, isDisabled } = require('./whatsapp.providers');
 // comportamento que existia antes de a escolha por empresa ser suportada.
 async function resolveConfig({ companyId, db = pool }) {
   if (companyId) {
-    const [rows] = await db.execute(
-      'SELECT api_whatsapp, token_whatsapp, instancia_whatsapp FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1',
-      [Number(companyId)]
-    );
-    const row = rows[0];
+    // O token vem decifrado daqui — no banco ele fica cifrado em repouso.
+    const row = await loadIntegrations(companyId, db);
     if (row && row.api_whatsapp) {
       return { provider: row.api_whatsapp, token: row.token_whatsapp || '', instance: row.instancia_whatsapp || '' };
     }
