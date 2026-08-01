@@ -64,6 +64,22 @@ function setupBells() {
   document.addEventListener('click', () => document.querySelectorAll('.bell-menu').forEach((m) => { m.hidden = true; }));
 }
 
+// Menu do usuário no topo (Configurações, Alterar senha, Sair) — abre/fecha como os sinos.
+function setupProfileMenu() {
+  const toggle = document.querySelector('[data-profile-toggle]');
+  const menu = document.querySelector('#nav-profile .profile-menu');
+  if (!toggle || !menu) return;
+  toggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    toggle.setAttribute('aria-expanded', String(willOpen));
+  });
+  // Clicar num item (ou fora) fecha o menu; os handlers de cada item continuam nos seus ids.
+  menu.addEventListener('click', () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); });
+  document.addEventListener('click', () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); });
+}
+
 function applyGreeting(user) {
   const el = document.querySelector('#topbar-greeting');
   if (!el) return;
@@ -103,7 +119,12 @@ function showApp() {
   const user = session.user;
   document.querySelector('#sidebar-user-name').textContent = user?.name || 'Usuário';
   document.querySelector('#sidebar-user-role').textContent = user?.role || 'Perfil';
-  document.querySelector('#user-avatar').textContent = (user?.name || 'U').trim().charAt(0).toUpperCase();
+  const initial = (user?.name || 'U').trim().charAt(0).toUpperCase();
+  document.querySelector('#user-avatar').textContent = initial;
+  // Espelha os dados do usuário também no menu do topo (avatar + cabeçalho do dropdown).
+  document.querySelector('#topbar-avatar').textContent = initial;
+  document.querySelector('#profile-menu-name').textContent = user?.name || 'Usuário';
+  document.querySelector('#profile-menu-role').textContent = user?.role || 'Perfil';
   const permissions = new Set(user?.permissions || []);
   document.querySelectorAll('[data-permission]').forEach((element) => {
     const accepted = element.dataset.permission.split(',').map((value) => value.trim());
@@ -199,6 +220,7 @@ async function bootstrapEntry() {
 
 setupSidebarGroups();
 setupBells();
+setupProfileMenu();
 setupTheme();
 
 if (session.token && session.user) showApp();

@@ -173,4 +173,5 @@ const db = {
   end: () => pool.end()
 };
 
-module.exports = { pool: db, toPositional };
+// `rawPool` é o Pool do `pg` sem o shim — para DDL/migração, que roda SQL cru multi-statement.
+module.exports = { pool: db, rawPool: pool, toPositional };

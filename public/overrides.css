@@ -792,3 +792,57 @@ input:focus,
 .barcode-label .money { display: block; font-size: 1.2rem; margin: 4px 0; }
 .barcode-label svg { max-width: 100%; height: auto; }
 .barcode-label small { display: block; font-family: ui-monospace, monospace; letter-spacing: 1px; color: var(--muted); }
+
+/* Menu do usuário no topo (avatar → Configurações, Alterar senha, Sair) */
+.nav-profile { position: relative; }
+.profile-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 3px 6px 3px 3px;
+  border-radius: 999px;
+}
+.profile-toggle:hover { background: #edf3f0; }
+.profile-toggle .avatar { min-width: 34px; height: 34px; font-size: .9rem; }
+.profile-toggle .nav-caret-icon { width: 16px; height: 16px; color: var(--muted); fill: none; stroke: currentColor; stroke-width: 2; }
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 60;
+  padding: 6px;
+}
+.profile-menu header {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+.profile-menu header strong { font-size: .9rem; color: var(--ink); }
+.profile-menu header small { color: var(--muted); font-size: .76rem; }
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  color: #26483d;
+  font-weight: 700;
+  font-size: .86rem;
+  text-align: left;
+  text-decoration: none;
+}
+.profile-item:hover { background: #edf3f0; }
+.profile-item.danger { color: var(--danger); }
+.profile-item.danger:hover { background: #fef0ee; }

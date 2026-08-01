@@ -29,11 +29,17 @@ for (const perfil of perfis) {
     await expect(page.locator('#topbar-greeting')).not.toHaveText('');
     await expect(page.locator('#page-title')).toBeVisible();
     await expect(topbar.locator('#theme-toggle')).toBeVisible();
-    await expect(topbar.locator('#change-password')).toBeVisible();
-    await expect(topbar.locator('#logout')).toBeVisible();
 
-    // Atalho de Configurações no cabeçalho (como o legado tinha no navbar) deve levar à tela.
-    const config = topbar.locator('#topbar-settings');
+    // O menu do usuário (avatar) agrupa Configurações, Alterar senha e Sair — como no legado.
+    const menu = topbar.locator('#nav-profile .profile-menu');
+    await expect(menu).toBeHidden(); // começa fechado
+    await topbar.locator('[data-profile-toggle]').click();
+    await expect(menu).toBeVisible();
+    await expect(menu.locator('#change-password')).toBeVisible();
+    await expect(menu.locator('#logout')).toBeVisible();
+
+    // Atalho de Configurações no menu (como o legado tinha no navbar) deve levar à tela.
+    const config = menu.locator('#topbar-settings');
     await expect(config).toBeVisible();
     await config.click();
     await expect(page.locator('#page-root').getByRole('heading', { name: 'Configurações da empresa' })).toBeVisible();
