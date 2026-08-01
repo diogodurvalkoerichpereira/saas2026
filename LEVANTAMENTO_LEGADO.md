@@ -45,9 +45,48 @@ lançamento de venda** de retaguarda (funciona, integra estoque e financeiro, ma
    (espelha `vendas.php:10-20`).
 4. **Gerar código de barras** — Code128 do campo `codigo` para etiqueta.
 
+## Auditoria da sidebar / navbar / APIs
+
+Verificado empiricamente (navegando como admin e como perfil comum):
+
+- **Por perfil não falta guia**: admin e "comum" veem exatamente as mesmas 51 entradas. As
+  permissões (`acessos` + `usuarios_permissoes`) estão completas; o admin ignora permissões
+  (`app.js:108-110`).
+- **As 39 rotas do menu renderizam e chamam a API sem erro** — nenhuma guia quebrada.
+
+Diferenças de organização em relação ao legado:
+
+- **"Grupos de disparos" e "Dispositivos"** existem, mas como **abas dentro de Marketing**
+  (`#/marketing?tab=groups` / `?tab=devices`). No legado eram itens de menu separados
+  ("Conectar Whatsapp" abria `dispositivos`).
+- **"Grupo de acessos"** (grupos de permissão) do legado (`painel/paginas/grupo_acessos`) não foi
+  portado — o Node gerencia permissão por usuário, não por grupo.
+
+## 5. Configuração de integrações por empresa (WhatsApp e pagamento) — regressão multiempresa
+
+No **legado**, cada empresa configurava suas próprias integrações **pela interface**, salvas na
+tabela `config` por empresa:
+
+- **WhatsApp**: navbar "Conectar Whatsapp" → `painel/paginas/dispositivos/appkey.php` grava
+  `config.token_whatsapp` e `config.instancia_whatsapp`.
+- **Pagamento**: modal "Alterar Configurações" (`painel/index.php:1160`) com dados/chaves de pagamento.
+
+No **Node**:
+
+- As colunas por empresa **existem** em `config` (`token_whatsapp`, `instancia_whatsapp`,
+  `chave_api_asaas`, `access_token`, `public_key`, `api_whatsapp`) — vieram do schema.
+- **Mas o app não as usa**: lê WhatsApp/pagamento de **variável de ambiente global** (a própria tela
+  diz "Integração configurada por ambiente"), e a tela de Configurações não expõe esses campos.
+
+**Consequência:** funciona para uma empresa só. Num SaaS multiempresa, hoje **todas as empresas
+compartilham a mesma configuração** de WhatsApp/pagamento — cada empresa não consegue conectar o seu.
+É a lacuna mais relevante para o modelo SaaS, embora não bloqueie um deploy de empresa única.
+
 ## Notas
 
 - O legado usa interpolação direta de `$_POST` em SQL (injeção) — **não** replicar; o Node já usa
   parâmetros. Portamos a *funcionalidade*, não a implementação insegura.
 - `produtos.foto`/`servicos.foto` já existem no schema — só falta o app usá-las.
 - O módulo de caixa (`operations`) já existe; falta apenas a venda alimentá-lo.
+- Guardar chaves de pagamento/WhatsApp por empresa no banco exige cuidado de segurança
+  (criptografia em repouso, nunca exibir a chave de volta) — o legado guardava em texto puro.
