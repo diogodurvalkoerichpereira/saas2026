@@ -4,6 +4,7 @@ import { icon } from './icons.mjs';
 import { loading, pageHeader, table, pagination, openForm, confirmAction, toast, catalogImageUrl } from './ui.js';
 import { renderExtraRoute } from './extra-pages.js';
 import { attachmentButton, openAttachments } from './attachments.js';
+import { code128SVG, sanitizeCode } from './barcode.mjs';
 
 const root = () => document.querySelector('#page-root');
 const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">${icon('edit')}Editar</button>`;
@@ -83,7 +84,8 @@ const entityConfigs = {
         { name: 'aliquota_iss', label: 'Alíquota ISS % (serviço)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
         { name: 'foto', label: 'Imagem do produto', type: 'image', full: true }
       ];
-    }
+    },
+    extraActions: (item) => (item.codigo ? `<button class="button ghost small" data-action="label" data-id="${item.id}">${icon('tag')}Etiqueta</button>` : '')
   },
   services: {
     title: 'Serviços', singular: 'serviço', path: '/api/catalog/services', subtitle: 'Serviços, valores e prazos praticados.', hasImage: true,
@@ -204,9 +206,62 @@ async function renderCrud(config) {
         await load();
       });
       if (action === 'permissions') await openPermissions(item);
+      if (action === 'label') openBarcodeLabel(item);
     }));
   };
   await load();
+}
+
+// Etiqueta com código de barras Code128 do produto (espelha gerar-codigo.php do legado).
+// Permite escolher quantas cópias imprimir; a impressão sai por um iframe oculto.
+function openBarcodeLabel(product) {
+  const codigo = sanitizeCode(product.codigo);
+  if (!codigo) { toast('Este produto não tem código para gerar etiqueta.', 'error'); return; }
+  const dialog = document.querySelector('#app-modal');
+  const form = document.querySelector('#modal-form');
+  const svg = code128SVG(codigo);
+  const label = `<div class="barcode-label"><strong>${escapeHtml(product.nome)}</strong><span class="money">${money(product.valor_venda)}</span>${svg}<small>${escapeHtml(codigo)}</small></div>`;
+  document.querySelector('#modal-title').textContent = 'Etiqueta do produto';
+  document.querySelector('#modal-eyebrow').textContent = 'Código de barras';
+  document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">
+    <div class="full barcode-preview">${label}</div>
+    <label class="field">Cópias<input name="copies" type="number" min="1" max="100" step="1" value="1"></label>
+  </div>`;
+  document.querySelector('#modal-error').textContent = '';
+  document.querySelector('#modal-submit-label').textContent = 'Imprimir';
+  const handler = (event) => {
+    event.preventDefault();
+    const copies = Math.min(Math.max(Number(form.querySelector('[name=copies]').value) || 1, 1), 100);
+    printLabels(label.repeat(copies));
+    dialog.close();
+  };
+  if (form._submitHandler) form.removeEventListener('submit', form._submitHandler);
+  form._submitHandler = handler;
+  form.addEventListener('submit', handler);
+  dialog.showModal();
+}
+
+function printLabels(html) {
+  document.querySelector('#barcode-print-frame')?.remove();
+  const frame = document.createElement('iframe');
+  frame.id = 'barcode-print-frame';
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px';
+  document.body.append(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Etiquetas</title><style>
+    body { margin: 0; font-family: system-ui, sans-serif; display: flex; flex-wrap: wrap; gap: 6mm; padding: 6mm; }
+    .barcode-label { border: 1px solid #ccc; padding: 3mm; text-align: center; page-break-inside: avoid; }
+    .barcode-label strong { display: block; font-size: 11pt; }
+    .barcode-label .money { display: block; font-size: 13pt; font-weight: 700; margin: 1mm 0; }
+    .barcode-label small { display: block; font-family: monospace; letter-spacing: 1px; }
+    .barcode-label svg { max-width: 60mm; height: auto; }
+  </style></head><body>${html}</body></html>`);
+  doc.close();
+  frame.contentWindow.focus();
+  frame.contentWindow.print();
+  setTimeout(() => frame.remove(), 1000);
 }
 
 async function openPermissions(user) {
@@ -217,6 +272,7 @@ async function openPermissions(user) {
   document.querySelector('#modal-eyebrow').textContent = 'Controle de acesso';
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">${options.map((option) => `<label class="field"><span><input type="checkbox" name="permissionIds" value="${option.id}" ${selected.includes(option.id) ? 'checked' : ''}> ${escapeHtml(option.nome)}</span></label>`).join('')}</div>`;
   document.querySelector('#modal-error').textContent = '';
+  document.querySelector('#modal-submit-label').textContent = 'Salvar';
   const handler = async (event) => {
     event.preventDefault();
     try {
