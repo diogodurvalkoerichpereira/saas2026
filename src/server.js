@@ -1,6 +1,7 @@
 const { app } = require('./app');
 const { assertEnvironment, env } = require('./config/env');
 const { runMigrations } = require('./config/migrate');
+const { seedTestUsers } = require('./config/seed-test-users');
 const { startJobs } = require('./jobs');
 
 assertEnvironment();
@@ -14,6 +15,15 @@ async function start() {
   } catch (error) {
     console.error('Falha ao aplicar migrações:', error.message);
     process.exit(1);
+  }
+  // Semeadura opcional dos usuários de teste (fase de teste). Não derruba o boot se falhar.
+  if (env.seedTestUsers) {
+    try {
+      const { usuarios } = await seedTestUsers();
+      console.log(`Usuários de teste garantidos: ${usuarios.length}`);
+    } catch (error) {
+      console.error('Falha ao semear usuários de teste:', error.message);
+    }
   }
   app.listen(env.port, () => {
     console.log(`API iniciada na porta ${env.port}`);

@@ -69,6 +69,9 @@ module.exports = {
     // aparece se os usuários de teste do seed existirem no banco (produção sem o seed não mostra
     // nada). Para desligar de vez: SHOW_TEST_LOGINS=false.
     showTestLogins: process.env.SHOW_TEST_LOGINS !== 'false',
+    // Semeia os usuários de teste no start (fase de teste, sem precisar de terminal). Desligue
+    // para produção. Independente de showTestLogins: um mostra os botões, o outro cria os usuários.
+    seedTestUsers: process.env.SEED_TEST_USERS === 'true',
     database: databaseConfig()
   }
 };

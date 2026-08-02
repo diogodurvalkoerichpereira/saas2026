@@ -13,6 +13,7 @@ RUN npm ci --omit=dev
 COPY public ./public
 COPY src ./src
 COPY db ./db
+COPY scripts ./scripts
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
