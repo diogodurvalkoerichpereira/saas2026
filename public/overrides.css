@@ -853,3 +853,31 @@ input:focus,
 .modal-section:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .modal-section h3 { margin: 0; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
 .modal-section p { margin: 4px 0 0; font-size: .8rem; }
+
+/* Acesso rápido de teste na tela de login (fase de teste) */
+.quick-login {
+  width: min(440px, 100%);
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, .92);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .18);
+}
+.quick-login-title { margin: 0 0 10px; font-weight: 800; font-size: .82rem; color: #26483d; }
+.quick-login-title span { display: block; font-weight: 600; font-size: .74rem; color: var(--muted); margin-top: 2px; }
+.quick-login-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.quick-login-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  min-width: 0;
+}
+.quick-login-item:hover { border-color: var(--brand); background: #f2f9f6; }
+.quick-login-item strong { font-size: .82rem; color: #1b2925; }
+.quick-login-item small { font-size: .7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .quick-login-list { grid-template-columns: 1fr; } }

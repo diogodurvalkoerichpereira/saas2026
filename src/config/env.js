@@ -65,6 +65,10 @@ module.exports = {
       enabled: process.env.JOBS_ENABLED === 'true',
       intervalMinutes: Math.min(Math.max(Number(process.env.JOBS_INTERVAL_MINUTES || 5), 1), 1440)
     },
+    // Botões de acesso rápido na tela de login, para a fase de teste. Ligado por padrão, mas só
+    // aparece se os usuários de teste do seed existirem no banco (produção sem o seed não mostra
+    // nada). Para desligar de vez: SHOW_TEST_LOGINS=false.
+    showTestLogins: process.env.SHOW_TEST_LOGINS !== 'false',
     database: databaseConfig()
   }
 };

@@ -144,14 +144,12 @@ function showApp() {
   });
 }
 
-loginForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
+async function doLogin(email, password) {
   loginError.textContent = '';
   const button = loginForm.querySelector('button');
   button.disabled = true;
   try {
-    const data = Object.fromEntries(new FormData(loginForm));
-    const result = await api('/api/auth/login', { method: 'POST', body: data, authenticated: false });
+    const result = await api('/api/auth/login', { method: 'POST', body: { email, password }, authenticated: false });
     if (Number(result.user.companyId) === 0) {
       sessionStorage.setItem('admin_session', JSON.stringify(result));
       location.assign('/admin.html');
@@ -164,7 +162,38 @@ loginForm.addEventListener('submit', async (event) => {
   } finally {
     button.disabled = false;
   }
+}
+
+loginForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(loginForm));
+  doLogin(data.email, data.password);
 });
+
+// Acesso rápido (fase de teste): botões que entram com cada perfil em um clique. O backend só
+// devolve algo quando os usuários de teste existem e SHOW_TEST_LOGINS não está desligado.
+async function setupQuickLogin() {
+  const box = document.querySelector('#quick-login');
+  const list = document.querySelector('#quick-login-list');
+  if (!box || !list) return;
+  try {
+    const { users } = await api('/api/auth/test-logins', { authenticated: false });
+    if (!users || !users.length) return;
+    list.innerHTML = users.map((user, index) =>
+      `<button type="button" class="quick-login-item" data-i="${index}"><strong>${escapeHtml(user.nivel)}${user.isSaas ? ' · SaaS' : ''}</strong><small>${escapeHtml(user.email)}</small></button>`
+    ).join('');
+    list.querySelectorAll('[data-i]').forEach((btn) => {
+      const user = users[Number(btn.dataset.i)];
+      btn.addEventListener('click', () => {
+        // Preenche os campos (para o usuário ver o que entrou) e já autentica.
+        loginForm.querySelector('[name=email]').value = user.email;
+        loginForm.querySelector('[name=password]').value = user.password;
+        doLogin(user.email, user.password);
+      });
+    });
+    box.hidden = false;
+  } catch { /* sem acesso rápido: segue o login normal */ }
+}
 
 document.querySelector('#change-password').addEventListener('click', () => {
   openForm({
@@ -224,4 +253,4 @@ setupProfileMenu();
 setupTheme();
 
 if (session.token && session.user) showApp();
-else bootstrapEntry();
+else { bootstrapEntry(); setupQuickLogin(); }

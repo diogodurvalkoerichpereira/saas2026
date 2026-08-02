@@ -24,6 +24,11 @@
       <p id="login-error" class="form-error" role="alert"></p>
       <div class="login-links"><a href="/portal.html">Portal do cliente</a><a href="/store.html?company=1">Loja de demonstração</a><a href="/admin.html">Administração SaaS</a></div>
     </form>
+    <!-- Acesso rápido (fase de teste): preenchido por app.js só quando há usuários de teste. -->
+    <div class="quick-login" id="quick-login" hidden>
+      <p class="quick-login-title">Acesso rápido de teste <span>um clique entra com o perfil</span></p>
+      <div class="quick-login-list" id="quick-login-list"></div>
+    </div>
   </section>
 
   <div class="app-shell" id="app-view" hidden>
