@@ -10,6 +10,7 @@ const { audit } = require('../../services/audit.service');
 const { providers } = require('../../integrations/whatsapp.providers');
 const { providers: paymentProviders } = require('../../integrations/payment.providers');
 const { encrypt } = require('../../lib/secrets');
+const { listUpgrades, requestUpgrade } = require('../../services/plan-upgrade');
 
 const id = z.coerce.number().int().positive();
 const optional = (max) => z.string().trim().max(max).optional();
@@ -221,6 +222,29 @@ router.get('/subscription', permit('home'), async (req, res, next) => {
       )
     ]);
     res.json({ company: normalizeRecord(companies[0]), resources, billing: billing.map(normalizeRecord), usage: normalizeRecord(usage[0]) });
+  } catch (error) { next(error); }
+});
+
+// Upgrade de plano pelo próprio lojista (espelha o modal "Upgrade Plano" do legado): lista só os
+// planos superiores, com a diferença proporcional a pagar hoje.
+router.get('/subscription/upgrades', permit('home'), async (req, res, next) => {
+  try {
+    const data = await listUpgrades(Number(req.auth.companyId));
+    res.json({
+      ...data,
+      current: data.current ? normalizeRecord(data.current) : null,
+      plans: data.plans.map(normalizeRecord)
+    });
+  } catch (error) { next(error); }
+});
+
+// Solicita o upgrade: gera a cobrança de ajuste. O plano só troca quando ela for paga.
+router.post('/subscription/upgrade', permit('home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    const { planId } = z.object({ planId: z.coerce.number().int().positive() }).parse(req.body);
+    const result = await requestUpgrade({ companyId: Number(req.auth.companyId), planId, userId: Number(req.auth.sub) });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'upgrade', entity: 'assinatura', entityId: result.id, details: { plano: planId, diferenca: result.diferenca } });
+    res.status(201).json(result);
   } catch (error) { next(error); }
 });
 

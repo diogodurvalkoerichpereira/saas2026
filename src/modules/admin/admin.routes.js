@@ -7,6 +7,7 @@ const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { CORE } = require('../../config/features');
+const { applyUpgrade } = require('../../services/plan-upgrade');
 
 const id = z.coerce.number().int().positive();
 const yesNo = z.enum(['Sim', 'Não']);
@@ -279,6 +280,41 @@ router.get('/billing', async (req, res, next) => {
         ORDER BY r.vencimento DESC, r.id DESC`
     );
     res.json(listResponse(rows, req.query, { searchFields: ['descricao', 'empresa_nome', 'referencia'], statusField: 'pago', dateField: 'vencimento', defaultSort: 'vencimento' }));
+  } catch (error) { next(error); }
+});
+
+// Confirma o pagamento de uma cobrança do SaaS. Quando é um Upgrade, é aqui que o plano da empresa
+// efetivamente muda — plano, recursos e mensalidade (espelha aprovar_plano.php do legado).
+router.post('/billing/:id/pay', async (req, res, next) => {
+  try {
+    const billingId = id.parse(req.params.id);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows] = await connection.execute(
+        "SELECT id, cliente, referencia, id_ref, pago FROM receber_sas WHERE id = ? LIMIT 1",
+        [billingId]
+      );
+      const conta = rows[0];
+      if (!conta) throw Object.assign(new Error('Cobrança não encontrada.'), { status: 404 });
+      if (conta.pago === 'Sim') throw Object.assign(new Error('Esta cobrança já está paga.'), { status: 409 });
+
+      await connection.execute(
+        "UPDATE receber_sas SET pago = 'Sim', data_pgto = CURRENT_DATE, usuario_pgto = ? WHERE id = ?",
+        [Number(req.auth.sub), billingId]
+      );
+
+      let upgrade = null;
+      if (conta.referencia === 'Upgrade' && conta.id_ref) {
+        upgrade = await applyUpgrade({ companyId: Number(conta.cliente), planId: Number(conta.id_ref), db: connection });
+      }
+      await audit(connection, { companyId: 0, userId: Number(req.auth.sub), action: 'pagar', entity: 'receber_sas', entityId: billingId, details: upgrade ? { upgradePara: upgrade.plano.nome } : null });
+      await connection.commit();
+      res.json({ id: billingId, upgrade: upgrade ? upgrade.plano : null });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally { connection.release(); }
   } catch (error) { next(error); }
 });
 

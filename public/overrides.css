@@ -869,3 +869,19 @@ input:focus,
 .quick-login-item strong { font-size: .82rem; color: #1b2925; }
 .quick-login-item small { font-size: .7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 420px) { .quick-login-list { grid-template-columns: 1fr; } }
+
+/* Upgrade de plano na tela de Assinatura */
+.upgrade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.upgrade-card {
+  display: flex; flex-direction: column; gap: 8px; padding: 16px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+}
+.upgrade-card:hover { border-color: var(--brand); }
+.upgrade-name { font-weight: 800; font-size: 1.02rem; }
+.upgrade-price { font-size: 1.5rem; font-weight: 800; color: var(--brand); letter-spacing: -.02em; }
+.upgrade-price small { font-size: .76rem; font-weight: 600; color: var(--muted); }
+.upgrade-items { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.upgrade-items li { display: flex; gap: 7px; font-size: .84rem; }
+.upgrade-items li::before { content: "✓"; color: var(--brand); font-weight: 800; }
+.upgrade-diff { margin: 4px 0 0; font-size: .84rem; }
+.upgrade-card .button { margin-top: auto; }

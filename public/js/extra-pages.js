@@ -1018,9 +1018,51 @@ async function renderSubscription() {
       <div class="metric-card"><span>Dispositivos</span><strong>${number(data.usage.dispositivos)}</strong><small>Limite: ${planLimit(c.limite_dispositivos)}</small></div>
     </div>
     <section class="panel" style="margin-bottom:14px"><div class="toolbar"><strong>Recursos habilitados</strong></div><div class="check-list" style="padding:14px">${data.resources.length ? data.resources.map((item) => `<span class="badge success">${escapeHtml(item.nome)}</span>`).join(' ') : '<p class="muted">Nenhum recurso específico cadastrado.</p>'}</div></section>
+    <section class="panel" id="upgrade-panel" style="margin-bottom:14px"><div class="toolbar"><strong>Fazer upgrade de plano</strong></div><div id="upgrade-body" style="padding:14px"><p class="muted">Carregando planos…</p></div></section>
     <section class="panel"><div class="toolbar"><strong>Últimas mensalidades</strong></div>${table([
       { key: 'descricao', label: 'Descrição' }, { key: 'vencimento', label: 'Vencimento', render: date }, { key: 'subtotal', label: 'Valor', render: money }, { key: 'pago', label: 'Pago', render: badge }, { key: 'data_pgto', label: 'Pagamento', render: date }
     ], data.billing)}</section>`;
+  await renderUpgrades();
+}
+
+// Upgrade pelo painel do lojista (espelha o modal "Upgrade Plano" do legado): mostra só os planos
+// superiores, com a diferença proporcional aos dias que faltam no ciclo atual.
+async function renderUpgrades() {
+  const box = document.querySelector('#upgrade-body');
+  if (!box) return;
+  try {
+    const data = await api('/api/content/subscription/upgrades');
+    if (!data.plans.length) {
+      box.innerHTML = '<p class="muted">Você já está no plano mais completo. Não há upgrade disponível.</p>';
+      return;
+    }
+    box.innerHTML = `<div class="upgrade-grid">${data.plans.map((plan) => `
+      <article class="upgrade-card">
+        <div class="upgrade-name">${escapeHtml(plan.nome)}</div>
+        <div class="upgrade-price">${money(plan.valor)}<small> /mês</small></div>
+        ${plan.itens && plan.itens.length ? `<ul class="upgrade-items">${plan.itens.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+        <p class="upgrade-diff">Para migrar hoje: <strong>${money(plan.diferenca)}</strong>${plan.diasRestantes ? ` <span class="muted">(proporcional a ${number(plan.diasRestantes)} dias restantes)</span>` : ''}</p>
+        <button class="button primary" data-upgrade="${plan.id}" data-nome="${escapeHtml(plan.nome)}">Fazer upgrade</button>
+      </article>`).join('')}</div>
+      <p class="muted" style="margin-top:12px">O plano muda assim que a cobrança do ajuste for confirmada.</p>`;
+
+    box.querySelectorAll('[data-upgrade]').forEach((button) => button.addEventListener('click', async () => {
+      const nome = button.dataset.nome;
+      await confirmAction(`Fazer upgrade para o plano ${nome}?`, async () => {
+        button.disabled = true;
+        try {
+          const result = await api('/api/content/subscription/upgrade', { method: 'POST', body: { planId: Number(button.dataset.upgrade) } });
+          toast(`Upgrade solicitado. Cobrança de ${money(result.diferenca)} gerada com vencimento em ${date(result.vencimento)}.`);
+          await renderSubscription();
+        } catch (error) {
+          toast(error.message, 'error');
+          button.disabled = false;
+        }
+      });
+    }));
+  } catch (error) {
+    box.innerHTML = `<p class="muted">Não foi possível carregar os planos: ${escapeHtml(error.message)}</p>`;
+  }
 }
 
 function downloadCsv(filename, columns, items) {
