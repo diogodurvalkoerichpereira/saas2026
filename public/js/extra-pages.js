@@ -844,7 +844,10 @@ const paymentProviderOptions = [
   { value: 'Asaas', label: 'Asaas' }
 ];
 
+// Organizado em seções, espelhando o modal "Alterar Configurações" do legado, para não ser
+// uma lista plana de ~35 campos. Os cabeçalhos (type: 'section') são só visuais.
 const companySettingsFields = [
+  { type: 'section', label: 'Dados da empresa' },
   { name: 'nome', label: 'Nome da empresa', optional: true, max: 50 },
   { name: 'email', label: 'E-mail', type: 'email', optional: true, max: 50 },
   { name: 'telefone', label: 'Telefone', optional: true, max: 20 },
@@ -852,45 +855,57 @@ const companySettingsFields = [
   { name: 'endereco', label: 'Endereço', optional: true, full: true, max: 100 },
   { name: 'cidade_sistema', label: 'Cidade', optional: true, max: 50 },
   { name: 'instagram', label: 'Instagram', optional: true, max: 100 },
-  { name: 'url_site', label: 'Endereço do site', optional: true, max: 255 },
+
+  { type: 'section', label: 'Recibos e operação' },
   { name: 'marca_dagua', label: 'Marca d’água', type: 'select', options: yesNo() },
   { name: 'assinatura_recibo', label: 'Assinatura em recibos', type: 'select', options: yesNo() },
   { name: 'impressao_automatica', label: 'Impressão automática', type: 'select', options: yesNo() },
   { name: 'abertura_caixa', label: 'Exigir abertura de caixa', type: 'select', options: yesNo() },
-  { name: 'dias_comissao', label: 'Prazo das comissões (dias)', type: 'number', min: 0, numeric: true, optional: true },
   { name: 'assinatura_cliente', label: 'Assinatura do cliente', type: 'select', options: yesNo() },
-  { name: 'cobrar_automaticamente', label: 'Cobrança automática', type: 'select', options: yesNo() },
-  { name: 'cobrar_duas_vezes', label: 'Segunda tentativa de cobrança', type: 'select', options: yesNo() },
-  // 'Login' é a primeira opção de propósito: é o default quando o valor está vazio, igual ao
-  // fallback do backend (/api/public/entry). Se 'Site' fosse o primeiro, salvar as configurações
-  // sem tocar neste campo trocaria a entrada para o site e esconderia a tela de login.
-  { name: 'pagina_entrada', label: 'Página de entrada (visitante não logado)', type: 'select', options: [{ value: 'Login', label: 'Login (tela de acesso)' }, { value: 'Site', label: 'Site (página de planos)' }] },
-  { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 },
+
+  { type: 'section', label: 'Financeiro e cobrança' },
   { name: 'multa_atraso', label: 'Multa por atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
   { name: 'juros_atraso', label: 'Juros por dia de atraso (%)', type: 'number', step: '.01', min: 0, numeric: true, optional: true },
+  { name: 'dias_comissao', label: 'Prazo das comissões (dias)', type: 'number', min: 0, numeric: true, optional: true },
   { name: 'dias_lembrete', label: 'Lembrete de vencimento (dias antes)', type: 'number', min: 0, numeric: true, optional: true },
-  { name: 'defeito_orc', label: 'Texto padrão · Defeito relatado (orçamento)', optional: true, max: 100 },
-  { name: 'laudo_orc', label: 'Texto padrão · Laudo técnico (orçamento)', optional: true, max: 100 },
-  { name: 'acessorios_orc', label: 'Texto padrão · Acessórios (orçamento)', optional: true, max: 100 },
-  { name: 'senha_aparelho_orc', label: 'Texto padrão · Senha do aparelho (orçamento)', optional: true, max: 100 },
-  { name: 'avarias_orc', label: 'Texto padrão · Avarias (orçamento)', optional: true, max: 100 },
-  { name: 'mao_obra_orc', label: 'Texto padrão · Condições de mão de obra (orçamento)', optional: true, max: 100 },
-  { name: 'defeito_os', label: 'Texto padrão · Defeito relatado (OS)', optional: true, max: 100 },
-  { name: 'laudo_os', label: 'Texto padrão · Laudo técnico (OS)', optional: true, max: 100 },
-  { name: 'acessorios_os', label: 'Texto padrão · Acessórios (OS)', optional: true, max: 100 },
-  { name: 'senha_aparelho_os', label: 'Texto padrão · Senha do aparelho (OS)', optional: true, max: 100 },
-  { name: 'avarias_os', label: 'Texto padrão · Avarias (OS)', optional: true, max: 100 },
-  { name: 'mao_obra_os', label: 'Texto padrão · Condições de mão de obra (OS)', optional: true, max: 100 },
+  { name: 'cobrar_automaticamente', label: 'Cobrança automática', type: 'select', options: yesNo() },
+  { name: 'cobrar_duas_vezes', label: 'Segunda tentativa de cobrança', type: 'select', options: yesNo() },
+
+  { type: 'section', label: 'Integração de WhatsApp', hint: 'O token é gravado de forma protegida e não é reexibido após salvo.' },
   // Provedor de WhatsApp da empresa — mesmas opções do legado.
   { name: 'api_whatsapp', label: 'WhatsApp · Provedor', type: 'select', full: true, options: whatsappProviderOptions },
   { name: 'instancia_whatsapp', label: 'WhatsApp · Instância', optional: true, max: 70 },
   { name: 'token_whatsapp', label: 'WhatsApp · Token (deixe em branco para manter o atual)', optional: true, max: 255 },
+
+  { type: 'section', label: 'Integração de pagamento', hint: 'As chaves são gravadas cifradas e nunca reexibidas; em branco mantêm a atual.' },
   // Pagamento por empresa — os segredos nunca voltam preenchidos; em branco mantém o atual.
   { name: 'api_pagamento', label: 'Pagamento · Provedor', type: 'select', full: true, options: paymentProviderOptions },
   { name: 'chave_api_asaas', label: 'Asaas · Chave da API (em branco mantém a atual)', optional: true, max: 255 },
   { name: 'access_token', label: 'Mercado Pago · Access Token (em branco mantém o atual)', optional: true, max: 255 },
   { name: 'public_key', label: 'Mercado Pago · Public Key', optional: true, max: 255 },
-  { name: 'dados_pagamento', label: 'Dados para pagamento manual (usado quando não há provedor)', type: 'textarea', optional: true, full: true, max: 5000 }
+  { name: 'dados_pagamento', label: 'Dados para pagamento manual (usado quando não há provedor)', type: 'textarea', optional: true, full: true, max: 5000 },
+
+  { type: 'section', label: 'Site e página de entrada' },
+  { name: 'url_site', label: 'Endereço do site', optional: true, max: 255 },
+  { name: 'meta_descricao', label: 'Descrição para buscadores', type: 'textarea', optional: true, full: true, max: 255 },
+  // 'Login' é a primeira opção de propósito: é o default quando o valor está vazio, igual ao
+  // fallback do backend (/api/public/entry). Se 'Site' fosse o primeiro, salvar as configurações
+  // sem tocar neste campo trocaria a entrada para o site e esconderia a tela de login.
+  { name: 'pagina_entrada', label: 'Página de entrada (visitante não logado)', type: 'select', full: true, options: [{ value: 'Login', label: 'Login (tela de acesso)' }, { value: 'Site', label: 'Site (página de planos)' }] },
+
+  { type: 'section', label: 'Textos padrão de orçamento e OS' },
+  { name: 'defeito_orc', label: 'Defeito relatado (orçamento)', optional: true, max: 100 },
+  { name: 'laudo_orc', label: 'Laudo técnico (orçamento)', optional: true, max: 100 },
+  { name: 'acessorios_orc', label: 'Acessórios (orçamento)', optional: true, max: 100 },
+  { name: 'senha_aparelho_orc', label: 'Senha do aparelho (orçamento)', optional: true, max: 100 },
+  { name: 'avarias_orc', label: 'Avarias (orçamento)', optional: true, max: 100 },
+  { name: 'mao_obra_orc', label: 'Condições de mão de obra (orçamento)', optional: true, max: 100 },
+  { name: 'defeito_os', label: 'Defeito relatado (OS)', optional: true, max: 100 },
+  { name: 'laudo_os', label: 'Laudo técnico (OS)', optional: true, max: 100 },
+  { name: 'acessorios_os', label: 'Acessórios (OS)', optional: true, max: 100 },
+  { name: 'senha_aparelho_os', label: 'Senha do aparelho (OS)', optional: true, max: 100 },
+  { name: 'avarias_os', label: 'Avarias (OS)', optional: true, max: 100 },
+  { name: 'mao_obra_os', label: 'Condições de mão de obra (OS)', optional: true, max: 100 }
 ];
 
 async function renderSettings() {

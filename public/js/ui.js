@@ -36,6 +36,11 @@ export function pagination(meta) {
 }
 
 function fieldMarkup(field, value) {
+  // Cabeçalho de seção: divide o formulário em blocos (Dados da empresa, Integrações, etc.),
+  // como o modal de configurações do legado. Não é campo de dados — não entra no corpo nem na validação.
+  if (field.type === 'section') {
+    return `<div class="modal-section full"><h3>${escapeHtml(field.label)}</h3>${field.hint ? `<p class="muted">${escapeHtml(field.hint)}</p>` : ''}</div>`;
+  }
   const required = field.required ? 'required' : '';
   const full = field.full ? 'full' : '';
   const safe = value === null || value === undefined ? '' : (field.type === 'date' ? String(value).slice(0, 10) : String(value));
@@ -62,8 +67,8 @@ export function openForm({ title, eyebrow = 'Cadastro', fields, record = {}, sub
   document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">${fields.map((field) => fieldMarkup(field, record[field.name])).join('')}</div>`;
   document.querySelector('#modal-error').textContent = '';
   document.querySelector('#modal-submit-label').textContent = submitLabel;
-  // Campos de imagem só renderizam/enviam arquivo; ficam fora da validação e do corpo JSON.
-  const dataFields = fields.filter((field) => field.type !== 'image');
+  // Campos de imagem (só arquivo) e seções (só visual) ficam fora da validação e do corpo JSON.
+  const dataFields = fields.filter((field) => field.type !== 'image' && field.type !== 'section');
   const handler = async (event) => {
     event.preventDefault();
     const submit = document.querySelector('#modal-submit');

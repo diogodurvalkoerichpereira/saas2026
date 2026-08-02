@@ -846,3 +846,10 @@ input:focus,
 .profile-item:hover { background: #edf3f0; }
 .profile-item.danger { color: var(--danger); }
 .profile-item.danger:hover { background: #fef0ee; }
+
+/* Cabeçalhos de seção dentro do formulário (tela de Configurações) */
+/* grid-column aqui porque a classe `full` do form só é estilizada via `.field.full`. */
+.modal-section { grid-column: 1 / -1; margin: 14px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); }
+.modal-section:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.modal-section h3 { margin: 0; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
+.modal-section p { margin: 4px 0 0; font-size: .8rem; }
