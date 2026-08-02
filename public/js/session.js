@@ -15,3 +15,17 @@ export const session = {
     sessionStorage.removeItem(USER_KEY);
   }
 };
+
+// O usuário pode abrir esta tela? Precisa das DUAS coisas: permissão do perfil e recurso do plano
+// da empresa — o mesmo par que o backend exige (permit + feature). Serve para não oferecer atalho
+// para uma tela que vai recusar. `permissions` aceita lista (basta uma) e `feature` é opcional.
+export function canAccess(permissions, feature) {
+  const user = session.user;
+  if (!user) return false;
+  const required = Array.isArray(permissions) ? permissions : (permissions ? [permissions] : []);
+  const granted = new Set(user.permissions || []);
+  const temPermissao = user.role === 'Administrador' || !required.length || required.some((key) => granted.has(key));
+  if (!temPermissao) return false;
+  if (!feature) return true;
+  return new Set(user.resources || []).has(feature);
+}

@@ -57,14 +57,16 @@ function proRata({ valorBase, frequencia, vencimento, valorNovo }) {
   return { vencida: false, diferenca: round2((diariaNova - diariaBase) * diasRestantes), diasRestantes };
 }
 
-// Planos disponíveis para upgrade (valor maior que o atual), já com a diferença a pagar hoje.
+// Planos disponíveis para troca. Upgrade (valor maior) cobra a diferença proporcional hoje;
+// downgrade (valor menor) não gera cobrança e passa a valer na próxima renovação — o cliente já
+// pagou o ciclo atual, então não faz sentido reduzir o acesso no meio dele nem devolver valor.
 async function listUpgrades(companyId, db = pool) {
   const sub = await currentSubscription(companyId, db);
   const valorAtual = Number(sub?.plano_valor ?? sub?.mensalidade ?? 0);
   const [plans] = await db.execute(
     `SELECT id, nome, valor, clientes, usuarios, dispositivos FROM planos
-      WHERE ativo = 'Sim' AND valor > ? ORDER BY valor ASC, id ASC`,
-    [valorAtual]
+      WHERE ativo = 'Sim' AND valor <> ? AND id <> COALESCE(?, -1) ORDER BY valor ASC, id ASC`,
+    [valorAtual, sub?.plano ?? null]
   );
   if (!plans.length) return { current: sub, plans: [] };
 
@@ -77,12 +79,17 @@ async function listUpgrades(companyId, db = pool) {
     current: sub,
     invoice: invoice ? { vencimento: invoice.vencimento, valor: invoice.valor } : null,
     plans: plans.map((plan) => {
+      const tipo = Number(plan.valor) > valorAtual ? 'upgrade' : 'downgrade';
+      if (tipo === 'downgrade') {
+        // Sem cobrança: vale a partir da próxima renovação (fim do ciclo já pago).
+        return { ...plan, itens: byPlan[plan.id] || [], tipo, diferenca: 0, diasRestantes: null, valeApartirDe: isoDate(invoice?.vencimento) };
+      }
       // Base = valor do PLANO atual (o que a empresa paga por ciclo). A fatura em aberto entra só
       // com o vencimento e a frequência — usar o valor dela quebraria se estivesse dessincronizada.
       const calc = invoice
         ? proRata({ valorBase: valorAtual, frequencia: invoice.frequencia, vencimento: invoice.vencimento, valorNovo: plan.valor })
         : { vencida: false, diferenca: round2(Number(plan.valor) - valorAtual), diasRestantes: null };
-      return { ...plan, itens: byPlan[plan.id] || [], diferenca: Math.max(calc.diferenca, 0), diasRestantes: calc.diasRestantes };
+      return { ...plan, itens: byPlan[plan.id] || [], tipo, diferenca: Math.max(calc.diferenca, 0), diasRestantes: calc.diasRestantes };
     })
   };
 }
@@ -97,8 +104,17 @@ async function requestUpgrade({ companyId, planId, userId, db = pool }) {
   if (!plano) throw Object.assign(new Error('Plano de destino indisponível.'), { status: 404 });
 
   const valorAtual = Number(sub.plano_valor ?? sub.mensalidade ?? 0);
-  if (Number(plano.valor) <= valorAtual) {
-    throw Object.assign(new Error('Escolha um plano superior ao atual.'), { status: 409 });
+  if (Number(plano.id) === Number(sub.plano)) {
+    throw Object.assign(new Error('Este já é o plano atual da empresa.'), { status: 409 });
+  }
+
+  // Downgrade: sem cobrança. Agenda a troca para a próxima renovação — o ciclo atual já foi pago,
+  // então o cliente mantém o acesso que contratou até o vencimento.
+  if (Number(plano.valor) < valorAtual) {
+    const invoiceAtual = await openInvoice(companyId, db);
+    const vigenciaEm = isoDate(invoiceAtual?.vencimento) || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    await db.execute('UPDATE empresas SET plano_agendado = ?, plano_agendado_em = ? WHERE id = ?', [plano.id, vigenciaEm, companyId]);
+    return { tipo: 'downgrade', plano: { id: plano.id, nome: plano.nome, valor: plano.valor }, diferenca: 0, vigenciaEm };
   }
 
   const [pending] = await db.execute(
@@ -155,4 +171,24 @@ async function applyUpgrade({ companyId, planId, db = pool }) {
   return { plano };
 }
 
-module.exports = { listUpgrades, requestUpgrade, applyUpgrade, proRata };
+// Cancela um downgrade agendado (o cliente mudou de ideia antes da renovação).
+async function cancelScheduled(companyId, db = pool) {
+  await db.execute('UPDATE empresas SET plano_agendado = NULL, plano_agendado_em = NULL WHERE id = ?', [companyId]);
+}
+
+// Aplica os downgrades cujo agendamento já chegou. Chamado pelo job diário: na data marcada, a
+// empresa passa para o plano menor e os recursos são reaplicados.
+async function applyScheduledDowngrades(db = pool) {
+  const [rows] = await db.execute(
+    'SELECT id, plano_agendado FROM empresas WHERE plano_agendado IS NOT NULL AND plano_agendado_em <= CURRENT_DATE'
+  );
+  const aplicados = [];
+  for (const empresa of rows) {
+    await applyUpgrade({ companyId: empresa.id, planId: empresa.plano_agendado, db });
+    await cancelScheduled(empresa.id, db);
+    aplicados.push({ empresa: empresa.id, plano: empresa.plano_agendado });
+  }
+  return aplicados;
+}
+
+module.exports = { listUpgrades, requestUpgrade, applyUpgrade, proRata, cancelScheduled, applyScheduledDowngrades };

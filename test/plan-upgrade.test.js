@@ -43,3 +43,10 @@ test('sem frequência definida assume ciclo de 30 dias', () => {
   const calc = proRata({ valorBase: 69, frequencia: null, vencimento: emDias(30), valorNovo: 139 });
   assert.equal(calc.diferenca, 70);
 });
+
+// Downgrade não usa pro-rata: não há cobrança, a troca é agendada para a renovação.
+test('plano menor gera diferença negativa (a rota trata como downgrade, sem cobrança)', () => {
+  const calc = proRata({ valorBase: 249, frequencia: 30, vencimento: emDias(10), valorNovo: 69 });
+  assert.ok(calc.diferenca < 0, 'diferença negativa sinaliza plano menor');
+  assert.equal(calc.vencida, false);
+});

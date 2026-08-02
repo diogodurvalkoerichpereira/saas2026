@@ -1018,7 +1018,7 @@ async function renderSubscription() {
       <div class="metric-card"><span>Dispositivos</span><strong>${number(data.usage.dispositivos)}</strong><small>Limite: ${planLimit(c.limite_dispositivos)}</small></div>
     </div>
     <section class="panel" style="margin-bottom:14px"><div class="toolbar"><strong>Recursos habilitados</strong></div><div class="check-list" style="padding:14px">${data.resources.length ? data.resources.map((item) => `<span class="badge success">${escapeHtml(item.nome)}</span>`).join(' ') : '<p class="muted">Nenhum recurso específico cadastrado.</p>'}</div></section>
-    <section class="panel" id="upgrade-panel" style="margin-bottom:14px"><div class="toolbar"><strong>Fazer upgrade de plano</strong></div><div id="upgrade-body" style="padding:14px"><p class="muted">Carregando planos…</p></div></section>
+    <section class="panel" id="upgrade-panel" style="margin-bottom:14px"><div class="toolbar"><strong>Trocar de plano</strong></div><div id="upgrade-body" style="padding:14px"><p class="muted">Carregando planos…</p></div></section>
     <section class="panel"><div class="toolbar"><strong>Últimas mensalidades</strong></div>${table([
       { key: 'descricao', label: 'Descrição' }, { key: 'vencimento', label: 'Vencimento', render: date }, { key: 'subtotal', label: 'Valor', render: money }, { key: 'pago', label: 'Pago', render: badge }, { key: 'data_pgto', label: 'Pagamento', render: date }
     ], data.billing)}</section>`;
@@ -1036,23 +1036,49 @@ async function renderUpgrades() {
       box.innerHTML = '<p class="muted">Você já está no plano mais completo. Não há upgrade disponível.</p>';
       return;
     }
-    box.innerHTML = `<div class="upgrade-grid">${data.plans.map((plan) => `
-      <article class="upgrade-card">
-        <div class="upgrade-name">${escapeHtml(plan.nome)}</div>
+    // Agendamento pendente (downgrade marcado para a renovação) aparece antes da lista.
+    const agendado = data.current?.plano_agendado_nome
+      ? `<div class="upgrade-scheduled">
+           <span>Troca agendada para <strong>${escapeHtml(data.current.plano_agendado_nome)}</strong>${data.current.plano_agendado_em ? ` a partir de ${date(data.current.plano_agendado_em)}` : ''}.</span>
+           <button class="button ghost small" data-cancel-scheduled>Cancelar</button>
+         </div>`
+      : '';
+
+    box.innerHTML = `${agendado}<div class="upgrade-grid">${data.plans.map((plan) => {
+      const isDown = plan.tipo === 'downgrade';
+      return `<article class="upgrade-card${isDown ? ' is-downgrade' : ''}">
+        <div class="upgrade-name">${escapeHtml(plan.nome)}${isDown ? '<span class="upgrade-tag">plano menor</span>' : ''}</div>
         <div class="upgrade-price">${money(plan.valor)}<small> /mês</small></div>
         ${plan.itens && plan.itens.length ? `<ul class="upgrade-items">${plan.itens.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
-        <p class="upgrade-diff">Para migrar hoje: <strong>${money(plan.diferenca)}</strong>${plan.diasRestantes ? ` <span class="muted">(proporcional a ${number(plan.diasRestantes)} dias restantes)</span>` : ''}</p>
-        <button class="button primary" data-upgrade="${plan.id}" data-nome="${escapeHtml(plan.nome)}">Fazer upgrade</button>
-      </article>`).join('')}</div>
-      <p class="muted" style="margin-top:12px">O plano muda assim que a cobrança do ajuste for confirmada.</p>`;
+        <p class="upgrade-diff">${isDown
+          ? `Sem cobrança agora. Passa a valer${plan.valeApartirDe ? ` em <strong>${date(plan.valeApartirDe)}</strong>` : ' na próxima renovação'}.`
+          : `Para migrar hoje: <strong>${money(plan.diferenca)}</strong>${plan.diasRestantes ? ` <span class="muted">(proporcional a ${number(plan.diasRestantes)} dias restantes)</span>` : ''}`}</p>
+        <button class="button ${isDown ? 'ghost' : 'primary'}" data-upgrade="${plan.id}" data-nome="${escapeHtml(plan.nome)}" data-tipo="${plan.tipo}">${isDown ? 'Mudar para este plano' : 'Fazer upgrade'}</button>
+      </article>`;
+    }).join('')}</div>
+      <p class="muted" style="margin-top:12px">No upgrade, o plano muda assim que a cobrança do ajuste for confirmada. No plano menor, a troca vale na próxima renovação — você mantém o acesso atual até lá.</p>`;
+
+    box.querySelector('[data-cancel-scheduled]')?.addEventListener('click', async () => {
+      await confirmAction('Cancelar a troca de plano agendada?', async () => {
+        await api('/api/content/subscription/upgrade', { method: 'DELETE' });
+        toast('Troca de plano cancelada.');
+        await renderSubscription();
+      });
+    });
 
     box.querySelectorAll('[data-upgrade]').forEach((button) => button.addEventListener('click', async () => {
       const nome = button.dataset.nome;
-      await confirmAction(`Fazer upgrade para o plano ${nome}?`, async () => {
+      const isDown = button.dataset.tipo === 'downgrade';
+      const pergunta = isDown
+        ? `Mudar para o plano ${nome} na próxima renovação? Você mantém o acesso atual até lá.`
+        : `Fazer upgrade para o plano ${nome}?`;
+      await confirmAction(pergunta, async () => {
         button.disabled = true;
         try {
           const result = await api('/api/content/subscription/upgrade', { method: 'POST', body: { planId: Number(button.dataset.upgrade) } });
-          toast(`Upgrade solicitado. Cobrança de ${money(result.diferenca)} gerada com vencimento em ${date(result.vencimento)}.`);
+          toast(result.tipo === 'downgrade'
+            ? `Troca agendada para ${date(result.vigenciaEm)}. Você mantém o plano atual até lá.`
+            : `Upgrade solicitado. Cobrança de ${money(result.diferenca)} gerada com vencimento em ${date(result.vencimento)}.`);
           await renderSubscription();
         } catch (error) {
           toast(error.message, 'error');

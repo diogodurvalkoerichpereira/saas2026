@@ -5,6 +5,7 @@ import { loading, pageHeader, table, pagination, openForm, confirmAction, toast,
 import { renderExtraRoute } from './extra-pages.js';
 import { attachmentButton, openAttachments } from './attachments.js';
 import { code128SVG, sanitizeCode } from './barcode.mjs';
+import { canAccess } from './session.js';
 
 const root = () => document.querySelector('#page-root');
 const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">${icon('edit')}Editar</button>`;
@@ -365,16 +366,43 @@ async function renderDashboard() {
   const [financeResult, operationsResult] = await Promise.allSettled([api('/api/reports/financial'), api('/api/reports/operational')]);
   const finance = financeResult.status === 'fulfilled' ? financeResult.value : null;
   const operations = operationsResult.status === 'fulfilled' ? operationsResult.value : {};
+  // Métricas e atalhos só aparecem quando o usuário realmente pode abrir a tela: precisa da
+  // permissão do perfil E do recurso no plano da empresa (o mesmo par que o backend exige).
+  const cards = [
+    finance && canAccess(['financeiro', 'receber'], 'financeiro') && metric('A receber', money(finance.a_receber), 'Contas pendentes', '#/finance?type=receivables'),
+    finance && canAccess(['financeiro', 'pagar'], 'financeiro') && metric('A pagar', money(finance.a_pagar), 'Compromissos pendentes', '#/finance?type=payables'),
+    canAccess('produtos', 'produtos_servicos') && metric('Produtos', number(operations.stock?.produtos), 'Itens cadastrados', '#/products'),
+    canAccess(['estoque', 'produtos'], 'estoque') && metric('Estoque baixo', number(operations.stock?.estoque_baixo), 'Requer atenção', '#/inventory')
+  ].filter(Boolean);
+
+  const shortcuts = [
+    { titulo: 'Nova venda', desc: 'Abrir o PDV e registrar uma venda', href: '#/sales', icone: 'cart', permissao: 'vendas', recurso: 'vendas_pdv' },
+    { titulo: 'Novo cliente', desc: 'Cadastrar um cliente', href: '#/clients', icone: 'clients', permissao: 'clientes', recurso: 'clientes' },
+    { titulo: 'Novo produto', desc: 'Cadastrar produto ou serviço', href: '#/products', icone: 'box', permissao: 'produtos', recurso: 'produtos_servicos' },
+    { titulo: 'Contas a receber', desc: 'Acompanhar recebimentos', href: '#/finance?type=receivables', icone: 'wallet', permissao: ['financeiro', 'receber'], recurso: 'financeiro' },
+    { titulo: 'Contas a pagar', desc: 'Compromissos do período', href: '#/finance?type=payables', icone: 'wallet', permissao: ['financeiro', 'pagar'], recurso: 'financeiro' },
+    { titulo: 'Movimentar estoque', desc: 'Entradas e saídas', href: '#/inventory', icone: 'inventory', permissao: ['estoque', 'produtos'], recurso: 'estoque' },
+    { titulo: 'Ordens de serviço', desc: 'Acompanhar as OS abertas', href: '#/orders', icone: 'clipboard-check', permissao: 'os', recurso: 'ordens_servico' },
+    { titulo: 'Orçamentos', desc: 'Criar e acompanhar propostas', href: '#/quotes', icone: 'clipboard', permissao: 'orcamentos', recurso: 'orcamentos' },
+    { titulo: 'Caixa', desc: 'Abrir, conferir e fechar o caixa', href: '#/cash', icone: 'wallet', permissao: 'caixas', recurso: 'vendas_pdv' },
+    { titulo: 'Compras', desc: 'Registrar compra de fornecedor', href: '#/purchases', icone: 'truck', permissao: 'compras', recurso: 'compras' },
+    { titulo: 'Campanhas', desc: 'Disparos de WhatsApp', href: '#/marketing', icone: 'megaphone', permissao: ['marketing', 'grupos_disparos'], recurso: 'marketing' },
+    { titulo: 'Tarefas', desc: 'Agenda e pendências', href: '#/tasks', icone: 'calendar', permissao: ['tarefas', 'tarefas_clientes'], recurso: 'tarefas' },
+    { titulo: 'Chamados', desc: 'Suporte e atendimentos', href: '#/tickets', icone: 'help', permissao: 'chamados', recurso: 'chamados' },
+    { titulo: 'Relatórios', desc: 'Vendas, financeiro e estoque', href: '#/reports', icone: 'file-text', permissao: ['rel_financeiro', 'rel_vendas', 'home'], recurso: 'relatorios' }
+  ].filter((item) => canAccess(item.permissao, item.recurso));
+
   root().innerHTML = `${pageHeader('Visão geral', 'Indicadores atualizados da empresa e atalhos operacionais.')}
-    <section class="metric-grid">
-      ${finance ? `${metric('A receber', money(finance.a_receber), 'Contas pendentes', '#/finance?type=receivables')}
-      ${metric('A pagar', money(finance.a_pagar), 'Compromissos pendentes', '#/finance?type=payables')}` : ''}
-      ${metric('Produtos', number(operations.stock?.produtos), 'Itens cadastrados', '#/products')}
-      ${metric('Estoque baixo', number(operations.stock?.estoque_baixo), 'Requer atenção', '#/inventory')}
-    </section>
-    <section class="panel" style="margin-top:16px"><div class="toolbar"><strong>Acesso rápido</strong></div><div class="detail-list" style="padding:16px">
-      <div><small>Clientes</small><a href="#/clients">Abrir cadastro</a></div><div><small>Vendas</small><a href="#/sales">Nova venda</a></div><div><small>Ordens</small><a href="#/orders">Acompanhar OS</a></div>
-    </div></section>`;
+    ${cards.length ? `<section class="metric-grid">${cards.join('')}</section>` : ''}
+    <section class="panel" style="margin-top:16px">
+      <div class="toolbar"><strong>Acesso rápido</strong><span class="muted" style="margin-left:auto;font-size:.8rem">Atalhos disponíveis no seu plano e perfil</span></div>
+      ${shortcuts.length ? `<div class="quick-actions">${shortcuts.map((item) => `
+        <a class="quick-action" href="${item.href}">
+          <span class="quick-action-icon">${icon(item.icone)}</span>
+          <span class="quick-action-text"><strong>${escapeHtml(item.titulo)}</strong><small>${escapeHtml(item.desc)}</small></span>
+        </a>`).join('')}</div>`
+        : '<p class="muted" style="padding:16px">Nenhum atalho disponível para o seu perfil e plano.</p>'}
+    </section>`;
 }
 function metric(label, value, hint, href) { return `<a class="metric-card" href="${href}" style="text-decoration:none;color:inherit"><span>${label}</span><strong>${value}</strong><small>${hint}</small></a>`; }
 

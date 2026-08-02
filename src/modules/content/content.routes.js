@@ -10,7 +10,7 @@ const { audit } = require('../../services/audit.service');
 const { providers } = require('../../integrations/whatsapp.providers');
 const { providers: paymentProviders } = require('../../integrations/payment.providers');
 const { encrypt } = require('../../lib/secrets');
-const { listUpgrades, requestUpgrade } = require('../../services/plan-upgrade');
+const { listUpgrades, requestUpgrade, cancelScheduled } = require('../../services/plan-upgrade');
 
 const id = z.coerce.number().int().positive();
 const optional = (max) => z.string().trim().max(max).optional();
@@ -194,6 +194,8 @@ router.get('/subscription', permit('home'), async (req, res, next) => {
     const companyId = Number(req.auth.companyId);
     const [companies] = await pool.execute(
       `SELECT e.id, e.nome, e.ativo, e.data_teste, e.mensalidade, e.plano, e.dispositivos,
+              e.plano_agendado, e.plano_agendado_em,
+              (SELECT nome FROM planos WHERE id = e.plano_agendado) AS plano_agendado_nome,
               p.nome AS plano_nome, p.valor AS plano_valor, p.clientes AS limite_clientes,
               p.usuarios AS limite_usuarios, p.dispositivos AS limite_dispositivos
          FROM empresas e LEFT JOIN planos p ON p.id = e.plano WHERE e.id = ?`,
@@ -243,8 +245,17 @@ router.post('/subscription/upgrade', permit('home'), authorize('Administrador', 
   try {
     const { planId } = z.object({ planId: z.coerce.number().int().positive() }).parse(req.body);
     const result = await requestUpgrade({ companyId: Number(req.auth.companyId), planId, userId: Number(req.auth.sub) });
-    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'upgrade', entity: 'assinatura', entityId: result.id, details: { plano: planId, diferenca: result.diferenca } });
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: result.tipo === 'downgrade' ? 'downgrade' : 'upgrade', entity: 'assinatura', entityId: result.id ?? planId, details: { plano: planId, diferenca: result.diferenca } });
     res.status(201).json(result);
+  } catch (error) { next(error); }
+});
+
+// Cancela a troca de plano agendada (downgrade que ainda não entrou em vigor).
+router.delete('/subscription/upgrade', permit('home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+  try {
+    await cancelScheduled(Number(req.auth.companyId));
+    await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'cancelar_downgrade', entity: 'assinatura', entityId: Number(req.auth.companyId) });
+    res.status(204).end();
   } catch (error) { next(error); }
 });
 
