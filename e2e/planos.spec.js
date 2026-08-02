@@ -10,14 +10,16 @@ test('a vitrine de planos lista os planos e abre a assinatura', async ({ page })
   await expect(cards.first()).toBeVisible();
   // Só os planos ativos (o "Plano Demonstração" foi desativado) — os 4 reais.
   await expect(cards).toHaveCount(4);
-  await expect(page.locator('.plan-ribbon')).toHaveText('Mais popular');
+  // O destaque é o plano que libera mais módulos — Enterprise, e não o que tem mais linhas escritas.
+  await expect(page.locator('.plan-ribbon')).toHaveText('Mais completo');
+  await expect(page.locator('.plan-card.popular .plan-name')).toHaveText('Enterprise');
   // Enterprise mostra "ilimitado" no lugar de número.
   await expect(page.locator('.plan-card', { hasText: 'Enterprise' })).toContainText('ilimitados');
 
   // Abrir a assinatura leva o plano escolhido para o resumo do modal.
   await page.locator('.plan-card.popular [data-plan]').click();
   await expect(page.locator('#sub-modal')).toBeVisible();
-  await expect(page.locator('#sub-plan-name')).toHaveText('Profissional');
+  await expect(page.locator('#sub-plan-name')).toHaveText('Enterprise');
   await expect(page.locator('#sub-form input[name="nome"]')).toBeVisible();
 
   expect(erros).toEqual([]);

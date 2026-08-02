@@ -150,12 +150,92 @@ async function editResources(type, id) {
   modal.showModal();
 }
 
+// --- Site e planos: o conteúdo da landing pública (/planos.html) ------------------------------
+// Tudo que o visitante lê antes de assinar é editado aqui — chamada, selos, botões, cards de
+// recurso, perguntas e rodapé. Nada dessa página é texto fixo no HTML.
+
+const siteFields = [
+  { name: 'nome', label: 'Nome do sistema' },
+  { name: 'telefone', label: 'WhatsApp de contato' },
+  { name: 'meta_descricao', label: 'Descrição para buscadores', full: true },
+  { name: 'titulo', label: 'Chamada principal', full: true },
+  { name: 'subtitulo', label: 'Texto de apoio', type: 'textarea' },
+  { name: 'item1', label: 'Selo 1' }, { name: 'item2', label: 'Selo 2' }, { name: 'item3', label: 'Selo 3' },
+  { name: 'titulo_recursos', label: 'Título da seção de recursos', full: true },
+  { name: 'titulo_perguntas', label: 'Título da seção de perguntas', full: true },
+  { name: 'titulo_rodape', label: 'Chamada final' },
+  { name: 'botao_rodape', label: 'Texto do botão final' },
+  { name: 'link_rodape', label: 'Link do botão final (#plans para rolar até os planos)', full: true },
+  { name: 'descricao_rodape', label: 'Texto da chamada final', type: 'textarea' }
+];
+const siteTabs = { content: 'Conteúdo', features: 'Recursos', faqs: 'Perguntas' };
+const siteCruds = {
+  features: {
+    path: '/api/admin/site/features', singular: 'card de recurso',
+    columns: [{ key: 'posicao_recurso', label: 'Ordem' }, { key: 'titulo_recurso', label: 'Título' }, { key: 'descricao_recurso', label: 'Descrição' }, { key: 'icone_recurso', label: 'Ícone' }],
+    fields: [
+      { name: 'titulo_recurso', label: 'Título', required: true },
+      { name: 'posicao_recurso', label: 'Ordem', type: 'number', min: 0, numeric: true },
+      { name: 'icone_recurso', label: 'Ícone', type: 'select', options: ['cart', 'wallet', 'inventory', 'clients', 'file-text', 'user', 'box', 'truck', 'megaphone', 'calendar', 'help', 'clipboard'].map((value) => ({ value, label: value })) },
+      { name: 'descricao_recurso', label: 'Descrição', type: 'textarea' }
+    ]
+  },
+  faqs: {
+    path: '/api/admin/site/faqs', singular: 'pergunta',
+    columns: [{ key: 'posicao_pergunta', label: 'Ordem' }, { key: 'titulo_pergunta', label: 'Pergunta' }, { key: 'descricao_pergunta', label: 'Resposta' }],
+    fields: [
+      { name: 'titulo_pergunta', label: 'Pergunta', required: true, full: true },
+      { name: 'posicao_pergunta', label: 'Ordem', type: 'number', min: 0, numeric: true },
+      { name: 'descricao_pergunta', label: 'Resposta', type: 'textarea', required: true }
+    ]
+  }
+};
+
+async function renderSite() {
+  const tab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'content';
+  const tabs = `<div class="split-tabs">${Object.entries(siteTabs).map(([key, label]) => `<a class="${tab === key ? 'active' : ''}" href="#/site?tab=${key}">${label}</a>`).join('')}</div>`;
+  const intro = header('Site e planos', 'O que o visitante lê em /planos.html antes de assinar. Os itens com ✓ dentro de cada card saem da tela de Planos → Recursos.',
+    '<a class="button ghost" href="/planos.html" target="_blank" rel="noopener">Ver a página</a>');
+
+  if (tab === 'content') {
+    const site = await api('/api/admin/site');
+    root.innerHTML = `${intro}${tabs}<section class="panel">
+      <dl class="site-preview">${siteFields.map((field) =>
+        `<div><dt>${esc(field.label)}</dt><dd>${esc(site[field.name] || 'Não preenchido')}</dd></div>`).join('')}</dl>
+      <button class="button primary" data-edit-site>Editar conteúdo</button></section>`;
+    root.querySelector('[data-edit-site]').addEventListener('click', () => openForm({
+      title: 'Conteúdo da landing', fields: siteFields, record: site,
+      submit: (values) => api('/api/admin/site', { method: 'PUT', body: values })
+    }));
+    return;
+  }
+
+  const config = siteCruds[tab];
+  const result = await api(`${config.path}?pageSize=100`);
+  root.innerHTML = `${intro}${tabs}<section class="panel">
+    <div class="page-header"><p class="muted">A ordem menor aparece primeiro na página.</p><button class="button primary" data-new>Adicionar ${esc(config.singular)}</button></div>
+    ${table(config.columns, result.items, (item) => `<button class="button ghost small" data-edit="${item.id}">Editar</button><button class="button danger small" data-remove="${item.id}">Excluir</button>`)}</section>`;
+  const byId = new Map(result.items.map((item) => [String(item.id), item]));
+  root.querySelector('[data-new]').addEventListener('click', () => openForm({
+    title: `Adicionar ${config.singular}`, fields: config.fields,
+    submit: (values) => api(config.path, { method: 'POST', body: values })
+  }));
+  root.querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', () => openForm({
+    title: `Editar ${config.singular}`, fields: config.fields, record: byId.get(button.dataset.edit),
+    submit: (values) => api(`${config.path}/${button.dataset.edit}`, { method: 'PATCH', body: values })
+  })));
+  root.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', async () => {
+    if (confirm('Excluir este item da página de planos?')) { await api(`${config.path}/${button.dataset.remove}`, { method: 'DELETE' }); await render(); }
+  }));
+}
+
 async function render() {
-  const route = routeName(); const titles = { dashboard: 'Visão geral', companies: 'Empresas', plans: 'Planos', resources: 'Recursos', billing: 'Mensalidades', alerts: 'Alertas', users: 'Usuários SaaS' };
+  const route = routeName(); const titles = { dashboard: 'Visão geral', companies: 'Empresas', plans: 'Planos', resources: 'Recursos', billing: 'Mensalidades', site: 'Site e planos', alerts: 'Alertas', users: 'Usuários SaaS' };
   document.querySelector('#admin-title').textContent = titles[route] || titles.dashboard;
   document.querySelectorAll('[data-route]').forEach((link) => link.classList.toggle('active', link.dataset.route === route));
   root.innerHTML = '<div class="empty">Carregando…</div>';
   if (configs[route]) return renderCrud(configs[route]);
+  if (route === 'site') return renderSite();
   if (route === 'dashboard') {
     const data = await api('/api/admin/dashboard');
     root.innerHTML = `${header('Administração SaaS', 'Indicadores globais sem misturar os dados internos das empresas.')}<div class="grid">

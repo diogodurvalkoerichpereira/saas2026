@@ -191,6 +191,40 @@ trocava a raiz `/` para a página de planos, **escondendo a tela de login**. O b
 (`/api/public/entry`) já tratava vazio como "Login"; o select agora reflete isso, com **Login**
 como primeira opção (padrão).
 
+## Landing de planos: conteúdo do administrador do SaaS
+
+No legado, a página pública de planos (`index.php`) **não tinha nenhum texto fixo**. Tudo saía do
+banco, escrito pelo administrador do SaaS em `sas/paginas/site.php`, sempre com `empresa = 0`:
+
+| Conteúdo | Origem no legado | Onde o admin edita agora |
+|---|---|---|
+| Chamada, texto de apoio | `site.titulo`, `site.subtitulo` | Painel → Site e planos → Conteúdo |
+| Botões do topo | `site.botao1/2/3` | idem |
+| Selos de confiança | `site.item1/2/3` | idem |
+| Cards de recurso | `recursos_site` + `site.titulo_recursos` | Painel → Site e planos → Recursos |
+| Perguntas frequentes | `perguntas_site` + `site.titulo_perguntas` | Painel → Site e planos → Perguntas |
+| Chamada final e botão | `site.titulo_rodape`, `descricao_rodape`, `botao_rodape`, `link_rodape` | Painel → Site e planos → Conteúdo |
+| Nome do sistema, WhatsApp, meta descrição | `config` da empresa 0 | idem |
+| Características de cada plano | `planos_itens` | Painel → Planos → Recursos |
+
+A versão Node tinha **tudo isso cravado no HTML** de `planos.html`: mudar uma frase, um selo ou uma
+pergunta exigia deploy. As colunas `item1/2/3`, `logo`, `logo_topo`, `fundo_topo(_mobile)` nem
+existiam na tabela `site`, e a empresa 0 não tinha linha em `config` — o legado criava essa linha
+sozinho na primeira execução (`conexao.php:65`). Corrigido em `db/migrations/013_site_saas.sql`,
+que também semeia o conteúdo inicial com exatamente o texto que estava no HTML, para o visual não
+mudar no deploy. O que ainda não foi portado: **logo e imagem de fundo** do topo (as colunas
+existem, falta a tela de upload) — hoje a landing usa a marca textual.
+
+**Erro corrigido junto:** a faixa "Todos os planos incluem" prometia Vendas/PDV, Estoque,
+Financeiro, Clientes, Relatórios, Usuários e Chamados em *qualquer* plano. Isso deixou de ser
+verdade quando o núcleo foi reduzido a `dashboard` + `assinatura` — a página anunciava módulos que
+o plano contratado podia não liberar. A faixa saiu no lugar dos cards de recurso editáveis.
+
+**Segundo erro corrigido:** o selo do card era "Mais popular" e caía no plano com **mais linhas de
+texto escritas**, o que fazia o Essencial (6 características) passar na frente do Enterprise (4).
+Agora é "Mais completo" e sai da contagem de `planos_recursos` — um fato conferível, ao contrário
+de popularidade, que a página não tem como saber.
+
 ## Notas
 
 - O legado usa interpolação direta de `$_POST` em SQL (injeção) — **não** replicar; o Node já usa

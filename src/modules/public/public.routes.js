@@ -80,18 +80,52 @@ router.get('/entry', async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// Planos ativos para a landing pública de assinatura (com as características de cada plano).
+// Planos ativos com as características (planos_itens) que o admin escreve na tela de Planos —
+// são elas que viram os itens com ✓ dentro de cada card na landing.
+async function listPublicPlans() {
+  // `recursos` é quantos módulos o plano libera de fato (planos_recursos, marcados em Planos →
+  // Recursos). É o que diz qual plano é o mais completo — as características são texto livre e
+  // um plano pequeno pode ter mais linhas escritas que um grande.
+  const [plans] = await pool.execute(
+    `SELECT p.id, p.nome, p.valor, p.clientes, p.usuarios, p.dispositivos,
+            (SELECT COUNT(*) FROM planos_recursos pr WHERE pr.plano = p.id) AS recursos
+       FROM planos p WHERE p.ativo = 'Sim' ORDER BY p.valor ASC, p.id ASC`
+  );
+  const itemsByPlan = {};
+  if (plans.length) {
+    const [items] = await pool.query('SELECT plano, nome FROM planos_itens WHERE plano IN (?) ORDER BY id', [plans.map((p) => p.id)]);
+    for (const item of items) { (itemsByPlan[item.plano] = itemsByPlan[item.plano] || []).push(item.nome); }
+  }
+  return plans.map((plan) => ({ ...normalizeRecord(plan), itens: itemsByPlan[plan.id] || [] }));
+}
+
 router.get('/plans', async (_req, res, next) => {
+  try { res.json(await listPublicPlans()); } catch (error) { next(error); }
+});
+
+// Landing pública de assinatura: TODO o conteúdo vem do banco, editável pelo painel SaaS em
+// Site (empresa 0) — chamada, selos, botões, cards de recurso, perguntas e rodapé. No legado era
+// assim (index.php lia `site`, `recursos_site` e `perguntas_site` da empresa 0); aqui o texto
+// estava cravado no HTML, então mudar uma frase da landing exigia deploy.
+router.get('/landing', async (_req, res, next) => {
   try {
-    const [plans] = await pool.execute(
-      `SELECT id, nome, valor, clientes, usuarios, dispositivos FROM planos WHERE ativo = 'Sim' ORDER BY valor ASC, id ASC`
-    );
-    const itemsByPlan = {};
-    if (plans.length) {
-      const [items] = await pool.query('SELECT plano, nome FROM planos_itens WHERE plano IN (?) ORDER BY id', [plans.map((p) => p.id)]);
-      for (const item of items) { (itemsByPlan[item.plano] = itemsByPlan[item.plano] || []).push(item.nome); }
-    }
-    res.json(plans.map((plan) => ({ ...normalizeRecord(plan), itens: itemsByPlan[plan.id] || [] })));
+    const [[siteRows], [features], [faqs], [configRows]] = await Promise.all([
+      pool.execute(
+        `SELECT titulo, subtitulo, botao1, botao2, botao3, item1, item2, item3, logo, logo_topo,
+                titulo_recursos, titulo_perguntas, titulo_rodape, descricao_rodape, botao_rodape, link_rodape
+           FROM site WHERE empresa = 0 ORDER BY id DESC LIMIT 1`
+      ),
+      pool.execute('SELECT titulo_recurso, icone_recurso, descricao_recurso FROM recursos_site WHERE empresa = 0 ORDER BY posicao_recurso, id'),
+      pool.execute('SELECT titulo_pergunta, descricao_pergunta FROM perguntas_site WHERE empresa = 0 ORDER BY posicao_pergunta, id'),
+      pool.execute('SELECT nome, telefone, meta_descricao FROM config WHERE empresa = 0 ORDER BY id DESC LIMIT 1')
+    ]);
+    res.json({
+      site: normalizeRecord(siteRows[0] || {}),
+      config: normalizeRecord(configRows[0] || {}),
+      features,
+      faqs,
+      plans: await listPublicPlans()
+    });
   } catch (error) { next(error); }
 });
 

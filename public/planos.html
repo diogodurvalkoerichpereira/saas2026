@@ -49,7 +49,9 @@
     .trust span::before { content: "✓"; color: var(--yes); font-weight: 900; }
 
     /* Plans */
-    .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 34px 0 12px; align-items: start; }
+    /* `stretch` deixa os cards com a mesma altura mesmo quando um plano tem menos características —
+       sem isso a fileira fica desalinhada, com os botões "Assinar" em alturas diferentes. */
+    .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 34px 0 12px; align-items: stretch; }
     .plan-card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px 20px;
       display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-sm); position: relative;
@@ -72,13 +74,41 @@
     .btn.ghost:hover { border-color: var(--brand-bright); }
     .plan-card.popular .btn.ghost { background: var(--brand); color: #fff; border-color: var(--brand); }
 
-    /* Included band */
+    /* Hero buttons (textos vindos do painel) */
+    .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 22px; }
+    .hero-cta a { width: auto; padding: 12px 22px; }
+
+    /* Feature cards */
     .included { margin: 34px 0; padding: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
-    .included h2 { margin: 0 0 4px; font-size: 1.1rem; }
-    .included p { margin: 0 0 16px; color: var(--muted); font-size: .9rem; }
-    .included-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; }
-    .included-grid div { display: flex; align-items: center; gap: 9px; font-size: .9rem; font-weight: 600; }
-    .included-grid div::before { content: "✓"; color: var(--yes); font-weight: 900; }
+    .included h2 { margin: 0 0 18px; font-size: 1.35rem; text-align: center; }
+    .feature-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+    .feature-card { display: grid; gap: 7px; justify-items: center; text-align: center; padding: 18px 14px; border: 1px solid var(--line-soft); border-radius: 14px; }
+    .feature-card svg { width: 30px; height: 30px; fill: none; stroke: var(--brand-bright); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feature-card strong { font-size: 1rem; }
+    .feature-card span { color: var(--muted); font-size: .86rem; }
+
+    /* FAQ */
+    .faq-section { margin: 34px 0; }
+    .faq-section h2 { margin: 0 0 18px; font-size: 1.35rem; text-align: center; }
+    .faq-item { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+    .faq-item summary { cursor: pointer; list-style: none; padding: 16px 20px; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after { content: "+"; color: var(--brand-bright); font-weight: 900; font-size: 1.2rem; flex: 0 0 auto; }
+    .faq-item[open] summary::after { content: "−"; }
+    .faq-item p { margin: 0; padding: 0 20px 18px; color: var(--muted); font-size: .92rem; }
+
+    /* Chamada final */
+    .closing { margin: 34px 0; padding: 32px 26px; text-align: center; background: var(--mint); border: 1px solid var(--line); border-radius: 18px; }
+    .closing h2 { margin: 0 0 8px; font-size: 1.5rem; }
+    .closing p { margin: 0 auto; max-width: 56ch; color: var(--muted); }
+    .closing-btn { width: auto; display: inline-flex; margin-top: 18px; padding: 13px 28px; }
+
+    /* Botão flutuante de WhatsApp (legado: telefone da configuração do SaaS) */
+    .whats-float { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: #25d366; box-shadow: 0 10px 26px rgba(0,0,0,.25); }
+    .whats-float svg { width: 30px; height: 30px; fill: #fff; }
+    /* `display: grid` acima ganha do estilo padrão de [hidden] — sem esta regra o botão aparecia
+       mesmo sem telefone cadastrado, levando a um link de WhatsApp vazio. */
+    [hidden] { display: none !important; }
 
     footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 24px 0 48px; }
     footer a { font-weight: 700; }
@@ -114,30 +144,38 @@
 <body>
   <div class="wrap">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">S26</span><div><strong>SaaS 2026</strong><div>Gestão empresarial</div></div></div>
+      <div class="brand"><span class="brand-mark" id="brand-mark">S26</span><div><strong id="brand-name">SaaS 2026</strong><div>Gestão empresarial</div></div></div>
       <a class="login" href="/index.html?acesso=1">Acessar sistema</a>
     </header>
 
     <section class="hero">
       <p class="eyebrow">Planos</p>
-      <h1>Escolha o plano ideal para o seu negócio</h1>
-      <p>ERP completo — vendas, financeiro, estoque e muito mais. Comece com <strong>3 dias grátis</strong>, sem cartão. Cancele quando quiser.</p>
-      <div class="trust"><span>3 dias grátis</span><span>Sem fidelidade</span><span>Dados protegidos (LGPD)</span><span>Suporte incluído</span></div>
+      <h1 id="hero-title">Carregando…</h1>
+      <p id="hero-subtitle"></p>
+      <div class="trust" id="hero-trust"></div>
+      <div class="hero-cta" id="hero-cta"></div>
     </section>
 
-    <div class="plans-grid" id="plans-grid"><p class="muted">Carregando planos…</p></div>
+    <div class="plans-grid" id="plans"><p class="muted">Carregando planos…</p></div>
 
-    <section class="included">
-      <h2>Todos os planos incluem</h2>
-      <p>O núcleo do ERP acompanha qualquer plano — você escolhe apenas os módulos premium.</p>
-      <div class="included-grid">
-        <div>Vendas / PDV</div><div>Produtos e estoque</div><div>Financeiro</div><div>Clientes e fornecedores</div>
-        <div>Dashboard e relatórios</div><div>Usuários e permissões</div><div>Configurações</div><div>Suporte por chamados</div>
-      </div>
+    <section class="included" id="features-section" hidden>
+      <h2 id="features-title"></h2>
+      <div class="feature-cards" id="features-grid"></div>
+    </section>
+
+    <section class="faq-section" id="faq-section" hidden>
+      <h2 id="faq-title"></h2>
+      <div id="faq-list"></div>
+    </section>
+
+    <section class="closing" id="closing" hidden>
+      <h2 id="closing-title"></h2>
+      <p id="closing-text"></p>
+      <a class="btn primary closing-btn" id="closing-btn" hidden></a>
     </section>
 
     <footer>
-      Já é cliente? <a href="/index.html?acesso=1">Acesse o sistema</a> · Precisa de ajuda para escolher? Fale com a gente.
+      Já é cliente? <a href="/index.html?acesso=1">Acesse o sistema</a> · <span id="footer-brand"></span>
     </footer>
   </div>
 
@@ -162,6 +200,10 @@
       <div class="sub-success" id="sub-success" hidden></div>
     </div>
   </dialog>
+
+  <a class="whats-float" id="whats-float" href="#" target="_blank" rel="noopener" title="Falar no WhatsApp" hidden aria-label="Falar no WhatsApp">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1a11 11 0 0 1-3.2-1.6 12 12 0 0 1-3.4-4c-.4-.7-.7-1.5-.7-2.2 0-.8.4-1.5.9-1.9.2-.2.4-.2.6-.2h.5c.2 0 .4 0 .6.4l.8 2c.1.2 0 .4-.1.6l-.4.5c-.1.2-.3.3-.1.6.5.9 1 1.5 1.7 2.1.6.5 1.2.8 1.6 1 .2.1.4.1.6-.1l.7-.8c.2-.2.3-.2.6-.1l2 1c.2.1.4.2.4.3 0 .2 0 .8-.3 1.3z"/></svg>
+  </a>
 
   <script type="module" src="/planos.js"></script>
 </body>

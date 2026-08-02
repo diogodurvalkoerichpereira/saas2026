@@ -270,6 +270,133 @@ router.put('/companies/:id/resources', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// --- Conteúdo da landing de planos (empresa 0) -------------------------------------------------
+// Espelha sas/paginas/site.php do legado: o administrador do SaaS escreve aqui a chamada, os selos,
+// os botões, os cards de recurso, as perguntas e o rodapé que aparecem em /planos.html.
+
+const siteSchema = z.object({
+  titulo: optional(255), subtitulo: optional(255),
+  botao1: optional(80), botao2: optional(80), botao3: optional(80),
+  item1: optional(100), item2: optional(100), item3: optional(100),
+  titulo_recursos: optional(255), titulo_perguntas: optional(255),
+  titulo_rodape: optional(255), descricao_rodape: optional(2000),
+  botao_rodape: optional(100), link_rodape: optional(255),
+  logo_topo: yesNo.optional()
+});
+const siteFeatureSchema = z.object({
+  titulo_recurso: z.string().trim().min(2).max(150),
+  descricao_recurso: optional(255),
+  icone_recurso: optional(100),
+  posicao_recurso: z.number().int().min(0).max(999).optional()
+});
+const siteFaqSchema = z.object({
+  titulo_pergunta: z.string().trim().min(2).max(150),
+  descricao_pergunta: z.string().trim().min(2).max(5000),
+  posicao_pergunta: z.number().int().min(0).max(999).optional()
+});
+
+// A marca (nome do sistema, telefone do WhatsApp, meta descrição) mora em `config` da empresa 0,
+// mas é conteúdo da mesma página — por isso entra e sai junto no formulário do painel.
+const brandSchema = z.object({
+  nome: z.string().trim().min(2).max(50).optional(),
+  telefone: optional(20),
+  meta_descricao: optional(255)
+});
+
+router.get('/site', async (_req, res, next) => {
+  try {
+    const [[siteRows], [configRows]] = await Promise.all([
+      pool.execute('SELECT * FROM site WHERE empresa = 0 ORDER BY id DESC LIMIT 1'),
+      pool.execute('SELECT nome, telefone, meta_descricao FROM config WHERE empresa = 0 ORDER BY id DESC LIMIT 1')
+    ]);
+    res.json({ ...normalizeRecord(siteRows[0] || {}), ...normalizeRecord(configRows[0] || {}) });
+  } catch (error) { next(error); }
+});
+
+router.put('/site', async (req, res, next) => {
+  try {
+    const data = siteSchema.parse(req.body);
+    const brand = brandSchema.parse(req.body);
+    const fields = Object.keys(data);
+    const brandFields = Object.keys(brand);
+    if (!fields.length && !brandFields.length) return res.status(204).end();
+    if (fields.length) {
+      // A landing pode nunca ter sido salva: o UPSERT cobre "cria na primeira vez, atualiza depois"
+      // sem o painel precisar saber qual dos dois é o caso (uq_site_empresa garante a linha única).
+      await pool.execute(
+        `INSERT INTO site (empresa, ${fields.join(', ')}) VALUES (0, ${fields.map(() => '?').join(', ')})
+         ON CONFLICT (empresa) DO UPDATE SET ${fields.map((field) => `${field} = EXCLUDED.${field}`).join(', ')}`,
+        fields.map((field) => data[field])
+      );
+    }
+    if (brandFields.length) {
+      const [result] = await pool.execute(
+        `UPDATE config SET ${brandFields.map((field) => `${field} = ?`).join(', ')} WHERE empresa = 0`,
+        brandFields.map((field) => brand[field])
+      );
+      // Instalação antiga pode não ter a linha da empresa 0 — cria em vez de perder a edição.
+      if (!result.affectedRows) {
+        await pool.execute(
+          `INSERT INTO config (empresa, ${brandFields.join(', ')}) VALUES (0, ${brandFields.map(() => '?').join(', ')})`,
+          brandFields.map((field) => brand[field])
+        );
+      }
+    }
+    await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'editar', entity: 'site_saas', entityId: 0, details: [...fields, ...brandFields] });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
+// CRUD dos cards de recurso e das perguntas da landing. Sempre presos a empresa = 0: são o
+// conteúdo do site do SaaS, nunca o de uma empresa cliente.
+function registerSiteCrud(path, { table, schema, entity, orderBy }) {
+  router.get(path, async (req, res, next) => {
+    try {
+      const [rows] = await pool.execute(`SELECT * FROM ${table} WHERE empresa = 0 ORDER BY ${orderBy}`);
+      res.json(listResponse(rows, req.query, { searchFields: Object.keys(schema.shape), defaultSort: orderBy.split(/[ ,]/)[0] }));
+    } catch (error) { next(error); }
+  });
+  router.post(path, async (req, res, next) => {
+    try {
+      const data = schema.parse(req.body);
+      const fields = Object.keys(data);
+      const [result] = await pool.execute(
+        `INSERT INTO ${table} (empresa, ${fields.join(', ')}) VALUES (0, ${fields.map(() => '?').join(', ')})`,
+        fields.map((field) => data[field])
+      );
+      await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'criar', entity, entityId: result.insertId });
+      res.status(201).json({ id: result.insertId });
+    } catch (error) { next(error); }
+  });
+  router.patch(`${path}/:id`, async (req, res, next) => {
+    try {
+      const recordId = id.parse(req.params.id);
+      const data = schema.partial().parse(req.body);
+      const fields = Object.keys(data);
+      if (!fields.length) return res.status(204).end();
+      const [result] = await pool.execute(
+        `UPDATE ${table} SET ${fields.map((field) => `${field} = ?`).join(', ')} WHERE id = ? AND empresa = 0`,
+        [...fields.map((field) => data[field]), recordId]
+      );
+      if (!result.affectedRows) throw Object.assign(new Error('Registro não encontrado.'), { status: 404 });
+      await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'editar', entity, entityId: recordId, details: fields });
+      res.status(204).end();
+    } catch (error) { next(error); }
+  });
+  router.delete(`${path}/:id`, async (req, res, next) => {
+    try {
+      const recordId = id.parse(req.params.id);
+      const [result] = await pool.execute(`DELETE FROM ${table} WHERE id = ? AND empresa = 0`, [recordId]);
+      if (!result.affectedRows) throw Object.assign(new Error('Registro não encontrado.'), { status: 404 });
+      await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'excluir', entity, entityId: recordId });
+      res.status(204).end();
+    } catch (error) { next(error); }
+  });
+}
+
+registerSiteCrud('/site/features', { table: 'recursos_site', schema: siteFeatureSchema, entity: 'site_recurso', orderBy: 'posicao_recurso, id' });
+registerSiteCrud('/site/faqs', { table: 'perguntas_site', schema: siteFaqSchema, entity: 'site_pergunta', orderBy: 'posicao_pergunta, id' });
+
 router.get('/billing', async (req, res, next) => {
   try {
     const [rows] = await pool.execute(

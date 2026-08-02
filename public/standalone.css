@@ -42,3 +42,16 @@ input:focus,.field input:focus,.field select:focus,.field textarea:focus,.toolba
 .res-item small { font-size: .7rem; opacity: .7; }
 .res-core-title { margin: 14px 0 6px; }
 .res-core { opacity: .7; }
+
+/* Site e planos (painel SaaS): abas e leitura do conteúdo da landing */
+.split-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+.split-tabs a {
+  padding: 8px 14px; border-radius: 999px; text-decoration: none; font-weight: 800; font-size: .84rem;
+  background: #edf4f1; color: #26483d;
+}
+.split-tabs a.active { background: var(--brand, #19704e); color: #fff; }
+.site-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 20px; margin: 0 0 18px; padding: 18px; }
+.site-preview dt { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted, #6b7974); }
+.site-preview dd { margin: 4px 0 0; font-size: .9rem; }
+.panel > .button.primary { margin: 0 18px 18px; }
+.panel > .page-header { padding: 14px 18px 0; margin-bottom: 12px; }

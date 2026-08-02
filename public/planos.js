@@ -1,4 +1,4 @@
-const grid = document.querySelector('#plans-grid');
+const grid = document.querySelector('#plans');
 const modal = document.querySelector('#sub-modal');
 const form = document.querySelector('#sub-form');
 const successBox = document.querySelector('#sub-success');
@@ -22,16 +22,16 @@ async function api(path, options = {}) {
   return data;
 }
 
-function planCard(plan, popular) {
+function planCard(plan, destaque) {
   const limits = [limitLabel(plan.usuarios, 'usuários'), limitLabel(plan.clientes, 'clientes')].join(' · ');
-  return `<article class="plan-card${popular ? ' popular' : ''}">
-    ${popular ? '<span class="plan-ribbon">Mais popular</span>' : ''}
+  return `<article class="plan-card${destaque ? ' popular' : ''}">
+    ${destaque ? '<span class="plan-ribbon">Mais completo</span>' : ''}
     <div class="plan-name">${esc(plan.nome)}</div>
     <div class="plan-price">${money(plan.valor)}<small> /mês</small></div>
     <div class="plan-trial">3 dias grátis para testar</div>
     ${plan.itens && plan.itens.length ? `<ul class="plan-items">${plan.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
     <p class="plan-limits">${esc(limits)}</p>
-    <div class="cta"><button class="btn ${popular ? 'ghost' : 'ghost'}" data-plan="${plan.id}" data-nome="${esc(plan.nome)}" data-valor="${esc(plan.valor)}">Assinar ${esc(plan.nome)}</button></div>
+    <div class="cta"><button class="btn ghost" data-plan="${plan.id}" data-nome="${esc(plan.nome)}" data-valor="${esc(plan.valor)}">Assinar ${esc(plan.nome)}</button></div>
   </article>`;
 }
 
@@ -74,16 +74,115 @@ async function submitSubscribe(event) {
   }
 }
 
+// Preenche um elemento e o esconde quando o admin deixou o campo em branco — assim uma seção
+// vazia some da página em vez de aparecer como um título solto.
+function fill(selector, text, { html = false } = {}) {
+  const el = document.querySelector(selector);
+  if (!el) return false;
+  const value = String(text || '').trim();
+  if (!value) { el.hidden = true; return false; }
+  el.hidden = false;
+  if (html) el.innerHTML = value; else el.textContent = value;
+  return true;
+}
+
+// Cabeçalho, selos e botões — todos escritos no painel SaaS em Site e planos.
+function renderHero(site) {
+  fill('#hero-title', site.titulo || 'Escolha o plano ideal para o seu negócio');
+  fill('#hero-subtitle', site.subtitulo);
+  const selos = [site.item1, site.item2, site.item3].filter(Boolean);
+  const trust = document.querySelector('#hero-trust');
+  trust.hidden = !selos.length;
+  trust.innerHTML = selos.map((item) => `<span>${esc(item)}</span>`).join('');
+  // botao1 rola até os planos, botao2 até as perguntas, botao3 leva ao login — como no legado.
+  const botoes = [
+    site.botao1 && { texto: site.botao1, href: '#plans', classe: 'primary' },
+    site.botao2 && { texto: site.botao2, href: '#faq-section', classe: 'ghost' },
+    site.botao3 && { texto: site.botao3, href: '/index.html?acesso=1', classe: 'ghost' }
+  ].filter(Boolean);
+  const cta = document.querySelector('#hero-cta');
+  cta.hidden = !botoes.length;
+  cta.innerHTML = botoes.map((b) => `<a class="btn ${b.classe}" href="${esc(b.href)}">${esc(b.texto)}</a>`).join('');
+}
+
+function renderFeatures(titulo, features) {
+  const section = document.querySelector('#features-section');
+  if (!features.length) { section.hidden = true; return; }
+  section.hidden = false;
+  fill('#features-title', titulo || 'Tudo que você precisa para gerir');
+  document.querySelector('#features-grid').innerHTML = features.map((item) => `
+    <div class="feature-card">
+      ${item.icone_recurso ? `<svg aria-hidden="true"><use href="/icons.svg#${esc(item.icone_recurso)}"></use></svg>` : ''}
+      <strong>${esc(item.titulo_recurso)}</strong>
+      ${item.descricao_recurso ? `<span>${esc(item.descricao_recurso)}</span>` : ''}
+    </div>`).join('');
+}
+
+function renderFaqs(titulo, faqs) {
+  const section = document.querySelector('#faq-section');
+  if (!faqs.length) { section.hidden = true; return; }
+  section.hidden = false;
+  fill('#faq-title', titulo || 'Perguntas frequentes');
+  document.querySelector('#faq-list').innerHTML = faqs.map((item) => `
+    <details class="faq-item">
+      <summary>${esc(item.titulo_pergunta)}</summary>
+      <p>${esc(item.descricao_pergunta)}</p>
+    </details>`).join('');
+}
+
+function renderClosing(site) {
+  const section = document.querySelector('#closing');
+  const temTitulo = fill('#closing-title', site.titulo_rodape);
+  const temTexto = fill('#closing-text', site.descricao_rodape);
+  const botao = document.querySelector('#closing-btn');
+  botao.hidden = !site.botao_rodape;
+  if (site.botao_rodape) {
+    botao.textContent = site.botao_rodape;
+    botao.href = site.link_rodape || '#plans';
+  }
+  section.hidden = !(temTitulo || temTexto || site.botao_rodape);
+}
+
+function renderPlans(plans) {
+  if (!plans.length) { grid.innerHTML = '<p class="muted">Nenhum plano disponível no momento.</p>'; return; }
+  // Destaca o plano que libera mais módulos. É um fato conferível (sai de Planos → Recursos), ao
+  // contrário de "mais vendido", que a página não tem como saber.
+  let destaque = 0;
+  plans.forEach((plan, index) => { if (Number(plan.recursos || 0) > Number(plans[destaque].recursos || 0)) destaque = index; });
+  if (!Number(plans[destaque].recursos || 0)) destaque = -1;
+  grid.innerHTML = plans.map((plan, index) => planCard(plan, index === destaque)).join('');
+}
+
 async function load() {
   try {
-    const plans = await api('/api/public/plans');
-    if (!plans.length) { grid.innerHTML = '<p class="muted">Nenhum plano disponível no momento.</p>'; return; }
-    // Destaca o "Profissional" como mais popular; se não houver, o segundo plano.
-    let popularIndex = plans.findIndex((p) => /profissional/i.test(p.nome));
-    if (popularIndex < 0) popularIndex = plans.length > 2 ? 1 : -1;
-    grid.innerHTML = plans.map((plan, index) => planCard(plan, index === popularIndex)).join('');
+    const data = await api('/api/public/landing');
+    const site = data.site || {};
+    renderHero(site);
+    renderPlans(data.plans || []);
+    renderFeatures(site.titulo_recursos, data.features || []);
+    renderFaqs(site.titulo_perguntas, data.faqs || []);
+    renderClosing(site);
+    applyBrand(data.config || {});
   } catch (error) {
     grid.innerHTML = `<p class="muted">Não foi possível carregar os planos: ${esc(error.message)}</p>`;
+  }
+}
+
+// Nome do sistema, descrição e WhatsApp saem de Configurações do painel SaaS (config da empresa 0).
+function applyBrand(config) {
+  const nome = String(config.nome || '').trim();
+  if (nome) {
+    document.title = `Planos e assinatura · ${nome}`;
+    document.querySelector('#brand-name').textContent = nome;
+    document.querySelector('#brand-mark').textContent = nome.replace(/[^A-Za-zÀ-ÿ0-9]+/g, ' ').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase() || 'S26';
+    document.querySelector('#footer-brand').textContent = `© ${new Date().getFullYear()} ${nome}`;
+  }
+  if (config.meta_descricao) document.querySelector('meta[name=description]')?.setAttribute('content', config.meta_descricao);
+  const telefone = String(config.telefone || '').replace(/\D/g, '');
+  const whats = document.querySelector('#whats-float');
+  if (telefone.length >= 10) {
+    whats.href = `https://api.whatsapp.com/send?phone=55${telefone}`;
+    whats.hidden = false;
   }
 }
 

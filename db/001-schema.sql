@@ -680,6 +680,14 @@ CREATE TABLE site (
   botao1 VARCHAR(80) NULL,
   botao2 VARCHAR(80) NULL,
   botao3 VARCHAR(80) NULL,
+  -- Selos de confiança abaixo da chamada (landing de planos e site da loja).
+  item1 VARCHAR(100) NULL,
+  item2 VARCHAR(100) NULL,
+  item3 VARCHAR(100) NULL,
+  logo VARCHAR(100) NULL,
+  logo_topo VARCHAR(5) NULL,
+  fundo_topo VARCHAR(100) NULL,
+  fundo_topo_mobile VARCHAR(100) NULL,
   titulo_recursos VARCHAR(255) NULL,
   titulo_perguntas VARCHAR(255) NULL,
   titulo_rodape VARCHAR(255) NULL,
@@ -928,6 +936,10 @@ CREATE TABLE node_folha_lancamentos (
   criado_por INT NULL,
   criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Uma linha de conteúdo de site por empresa (a landing do SaaS é a da empresa 0). O índice único
+-- é o que deixa o painel gravar com ON CONFLICT — cria na primeira vez, atualiza nas seguintes.
+CREATE UNIQUE INDEX uq_site_empresa ON site (empresa);
 
 CREATE INDEX idx_marketing_due ON node_marketing_dispatch (empresa, status, agendado_para);
 CREATE INDEX idx_attachments_record ON node_attachments (empresa, entidade, entidade_id);
