@@ -53,6 +53,21 @@ test('no plano Essencial, o Gerente não vê nem acessa módulos premium', async
   expect(api.status()).toBe(403);
 });
 
+test('o Administrador da própria empresa também é limitado pelo plano', async ({ page }) => {
+  await setPlan('Essencial');
+  // teste.local é Administrador da empresa 1 — ainda assim não pode furar o plano.
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'E-mail' }).fill('teste.local@saas2026.local');
+  await page.getByLabel('Senha').fill('Teste@2026');
+  await page.getByRole('button', { name: 'Entrar no sistema' }).click();
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+
+  await expect(page.locator('#sidebar [data-feature="fiscal"]').first()).toHaveJSProperty('hidden', true);
+  const token = await page.evaluate(() => sessionStorage.getItem('saas2026.token'));
+  const api = await page.request.get('/api/fiscal/config', { headers: { authorization: `Bearer ${token}` } });
+  expect(api.status()).toBe(403);
+});
+
 test('ao subir para Profissional, os módulos incluídos aparecem', async ({ page }) => {
   await setPlan('Profissional');
   await loginGerente(page);

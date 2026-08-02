@@ -5,12 +5,12 @@ const { CORE } = require('../config/features');
 // passa se a empresa tiver qualquer um dos recursos exigidos. É o segundo filtro, além do permit:
 // permit = "o perfil pode?", feature = "a empresa contratou?".
 //
-// Administrador do sistema e painel SaaS (empresa 0) não são limitados por plano. Recursos de
-// núcleo nunca bloqueiam.
+// Só o painel do sistema (empresa 0) ignora o plano. TODO usuário de empresa fica preso aos
+// recursos do plano — inclusive o Administrador da própria empresa, porque o plano é um limite da
+// EMPRESA (não dá para o dono usar o que não contratou). Recursos de núcleo nunca bloqueiam.
 function feature(...chaves) {
   return async (req, res, next) => {
     if (!req.auth) return res.status(401).json({ error: 'Autenticação obrigatória.' });
-    if (req.auth.role === 'Administrador') return next();
     if (Number(req.auth.companyId) === 0) return next();
     if (chaves.some((chave) => CORE.has(chave))) return next();
     try {

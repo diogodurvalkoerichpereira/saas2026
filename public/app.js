@@ -132,12 +132,14 @@ function showApp() {
     element.hidden = !isAdmin && !accepted.some((key) => permissions.has(key));
   });
   // Segundo filtro: recursos do PLANO da empresa. Uma guia com data-feature some quando o plano não
-  // inclui aquele recurso (o backend também recusa a API). Admin do sistema não é limitado.
+  // inclui aquele recurso (o backend também recusa a API). Vale para TODO usuário desta tela,
+  // inclusive o Administrador da empresa — o plano é limite da empresa. (O painel do sistema roda
+  // em /admin.html, então aqui não há usuário de empresa 0; user.resources já reflete o plano.)
   const resources = new Set(user?.resources || []);
   document.querySelectorAll('[data-feature]').forEach((element) => {
     if (element.hidden) return; // já escondida por permissão
     const needed = element.dataset.feature.split(',').map((value) => value.trim());
-    if (!isAdmin && !needed.some((key) => resources.has(key))) element.hidden = true;
+    if (!needed.some((key) => resources.has(key))) element.hidden = true;
   });
   hideEmptyGroups();
   applyGreeting(user);

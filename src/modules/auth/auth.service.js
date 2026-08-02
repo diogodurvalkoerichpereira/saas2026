@@ -49,10 +49,11 @@ async function authenticate({ email, password }) {
     );
   const permissions = permissionRows.map((row) => row.chave);
 
-  // Recursos (features do plano) da empresa. Admin do sistema e painel SaaS (empresa 0) enxergam
-  // tudo; empresa comum recebe os recursos do seu plano ∪ o núcleo (via provisionamento).
+  // Recursos (features do plano) da empresa. Só o painel do sistema (empresa 0) enxerga tudo; TODO
+  // usuário de empresa — inclusive o Administrador dela — recebe os recursos do plano ∪ o núcleo,
+  // porque o plano é um limite da empresa, não do perfil.
   let resources = [];
-  if (!isTenantUser || user.nivel === 'Administrador') {
+  if (!isTenantUser) {
     const [all] = await pool.execute('SELECT chave FROM recursos ORDER BY chave');
     resources = all.map((row) => row.chave);
   } else {

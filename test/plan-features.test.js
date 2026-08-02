@@ -76,12 +76,24 @@ test('feature() libera recurso premium presente', async () => {
   } finally { require('../src/config/database').pool.execute = orig; }
 });
 
-test('Administrador e painel SaaS (empresa 0) não são limitados por plano', async () => {
+test('só o painel do sistema (empresa 0) ignora o plano', async () => {
   const mw = feature('marketing');
-  for (const auth of [{ role: 'Administrador', companyId: 5 }, { role: 'Gerente', companyId: 0 }]) {
-    const res = mkRes();
+  // Empresa 0 (painel SaaS) passa sem consultar recurso.
+  const res0 = mkRes();
+  let passou0 = false;
+  await mw({ auth: { role: 'Administrador', companyId: 0 } }, res0, () => { passou0 = true; });
+  assert.equal(passou0, true);
+});
+
+test('o Administrador da EMPRESA também é limitado pelo plano', async () => {
+  const mw = feature('marketing');
+  const res = mkRes();
+  const orig = require('../src/config/database').pool.execute;
+  require('../src/config/database').pool.execute = fakeDb([]).execute; // empresa sem o recurso
+  try {
     let chamouNext = false;
-    await mw({ auth }, res, () => { chamouNext = true; });
-    assert.equal(chamouNext, true, `${JSON.stringify(auth)} deveria passar`);
-  }
+    await mw({ auth: { role: 'Administrador', companyId: 5 } }, res, () => { chamouNext = true; });
+    assert.equal(chamouNext, false, 'admin da empresa não pode furar o plano');
+    assert.equal(res.statusCode, 403);
+  } finally { require('../src/config/database').pool.execute = orig; }
 });
