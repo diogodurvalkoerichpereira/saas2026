@@ -250,6 +250,68 @@ router.post('/subscription/upgrade', permit('home'), authorize('Administrador', 
   } catch (error) { next(error); }
 });
 
+// --- Atalhos do dashboard: escolha do usuário + contagem de uso para a ordenação automática ---
+const shortcutKey = z.string().trim().regex(/^[a-z_-]{2,40}$/);
+
+router.get('/dashboard/shortcuts', permit('home'), async (req, res, next) => {
+  try {
+    const userId = Number(req.auth.sub);
+    const [[chosen], [usage]] = await Promise.all([
+      pool.execute('SELECT chave FROM node_dashboard_atalhos WHERE usuario = ? ORDER BY posicao, id', [userId]),
+      pool.execute('SELECT rota, acessos FROM node_rota_uso WHERE usuario = ? ORDER BY acessos DESC', [userId])
+    ]);
+    res.json({
+      // null = não personalizou; aí o dashboard usa a ordenação automática pelo uso.
+      atalhos: chosen.length ? chosen.map((row) => row.chave) : null,
+      uso: Object.fromEntries(usage.map((row) => [row.rota, Number(row.acessos)]))
+    });
+  } catch (error) { next(error); }
+});
+
+router.put('/dashboard/shortcuts', permit('home'), async (req, res, next) => {
+  try {
+    const { atalhos } = z.object({ atalhos: z.array(shortcutKey).max(40) }).parse(req.body);
+    const userId = Number(req.auth.sub);
+    const companyId = Number(req.auth.companyId);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute('DELETE FROM node_dashboard_atalhos WHERE usuario = ?', [userId]);
+      let posicao = 0;
+      for (const chave of [...new Set(atalhos)]) {
+        await connection.execute('INSERT INTO node_dashboard_atalhos (empresa, usuario, chave, posicao) VALUES (?, ?, ?, ?)', [companyId, userId, chave, posicao]);
+        posicao += 1;
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally { connection.release(); }
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
+// Volta ao automático (ordenado pelas telas mais usadas).
+router.delete('/dashboard/shortcuts', permit('home'), async (req, res, next) => {
+  try {
+    await pool.execute('DELETE FROM node_dashboard_atalhos WHERE usuario = ?', [Number(req.auth.sub)]);
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
+// Registra que o usuário abriu uma tela. Alimenta a ordenação automática dos atalhos.
+router.post('/dashboard/usage', permit('home'), async (req, res, next) => {
+  try {
+    const { rota } = z.object({ rota: shortcutKey }).parse(req.body);
+    await pool.execute(
+      `INSERT INTO node_rota_uso (empresa, usuario, rota) VALUES (?, ?, ?)
+       ON CONFLICT (usuario, rota) DO UPDATE SET acessos = node_rota_uso.acessos + 1, ultimo_acesso = CURRENT_TIMESTAMP`,
+      [Number(req.auth.companyId), Number(req.auth.sub), rota]
+    );
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
 // Cancela a troca de plano agendada (downgrade que ainda não entrou em vigor).
 router.delete('/subscription/upgrade', permit('home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {

@@ -5,7 +5,7 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { env } = require('../../config/env');
 const { clientAuthenticate } = require('../../middlewares/client-authenticate');
-const { loginRateLimit } = require('../../middlewares/login-rate-limit');
+const { loginRateLimit, clearLoginAttempts } = require('../../middlewares/login-rate-limit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 
 const id = z.coerce.number().int().positive();
@@ -61,6 +61,7 @@ router.post('/login', loginRateLimit, async (req, res, next) => {
       throw Object.assign(new Error('O portal do cliente não está disponível no plano desta empresa.'), { status: 403 });
     }
     const token = jwt.sign({ sub: client.id, companyId: client.empresa, role: 'Cliente', kind: 'client' }, env.jwtSecret, { expiresIn: '8h' });
+    clearLoginAttempts(req);
     res.json({
       token,
       user: { id: client.id, name: client.nome, email: client.email, role: 'Cliente', companyId: client.empresa, companyName: client.empresa_nome }

@@ -4,6 +4,7 @@ import { startRouter } from './js/router.mjs';
 import { renderRoute } from './js/pages.js';
 import { toast, openForm } from './js/ui.js';
 import { money, date, escapeHtml } from './js/format.mjs';
+import { routeToKey } from './js/shortcuts.mjs';
 
 const loginView = document.querySelector('#login-view');
 const appView = document.querySelector('#app-view');
@@ -152,6 +153,7 @@ function showApp() {
     await renderRoute(route);
     document.querySelector('#page-root').focus({ preventScroll: true });
     if (innerWidth <= 700) document.querySelector('#sidebar').classList.remove('open');
+    registrarUso(route);
   });
 }
 
@@ -247,6 +249,14 @@ window.addEventListener('auth:expired', () => {
   toast('Sua sessão expirou. Entre novamente.', 'error');
   setTimeout(() => location.reload(), 900);
 });
+
+// Conta quantas vezes o usuário abre cada tela, para o dashboard ordenar os atalhos pelas mais
+// usadas. Dispara e esquece: é só um contador, nunca deve atrapalhar a navegação.
+function registrarUso(route) {
+  const chave = routeToKey(route.name, location.hash);
+  if (!chave) return;
+  api('/api/content/dashboard/usage', { method: 'POST', body: { rota: chave } }).catch(() => {});
+}
 
 // Página de entrada (legado pagina_entrada): visitante não logado vê o Site ou a tela de Login.
 // Com ?acesso na URL, sempre mostra o login (para acessar o sistema a partir do site).

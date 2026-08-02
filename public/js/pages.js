@@ -6,6 +6,7 @@ import { renderExtraRoute } from './extra-pages.js';
 import { attachmentButton, openAttachments } from './attachments.js';
 import { code128SVG, sanitizeCode } from './barcode.mjs';
 import { canAccess } from './session.js';
+import { SHORTCUTS, AUTO_LIMIT } from './shortcuts.mjs';
 
 const root = () => document.querySelector('#page-root');
 const editButton = (id) => `<button class="button ghost small" data-action="edit" data-id="${id}">${icon('edit')}Editar</button>`;
@@ -375,27 +376,32 @@ async function renderDashboard() {
     canAccess(['estoque', 'produtos'], 'estoque') && metric('Estoque baixo', number(operations.stock?.estoque_baixo), 'Requer atenção', '#/inventory')
   ].filter(Boolean);
 
-  const shortcuts = [
-    { titulo: 'Nova venda', desc: 'Abrir o PDV e registrar uma venda', href: '#/sales', icone: 'cart', permissao: 'vendas', recurso: 'vendas_pdv' },
-    { titulo: 'Novo cliente', desc: 'Cadastrar um cliente', href: '#/clients', icone: 'clients', permissao: 'clientes', recurso: 'clientes' },
-    { titulo: 'Novo produto', desc: 'Cadastrar produto ou serviço', href: '#/products', icone: 'box', permissao: 'produtos', recurso: 'produtos_servicos' },
-    { titulo: 'Contas a receber', desc: 'Acompanhar recebimentos', href: '#/finance?type=receivables', icone: 'wallet', permissao: ['financeiro', 'receber'], recurso: 'financeiro' },
-    { titulo: 'Contas a pagar', desc: 'Compromissos do período', href: '#/finance?type=payables', icone: 'wallet', permissao: ['financeiro', 'pagar'], recurso: 'financeiro' },
-    { titulo: 'Movimentar estoque', desc: 'Entradas e saídas', href: '#/inventory', icone: 'inventory', permissao: ['estoque', 'produtos'], recurso: 'estoque' },
-    { titulo: 'Ordens de serviço', desc: 'Acompanhar as OS abertas', href: '#/orders', icone: 'clipboard-check', permissao: 'os', recurso: 'ordens_servico' },
-    { titulo: 'Orçamentos', desc: 'Criar e acompanhar propostas', href: '#/quotes', icone: 'clipboard', permissao: 'orcamentos', recurso: 'orcamentos' },
-    { titulo: 'Caixa', desc: 'Abrir, conferir e fechar o caixa', href: '#/cash', icone: 'wallet', permissao: 'caixas', recurso: 'vendas_pdv' },
-    { titulo: 'Compras', desc: 'Registrar compra de fornecedor', href: '#/purchases', icone: 'truck', permissao: 'compras', recurso: 'compras' },
-    { titulo: 'Campanhas', desc: 'Disparos de WhatsApp', href: '#/marketing', icone: 'megaphone', permissao: ['marketing', 'grupos_disparos'], recurso: 'marketing' },
-    { titulo: 'Tarefas', desc: 'Agenda e pendências', href: '#/tasks', icone: 'calendar', permissao: ['tarefas', 'tarefas_clientes'], recurso: 'tarefas' },
-    { titulo: 'Chamados', desc: 'Suporte e atendimentos', href: '#/tickets', icone: 'help', permissao: 'chamados', recurso: 'chamados' },
-    { titulo: 'Relatórios', desc: 'Vendas, financeiro e estoque', href: '#/reports', icone: 'file-text', permissao: ['rel_financeiro', 'rel_vendas', 'home'], recurso: 'relatorios' }
-  ].filter((item) => canAccess(item.permissao, item.recurso));
+  // Atalhos: só os que o usuário pode abrir (perfil + plano). A ORDEM vem da personalização dele;
+  // sem personalização, entram os mais usados primeiro (contagem por tela), com o catálogo de
+  // desempate — assim o dashboard já chega útil sem ninguém configurar nada.
+  const disponiveis = SHORTCUTS.filter((item) => canAccess(item.permissao, item.recurso));
+  let prefs = { atalhos: null, uso: {} };
+  try { prefs = await api('/api/content/dashboard/shortcuts'); } catch { /* segue no automático */ }
 
+  let shortcuts;
+  if (prefs.atalhos?.length) {
+    const porChave = new Map(disponiveis.map((item) => [item.chave, item]));
+    shortcuts = prefs.atalhos.map((chave) => porChave.get(chave)).filter(Boolean);
+  } else {
+    const uso = prefs.uso || {};
+    shortcuts = [...disponiveis]
+      .sort((a, b) => (uso[b.chave] || 0) - (uso[a.chave] || 0) || disponiveis.indexOf(a) - disponiveis.indexOf(b))
+      .slice(0, AUTO_LIMIT);
+  }
+
+  const personalizado = Boolean(prefs.atalhos?.length);
   root().innerHTML = `${pageHeader('Visão geral', 'Indicadores atualizados da empresa e atalhos operacionais.')}
     ${cards.length ? `<section class="metric-grid">${cards.join('')}</section>` : ''}
     <section class="panel" style="margin-top:16px">
-      <div class="toolbar"><strong>Acesso rápido</strong><span class="muted" style="margin-left:auto;font-size:.8rem">Atalhos disponíveis no seu plano e perfil</span></div>
+      <div class="toolbar"><strong>Acesso rápido</strong>
+        <span class="muted" style="margin-left:auto;font-size:.8rem">${personalizado ? 'Sua seleção' : 'Ordenado pelas telas que você mais usa'}</span>
+        <button class="button ghost small" data-customize>${icon('settings')}Personalizar</button>
+      </div>
       ${shortcuts.length ? `<div class="quick-actions">${shortcuts.map((item) => `
         <a class="quick-action" href="${item.href}">
           <span class="quick-action-icon">${icon(item.icone)}</span>
@@ -403,6 +409,42 @@ async function renderDashboard() {
         </a>`).join('')}</div>`
         : '<p class="muted" style="padding:16px">Nenhum atalho disponível para o seu perfil e plano.</p>'}
     </section>`;
+
+  root().querySelector('[data-customize]').addEventListener('click', () => openShortcutPicker(disponiveis, prefs.atalhos));
+}
+
+// Personalização: o usuário escolhe quais atalhos quer e em que ordem (a ordem é a de marcação).
+function openShortcutPicker(disponiveis, atuais) {
+  const escolhidos = new Set(atuais || []);
+  const dialog = document.querySelector('#app-modal');
+  const form = document.querySelector('#modal-form');
+  document.querySelector('#modal-title').textContent = 'Personalizar acesso rápido';
+  document.querySelector('#modal-eyebrow').textContent = 'Dashboard';
+  document.querySelector('#modal-submit-label').textContent = 'Salvar';
+  document.querySelector('#modal-error').textContent = '';
+  document.querySelector('#modal-body').innerHTML = `
+    <p class="muted" style="margin:0 0 10px">Marque os atalhos que quer no dashboard. Sem nenhum marcado, eles voltam a ser escolhidos automaticamente pelas telas que você mais usa.</p>
+    <div class="perm-items">${disponiveis.map((item) => `
+      <label class="perm-item">
+        <input type="checkbox" name="atalho" value="${item.chave}" ${escolhidos.has(item.chave) ? 'checked' : ''}>
+        <span>${escapeHtml(item.titulo)}</span>
+      </label>`).join('')}</div>`;
+
+  const handler = async (event) => {
+    event.preventDefault();
+    try {
+      const marcados = [...form.querySelectorAll('[name=atalho]:checked')].map((input) => input.value);
+      if (marcados.length) await api('/api/content/dashboard/shortcuts', { method: 'PUT', body: { atalhos: marcados } });
+      else await api('/api/content/dashboard/shortcuts', { method: 'DELETE' });
+      dialog.close();
+      toast(marcados.length ? 'Atalhos atualizados.' : 'Atalhos voltaram ao automático.');
+      await renderDashboard();
+    } catch (error) { document.querySelector('#modal-error').textContent = error.message; }
+  };
+  if (form._submitHandler) form.removeEventListener('submit', form._submitHandler);
+  form._submitHandler = handler;
+  form.addEventListener('submit', handler);
+  dialog.showModal();
 }
 function metric(label, value, hint, href) { return `<a class="metric-card" href="${href}" style="text-decoration:none;color:inherit"><span>${label}</span><strong>${value}</strong><small>${hint}</small></a>`; }
 

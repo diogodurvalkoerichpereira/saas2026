@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { z } = require('zod');
 const { authenticate } = require('./auth.service');
-const { loginRateLimit } = require('../../middlewares/login-rate-limit');
+const { loginRateLimit, clearLoginAttempts } = require('../../middlewares/login-rate-limit');
 const { pool } = require('../../config/database');
 const { env } = require('../../config/env');
 
@@ -27,6 +27,7 @@ router.get('/test-logins', async (req, res, next) => {
 router.post('/login', loginRateLimit, async (req, res, next) => {
   try {
     const result = await authenticate(credentials.parse(req.body));
+    clearLoginAttempts(req);
     res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) error.status = 400;
