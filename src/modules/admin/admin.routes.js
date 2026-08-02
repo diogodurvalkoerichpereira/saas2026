@@ -186,9 +186,15 @@ router.get('/plans/:id/resources', async (req, res, next) => {
         ORDER BY r.nome`,
       [planId]
     );
+    // As características são o texto com ✓ que aparece dentro do card do plano na landing
+    // (planos_itens, o modal "Item" do legado). Vêm junto para o painel poder editá-las.
+    const [itens] = await pool.execute('SELECT nome FROM planos_itens WHERE plano = ? ORDER BY id', [planId]);
     // Marca o núcleo: sempre incluído em qualquer plano (o ERP não funciona sem ele). O que o
     // administrador realmente escolhe são os recursos premium.
-    res.json({ items: rows.map((row) => ({ ...row, nucleo: CORE.has(row.chave) ? 'Sim' : 'Não' })) });
+    res.json({
+      items: rows.map((row) => ({ ...row, nucleo: CORE.has(row.chave) ? 'Sim' : 'Não' })),
+      itens: itens.map((item) => item.nome)
+    });
   } catch (error) { next(error); }
 });
 router.put('/plans/:id/resources', async (req, res, next) => {

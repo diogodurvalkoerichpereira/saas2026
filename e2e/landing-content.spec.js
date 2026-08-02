@@ -11,6 +11,10 @@ async function saas() {
   return { ctx, headers: { authorization: `Bearer ${token}` } };
 }
 
+// Pelo NOME do plano: filtrar o card por texto pega vizinhos, porque o Profissional lista
+// "Tudo do Essencial" entre as suas características.
+const cardDoPlano = (page, nome) => page.locator('.plan-card').filter({ has: page.locator('.plan-name', { hasText: new RegExp(`^${nome}$`) }) });
+
 // Devolve o conteúdo ao estado inicial para não contaminar os outros testes.
 const ORIGINAL = {
   titulo: 'Escolha o plano ideal para o seu negócio',
@@ -59,6 +63,40 @@ test('cards de recurso e perguntas criados no painel aparecem na landing', async
   await page.reload();
   await expect(page.locator('.feature-card', { hasText: 'Emissão fiscal' })).toHaveCount(0);
   await expect(page.locator('.faq-item summary', { hasText: 'Emitem nota fiscal?' })).toHaveCount(0);
+  await ctx.dispose();
+});
+
+// Guardado antes de mexer no plano e devolvido no afterEach — inclusive quando o teste falha no
+// meio, senão a característica de teste fica no banco e contamina a rodada seguinte.
+let planoOriginal = null;
+
+test.afterEach(async () => {
+  if (!planoOriginal) return;
+  const { ctx, headers } = await saas();
+  await ctx.put(`/api/admin/plans/${planoOriginal.id}/resources`, { headers, data: { resourceIds: planoOriginal.recursos, items: planoOriginal.itens } });
+  await ctx.dispose();
+  planoOriginal = null;
+});
+
+test('as características do plano são editadas no painel e aparecem no card', async ({ page }) => {
+  const { ctx, headers } = await saas();
+  const plans = await (await ctx.get('/api/admin/plans?pageSize=100', { headers })).json();
+  const plano = plans.items.find((p) => p.nome === 'Essencial');
+  const atual = await (await ctx.get(`/api/admin/plans/${plano.id}/resources`, { headers })).json();
+  planoOriginal = { id: plano.id, itens: atual.itens, recursos: atual.items.filter((i) => i.selecionado === 'Sim').map((i) => i.id) };
+  // O GET traz as características para o painel poder editá-las (antes só o PUT as aceitava, e a
+  // tela não tinha como preencher o campo com o que já estava salvo).
+  expect(atual.itens.length, 'o painel precisa receber as características para editá-las').toBeGreaterThan(0);
+
+  await ctx.put(`/api/admin/plans/${plano.id}/resources`, {
+    headers, data: { resourceIds: planoOriginal.recursos, items: [...atual.itens, 'Suporte por e-mail em 24h'] }
+  });
+  await page.goto('/planos.html');
+  await expect(cardDoPlano(page, 'Essencial')).toContainText('Suporte por e-mail em 24h');
+
+  await ctx.put(`/api/admin/plans/${plano.id}/resources`, { headers, data: { resourceIds: planoOriginal.recursos, items: atual.itens } });
+  await page.reload();
+  await expect(cardDoPlano(page, 'Essencial')).not.toContainText('Suporte por e-mail em 24h');
   await ctx.dispose();
 });
 

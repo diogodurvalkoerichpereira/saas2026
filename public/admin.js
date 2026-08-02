@@ -116,7 +116,7 @@ async function editUserPermissions(userId) {
 
 async function editResources(type, id) {
   const result = await api(`/api/admin/${type}/${id}/resources`);
-  document.querySelector('#admin-modal-title').textContent = 'Recursos do plano';
+  document.querySelector('#admin-modal-title').textContent = type === 'plans' ? 'Recursos e características do plano' : 'Recursos da empresa';
   // O núcleo é sempre incluído (o ERP não funciona sem ele) — aparece marcado e travado.
   // Os premium são a escolha real: o que você marca é o que a empresa recebe e o usuário vê.
   const premium = result.items.filter((item) => item.nucleo !== 'Sim');
@@ -132,7 +132,10 @@ async function editResources(type, id) {
     </div>
     <div class="res-list">${premium.map((item) => row(item, false)).join('')}</div>
     ${nucleo.length ? `<p class="muted res-core-title"><strong>Núcleo</strong> — incluído em qualquer plano</p>
-    <div class="res-list res-core">${nucleo.map((item) => row(item, true)).join('')}</div>` : ''}`;
+    <div class="res-list res-core">${nucleo.map((item) => row(item, true)).join('')}</div>` : ''}
+    ${type === 'plans' ? `<label class="field res-itens"><strong>Características</strong>
+      <small class="muted">Uma por linha. É o texto com ✓ que o visitante lê dentro do card deste plano em /planos.html.</small>
+      <textarea name="planoItens" rows="6" placeholder="Tudo do Essencial&#10;Orçamentos e ordens de serviço&#10;Até 5 usuários">${esc((result.itens || []).join('\n'))}</textarea></label>` : ''}`;
 
   const body = document.querySelector('#admin-modal-body');
   const boxes = () => [...body.querySelectorAll('[name="resourceIds"]:not(:disabled)')];
@@ -146,7 +149,14 @@ async function editResources(type, id) {
     body.querySelectorAll('.res-item').forEach((item) => { item.hidden = Boolean(term) && !item.dataset.name.includes(term); });
   });
 
-  modalForm.onsubmit = async (event) => { event.preventDefault(); const ids = boxes().filter((b) => b.checked).map((b) => Number(b.value)); try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: { resourceIds: ids } }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; } };
+  modalForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const payload = { resourceIds: boxes().filter((b) => b.checked).map((b) => Number(b.value)) };
+    // Só o plano tem características; a empresa herda as do plano dela.
+    const itens = body.querySelector('[name="planoItens"]');
+    if (itens) payload.items = itens.value.split('\n').map((linha) => linha.trim()).filter(Boolean);
+    try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: payload }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; }
+  };
   modal.showModal();
 }
 

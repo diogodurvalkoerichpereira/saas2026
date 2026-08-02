@@ -42,6 +42,10 @@ input:focus,.field input:focus,.field select:focus,.field textarea:focus,.toolba
 .res-item small { font-size: .7rem; opacity: .7; }
 .res-core-title { margin: 14px 0 6px; }
 .res-core { opacity: .7; }
+.res-itens { margin-top: 16px; }
+/* `.field` deixa tudo em 750; a lista digitada é conteúdo, não rótulo — volta ao peso normal. */
+.res-itens small, .res-itens textarea { font-weight: 400; }
+.res-itens textarea { margin-top: 6px; }
 
 /* Site e planos (painel SaaS): abas e leitura do conteúdo da landing */
 .split-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }

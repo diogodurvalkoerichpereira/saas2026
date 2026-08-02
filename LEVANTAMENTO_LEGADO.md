@@ -225,6 +225,14 @@ texto escritas**, o que fazia o Essencial (6 características) passar na frente 
 Agora é "Mais completo" e sai da contagem de `planos_recursos` — um fato conferível, ao contrário
 de popularidade, que a página não tem como saber.
 
+**Terceiro erro corrigido:** as **características do plano** (`planos_itens`, o texto com ✓ dentro
+de cada card) não tinham como ser editadas. O legado tinha um modal "Item / Característica" em
+`sas/paginas/planos.php`; no Node o `PUT /api/admin/plans/:id/resources` já aceitava `items`, mas
+**o painel nunca enviava esse campo** e o `GET` nem devolvia as características — então não havia
+como preencher a tela com o que já estava salvo. Na prática as características só existiam porque
+a migração 005 as semeou: o administrador não conseguia mudar uma vírgula sem ir ao banco. O modal
+de recursos do plano agora tem o campo (uma característica por linha).
+
 ## Notas
 
 - O legado usa interpolação direta de `$_POST` em SQL (injeção) — **não** replicar; o Node já usa
