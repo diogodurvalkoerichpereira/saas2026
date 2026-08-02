@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { companyHasFeature } = require('../../middlewares/feature');
+const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { normalizeRecord } = require('../../lib/list-response');
 
 const slugify = (value) => String(value || '')
@@ -135,7 +136,8 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
        VALUES (?, ?, ?, 'Administrador', 'Sim', ?, CURRENT_DATE, 'Sim', 'Sim', ?)`,
       [data.nome, data.email, senhaCrip, data.telefone, companyId]
     );
-    await conn.execute('INSERT INTO clientes_recursos (empresa, recurso) SELECT ?, recurso FROM planos_recursos WHERE plano = ?', [companyId, plan.id]);
+    // Provisiona os recursos da empresa (núcleo + premium do plano), igual ao painel SaaS.
+    await provisionCompanyResources({ companyId, planId: plan.id, db: conn });
     let receivableId = null;
     if (mensalidade > 0) {
       const [rec] = await conn.execute(

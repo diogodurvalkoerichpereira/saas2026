@@ -1,0 +1,24 @@
+const { test, expect } = require('@playwright/test');
+
+// Página pública de planos: lista os planos ativos, destaca o popular e abre o modal de assinatura.
+test('a vitrine de planos lista os planos e abre a assinatura', async ({ page }) => {
+  const erros = [];
+  page.on('pageerror', (e) => erros.push(e.message));
+  await page.goto('/planos.html');
+
+  const cards = page.locator('.plan-card');
+  await expect(cards.first()).toBeVisible();
+  // Só os planos ativos (o "Plano Demonstração" foi desativado) — os 4 reais.
+  await expect(cards).toHaveCount(4);
+  await expect(page.locator('.plan-ribbon')).toHaveText('Mais popular');
+  // Enterprise mostra "ilimitado" no lugar de número.
+  await expect(page.locator('.plan-card', { hasText: 'Enterprise' })).toContainText('ilimitados');
+
+  // Abrir a assinatura leva o plano escolhido para o resumo do modal.
+  await page.locator('.plan-card.popular [data-plan]').click();
+  await expect(page.locator('#sub-modal')).toBeVisible();
+  await expect(page.locator('#sub-plan-name')).toHaveText('Profissional');
+  await expect(page.locator('#sub-form input[name="nome"]')).toBeVisible();
+
+  expect(erros).toEqual([]);
+});
