@@ -39,7 +39,7 @@ const replySchema = z.object({ texto: z.string().trim().min(1).max(10000) });
 
 router.use(authenticate);
 
-router.get('/notes', permit('anotacoes', 'home'), async (req, res, next) => {
+router.get('/notes', permit('anotacoes', 'home'), feature('anotacoes'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT a.id, a.titulo, a.msg, a.usuario, a.data, a.mostrar_home, a.privado, a.empresa,
@@ -53,7 +53,7 @@ router.get('/notes', permit('anotacoes', 'home'), async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['titulo', 'msg', 'usuario_nome'], dateField: 'data', defaultSort: 'data' }));
   } catch (error) { next(error); }
 });
-router.post('/notes', permit('anotacoes', 'home'), async (req, res, next) => {
+router.post('/notes', permit('anotacoes', 'home'), feature('anotacoes'), async (req, res, next) => {
   try {
     const data = noteSchema.parse(req.body);
     const [result] = await pool.execute(
@@ -65,7 +65,7 @@ router.post('/notes', permit('anotacoes', 'home'), async (req, res, next) => {
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.patch('/notes/:id', permit('anotacoes', 'home'), async (req, res, next) => {
+router.patch('/notes/:id', permit('anotacoes', 'home'), feature('anotacoes'), async (req, res, next) => {
   try {
     const noteId = id.parse(req.params.id);
     const data = noteSchema.partial().parse(req.body);
@@ -78,7 +78,7 @@ router.patch('/notes/:id', permit('anotacoes', 'home'), async (req, res, next) =
     res.status(204).end();
   } catch (error) { next(error); }
 });
-router.delete('/notes/:id', permit('anotacoes', 'home'), async (req, res, next) => {
+router.delete('/notes/:id', permit('anotacoes', 'home'), feature('anotacoes'), async (req, res, next) => {
   try {
     const noteId = id.parse(req.params.id);
     const [current] = await pool.execute('SELECT usuario FROM anotacoes WHERE id = ? AND empresa = ?', [noteId, Number(req.auth.companyId)]);
@@ -99,7 +99,8 @@ function taskConfig(audience) {
 function taskPermission(req, res, next) {
   try {
     req.taskConfig = taskConfig(req.query.audience || 'users');
-    permit(req.taskConfig.permission)(req, res, next);
+    // Permissão do perfil e, em seguida, o recurso do plano (tarefas).
+    permit(req.taskConfig.permission)(req, res, (error) => (error ? next(error) : feature('tarefas')(req, res, next)));
   } catch (error) {
     next(error);
   }

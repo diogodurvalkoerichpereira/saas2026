@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { listPaymentMethods, listEntries, getEntry, createEntry, updateEntry, settleEntry, reopenEntry, cancelEntry } = require('./finance.service');
@@ -30,7 +31,7 @@ const settlementSchema = z.object({
   juros: z.number().nonnegative().optional()
 });
 
-router.use(authenticate, permit('financeiro', 'receber', 'pagar'), authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'));
+router.use(authenticate, permit('financeiro', 'receber', 'pagar'), feature('financeiro'), authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'));
 router.get('/payment-methods', async (req, res, next) => {
   try {
     const rows = await listPaymentMethods(Number(req.auth.companyId));

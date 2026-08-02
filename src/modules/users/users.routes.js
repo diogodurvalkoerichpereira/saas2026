@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { assertWithinPlanLimit } = require('../../services/plan-limits');
@@ -49,7 +50,7 @@ router.patch('/me/password', authenticate, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.use(authenticate, permit('usuarios'));
+router.use(authenticate, permit('usuarios'), feature('usuarios'));
 router.get('/permissions/options', authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try { res.json(await listPermissionOptions(Number(req.auth.companyId || 0))); } catch (error) { next(error); }
 });

@@ -12,8 +12,12 @@ async function saasContext() {
 
 async function planId(ctx, headers, nome) {
   const res = await ctx.get('/api/admin/plans?page=1&pageSize=100', { headers });
-  const items = (await res.json()).items;
-  return items.find((p) => p.nome === nome)?.id;
+  const payload = await res.json();
+  // Erro (ex.: sessão expirada num run longo) devolve { error } em vez de { items }.
+  if (!payload.items) throw new Error(`não foi possível listar planos: ${payload.error || res.status()}`);
+  const plano = payload.items.find((p) => p.nome === nome);
+  if (!plano) throw new Error(`plano "${nome}" não encontrado`);
+  return plano.id;
 }
 
 async function setPlan(nome) {
@@ -32,7 +36,30 @@ async function loginGerente(page) {
   await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
 }
 
-test.afterAll(async () => { await setPlan('Enterprise'); }); // devolve a empresa ao estado cheio
+// Estes testes trocam o plano da empresa 1 (estado compartilhado). Restaura depois de CADA teste,
+// não só no fim do arquivo — se um teste falhar no meio, os seguintes (e os outros arquivos) não
+// herdam uma empresa sem recursos.
+test.afterEach(async () => {
+  try { await setPlan('Enterprise'); } catch { /* não mascara a falha do teste */ }
+});
+
+test('plano criado SEM habilitar nada não libera nenhum módulo', async () => {
+  const { ctx, headers } = await saasContext();
+  const criado = await (await ctx.post('/api/admin/plans', { headers, data: { nome: `Vazio ${Date.now()}`, valor: 29 } })).json();
+  await ctx.put(`/api/admin/plans/${criado.id}/resources`, { headers, data: { resourceIds: [] } });
+  await ctx.patch('/api/admin/companies/1', { headers, data: { plano: criado.id } });
+
+  const gtoken = (await (await ctx.post('/api/auth/login', { data: { email: 'teste.local@saas2026.local', password: 'Teste@2026' } })).json()).token;
+  const h = { authorization: `Bearer ${gtoken}` };
+  // Nada habilitado = nada acessível (só dashboard/assinatura, que não têm API própria de módulo).
+  for (const path of ['/api/clients', '/api/catalog/products', '/api/finance/receivables', '/api/inventory/movements', '/api/sales', '/api/reports/financial', '/api/users', '/api/content/settings']) {
+    expect((await ctx.get(path, { headers: h })).status(), `${path} deveria recusar em plano vazio`).toBe(403);
+  }
+
+  await setPlan('Enterprise');
+  await ctx.patch(`/api/admin/plans/${criado.id}`, { headers, data: { ativo: 'Não' } }).catch(() => {});
+  await ctx.dispose();
+});
 
 test('criar um plano novo com recursos escolhidos entrega exatamente esses ao usuário', async () => {
   const { ctx, headers } = await saasContext();

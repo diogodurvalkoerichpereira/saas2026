@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { z } = require('zod');
 const { listResponse } = require('../../lib/list-response');
 const {
@@ -16,7 +17,7 @@ function period(raw) {
   return z.object({ from: date.default(first), to: date.default(today.toISOString().slice(0, 10)) }).parse(raw);
 }
 
-router.use(authenticate, permit('home', 'rel_financeiro', 'rel_vendas', 'rel_balanco', 'rel_prod_vendidos', 'rel_sintetico_despesas', 'rel_sintetico_receber'));
+router.use(authenticate, permit('home', 'rel_financeiro', 'rel_vendas', 'rel_balanco', 'rel_prod_vendidos', 'rel_sintetico_despesas', 'rel_sintetico_receber'), feature('relatorios'));
 router.get('/financial', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => { try { res.json(await financialSummary(Number(req.auth.companyId))); } catch (error) { next(error); } });
 router.get('/operational', async (req, res, next) => { try { res.json(await operationalSummary(Number(req.auth.companyId))); } catch (error) { next(error); } });
 router.get('/sales', authorize('Administrador', 'Gerente', 'Tesoureiro', 'Financeiro'), async (req, res, next) => {

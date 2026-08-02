@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { pool } = require('../../config/database');
@@ -19,7 +20,7 @@ const clientSchema = z.object({
 });
 const idSchema = z.coerce.number().int().positive();
 
-router.use(authenticate, permit('clientes'));
+router.use(authenticate, permit('clientes'), feature('clientes'));
 router.get('/', async (req, res, next) => {
   try {
     const restrictToUserId = req.auth.mostrarRegistros === false ? Number(req.auth.sub) : null;

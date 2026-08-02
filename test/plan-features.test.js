@@ -22,22 +22,28 @@ const fakeDb = (empresaTemChaves = []) => ({
   }
 });
 
-test('núcleo e premium não se sobrepõem', () => {
-  for (const chave of CORE) assert.equal(PREMIUM.has(chave), false, `${chave} não pode ser núcleo e premium`);
-  assert.equal(isCore('financeiro'), true);
+test('núcleo é mínimo e não se sobrepõe ao que o plano controla', () => {
+  for (const chave of CORE) assert.equal(PREMIUM.has(chave), false, `${chave} não pode ser núcleo e do plano`);
+  // Só o mínimo para entrar e poder fazer upgrade.
+  assert.deepEqual([...CORE].sort(), ['assinatura', 'dashboard']);
+  // Tudo o mais é decidido pelo plano — inclusive o que antes era "núcleo".
+  assert.equal(isCore('financeiro'), false);
+  assert.equal(isCore('clientes'), false);
   assert.equal(isCore('marketing'), false);
+  assert.equal(isCore('dashboard'), true);
 });
 
-test('recursos efetivos sempre incluem o núcleo', () => {
+test('recursos efetivos sempre incluem o núcleo mínimo', () => {
   const eff = effectiveResources(['marketing']);
   assert.equal(eff.has('marketing'), true);
   assert.equal(eff.has('dashboard'), true); // núcleo entra mesmo sem estar na lista
+  assert.equal(eff.has('financeiro'), false); // não veio do plano: não entra
 });
 
-test('feature() libera recurso de núcleo sem consultar o banco', async () => {
+test('feature() libera o núcleo mínimo sem consultar o banco', async () => {
   let consultou = false;
   const db = { execute: async () => { consultou = true; return [[]]; } };
-  const mw = feature('financeiro'); // núcleo
+  const mw = feature('dashboard'); // núcleo
   const res = mkRes();
   let chamouNext = false;
   await mw({ auth: { role: 'Gerente', companyId: 5 }, db }, res, () => { chamouNext = true; });

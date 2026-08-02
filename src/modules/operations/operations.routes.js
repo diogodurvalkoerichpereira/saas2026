@@ -32,7 +32,7 @@ async function cashBalance(cashId, companyId, db = pool) {
   };
 }
 
-router.get('/cash', permit('caixas'), async (req, res, next) => {
+router.get('/cash', permit('caixas'), feature('vendas_pdv'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT c.id, c.operador, c.data_abertura, c.data_fechamento, c.valor_abertura, c.valor_fechamento,
@@ -45,7 +45,7 @@ router.get('/cash', permit('caixas'), async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['operador_nome', 'obs'], statusField: 'status', dateField: 'data_abertura', defaultSort: 'data_abertura' }));
   } catch (error) { next(error); }
 });
-router.get('/cash/:id', permit('caixas'), async (req, res, next) => {
+router.get('/cash/:id', permit('caixas'), feature('vendas_pdv'), async (req, res, next) => {
   try {
     const cashId = id.parse(req.params.id);
     const [cashRows] = await pool.execute(
@@ -67,7 +67,7 @@ router.get('/cash/:id', permit('caixas'), async (req, res, next) => {
     res.json({ ...normalizeRecord(cashRows[0]), balance: await cashBalance(cashId, Number(req.auth.companyId)), withdrawals: withdrawals.map(normalizeRecord) });
   } catch (error) { next(error); }
 });
-router.post('/cash', permit('caixas'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
+router.post('/cash', permit('caixas'), feature('vendas_pdv'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
   try {
     const data = z.object({
       operatorId: z.number().int().positive(),
@@ -88,7 +88,7 @@ router.post('/cash', permit('caixas'), authorize('Administrador', 'Gerente', 'Te
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.post('/cash/:id/withdrawals', permit('caixas'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
+router.post('/cash/:id/withdrawals', permit('caixas'), feature('vendas_pdv'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
   try {
     const cashId = id.parse(req.params.id);
     const data = z.object({ value: z.number().positive(), reason }).parse(req.body);
@@ -105,7 +105,7 @@ router.post('/cash/:id/withdrawals', permit('caixas'), authorize('Administrador'
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.post('/cash/:id/close', permit('caixas'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
+router.post('/cash/:id/close', permit('caixas'), feature('vendas_pdv'), authorize('Administrador', 'Gerente', 'Tesoureiro'), async (req, res, next) => {
   try {
     const cashId = id.parse(req.params.id);
     const data = z.object({ closingValue: z.number().nonnegative(), notes: z.string().trim().max(255).optional() }).parse(req.body);

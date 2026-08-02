@@ -8,6 +8,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { createRepository } = require('./catalog.repository');
@@ -40,11 +41,14 @@ const imageTables = { products: 'produtos', services: 'servicos' };
 const imageExtensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 
 router.use(authenticate, permit('fornecedores', 'produtos', 'servicos'));
+// Cada recurso do catálogo respeita o recurso do plano: fornecedores e produtos/serviços separados.
+const catalogFeature = { suppliers: 'fornecedores', products: 'produtos_servicos', services: 'produtos_servicos' };
 router.param('resource', (req, res, next, value) => {
   if (!resources[value]) return res.status(404).json({ error: 'Recurso não encontrado.' });
   req.resource = resources[value];
   next();
 });
+router.use('/:resource', (req, res, next) => feature(catalogFeature[req.params.resource] || 'produtos_servicos')(req, res, next));
 router.get('/:resource', async (req, res, next) => {
   try {
     const rows = await req.resource.repository.list(Number(req.auth.companyId));

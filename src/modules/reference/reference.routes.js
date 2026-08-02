@@ -14,45 +14,45 @@ const name = z.string().trim().min(2).max(150);
 const optionalText = (max = 255) => z.string().trim().max(max).optional();
 const resources = {
   categories: {
-    table: 'categorias', permission: 'categorias', fields: ['nome', 'foto', 'ativo', 'icone'],
+    table: 'categorias', permission: 'categorias', feature: 'cadastros_auxiliares', fields: ['nome', 'foto', 'ativo', 'icone'],
     schema: z.object({ nome: name.max(50), foto: optionalText(100), ativo: yesNo.optional(), icone: optionalText(60) }),
     defaults: { foto: 'sem-foto.jpg', ativo: 'Sim', icone: '' }, activeField: 'ativo', orderBy: 'nome'
   },
   subcategories: {
-    table: 'sub_categorias', permission: 'sub_categorias', fields: ['nome', 'ativo', 'foto'],
+    table: 'sub_categorias', permission: 'sub_categorias', feature: 'cadastros_auxiliares', fields: ['nome', 'ativo', 'foto'],
     schema: z.object({ nome: name.max(50), ativo: yesNo.optional(), foto: optionalText(100) }),
     defaults: { ativo: 'Sim', foto: 'sem-foto.jpg' }, activeField: 'ativo', orderBy: 'nome'
   },
   brands: {
-    table: 'marcas', permission: 'marcas', fields: ['nome', 'ativo'],
+    table: 'marcas', permission: 'marcas', feature: 'cadastros_auxiliares', fields: ['nome', 'ativo'],
     schema: z.object({ nome: name.max(50), ativo: yesNo.optional() }),
     defaults: { ativo: 'Sim' }, activeField: 'ativo', orderBy: 'nome'
   },
   equipment: {
-    table: 'equipamentos', permission: 'equipamentos', fields: ['nome', 'ativo'],
+    table: 'equipamentos', permission: 'equipamentos', feature: 'cadastros_auxiliares', fields: ['nome', 'ativo'],
     schema: z.object({ nome: name.max(50), ativo: yesNo.optional() }),
     defaults: { ativo: 'Sim' }, activeField: 'ativo', orderBy: 'nome'
   },
   models: {
-    table: 'modelos', permission: 'modelos', fields: ['nome', 'ativo', 'marca', 'equipamento'],
+    table: 'modelos', permission: 'modelos', feature: 'cadastros_auxiliares', fields: ['nome', 'ativo', 'marca', 'equipamento'],
     schema: z.object({ nome: name.max(50), ativo: yesNo.optional(), marca: optionalText(100), equipamento: optionalText(100) }),
     defaults: { ativo: 'Sim', marca: '', equipamento: '' }, activeField: 'ativo', orderBy: 'nome'
   },
   'payment-methods': {
-    table: 'formas_pgto', permission: 'formas_pgto', fields: ['nome', 'taxa'],
+    table: 'formas_pgto', permission: 'formas_pgto', feature: 'cadastros_auxiliares', fields: ['nome', 'taxa'],
     schema: z.object({ nome: name.max(50), taxa: z.number().int().min(0).max(100).optional() }),
     defaults: { taxa: 0 }, orderBy: 'nome'
   },
   positions: {
-    table: 'cargos', permission: 'cargos', fields: ['nome'],
+    table: 'cargos', permission: 'cargos', feature: 'cadastros_auxiliares', fields: ['nome'],
     schema: z.object({ nome: name.max(50) }), orderBy: 'nome'
   },
   frequencies: {
-    table: 'frequencias', permission: 'frequencias', fields: ['frequencia', 'dias'],
+    table: 'frequencias', permission: 'frequencias', feature: 'cadastros_auxiliares', fields: ['frequencia', 'dias'],
     schema: z.object({ frequencia: name.max(25), dias: z.number().int().min(0).max(3650) }), orderBy: 'dias, frequencia'
   },
   'account-plans': {
-    table: 'plano_contas', permission: 'plano_contas', fields: ['nome'],
+    table: 'plano_contas', permission: 'plano_contas', feature: 'cadastros_auxiliares', fields: ['nome'],
     schema: z.object({ nome: name }), orderBy: 'nome'
   },
   coupons: {

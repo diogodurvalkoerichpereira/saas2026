@@ -3,13 +3,14 @@ const { z } = require('zod');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { pool } = require('../../config/database');
 const { listMovements, moveStock } = require('./inventory.service');
 
 const movementSchema = z.object({ type: z.enum(['entrada', 'saida']), productId: z.number().int().positive(), quantity: z.number().int().positive(), reason: z.string().trim().min(2).max(100) });
-router.use(authenticate, permit('estoque', 'entradas', 'saidas', 'produtos'));
+router.use(authenticate, permit('estoque', 'entradas', 'saidas', 'produtos'), feature('estoque'));
 router.get('/movements', async (req, res, next) => {
   try {
     const rows = await listMovements(Number(req.auth.companyId));

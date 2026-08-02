@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { providers } = require('../../integrations/whatsapp.providers');
@@ -59,7 +60,7 @@ const SECRET_FIELDS = ['token_whatsapp', 'chave_api_asaas', 'access_token'];
 
 router.use(authenticate);
 
-router.get('/settings', permit('configuracoes', 'home'), async (req, res, next) => {
+router.get('/settings', permit('configuracoes', 'home'), feature('configuracoes'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, nome, email, telefone, endereco, instagram, cnpj, cidade_sistema, marca_dagua,
@@ -83,7 +84,7 @@ router.get('/settings', permit('configuracoes', 'home'), async (req, res, next) 
     res.json(record);
   } catch (error) { next(error); }
 });
-router.put('/settings', permit('configuracoes', 'home'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+router.put('/settings', permit('configuracoes', 'home'), feature('configuracoes'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const data = settingsSchema.parse(req.body);
     // Segredo vazio significa "manter o atual" (write-only), não apagar; e o que vier
@@ -108,7 +109,7 @@ router.put('/settings', permit('configuracoes', 'home'), authorize('Administrado
   } catch (error) { next(error); }
 });
 
-router.get('/site', permit('site'), async (req, res, next) => {
+router.get('/site', permit('site'), feature('site'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, empresa, titulo, subtitulo, botao1, botao2, botao3, titulo_recursos, titulo_perguntas,
@@ -119,7 +120,7 @@ router.get('/site', permit('site'), async (req, res, next) => {
     res.json(rows[0] ? normalizeRecord(rows[0]) : null);
   } catch (error) { next(error); }
 });
-router.put('/site', permit('site'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+router.put('/site', permit('site'), feature('site'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const data = siteSchema.parse(req.body);
     const fields = Object.keys(data);
