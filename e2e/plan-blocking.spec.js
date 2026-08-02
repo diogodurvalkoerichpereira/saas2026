@@ -34,6 +34,33 @@ async function loginGerente(page) {
 
 test.afterAll(async () => { await setPlan('Enterprise'); }); // devolve a empresa ao estado cheio
 
+test('tirar um recurso do plano remove o acesso de quem já está nele', async () => {
+  const { ctx, headers } = await saasContext();
+  const profId = await planId(ctx, headers, 'Profissional');
+  // empresa 1 no Profissional (que inclui marketing)
+  await ctx.patch('/api/admin/companies/1', { headers, data: { plano: profId } });
+
+  const before = await (await ctx.get(`/api/admin/plans/${profId}/resources`, { headers })).json();
+  const marketing = before.items.find((r) => r.chave === 'marketing');
+  expect(marketing.selecionado).toBe('Sim');
+
+  // remove 'marketing' do plano
+  const semMarketing = before.items.filter((r) => r.selecionado === 'Sim' && r.chave !== 'marketing').map((r) => r.id);
+  const put = await ctx.put(`/api/admin/plans/${profId}/resources`, { headers, data: { resourceIds: semMarketing } });
+  expect(put.status()).toBe(204);
+
+  // o Gerente da empresa 1 (no Profissional) já não acessa marketing
+  const login = await ctx.post('/api/auth/login', { data: { email: 'gerente.local@saas2026.local', password: 'Teste@2026' } });
+  const gtoken = (await login.json()).token;
+  const resp = await ctx.get('/api/marketing/campaigns', { headers: { authorization: `Bearer ${gtoken}` } });
+  expect(resp.status(), 'acesso deve cair ao tirar o recurso do plano').toBe(403);
+
+  // restaura: recoloca marketing no plano
+  const comMarketing = [...semMarketing, marketing.id];
+  await ctx.put(`/api/admin/plans/${profId}/resources`, { headers, data: { resourceIds: comMarketing } });
+  await ctx.dispose();
+});
+
 test('no plano Essencial, o Gerente não vê nem acessa módulos premium', async ({ page }) => {
   await setPlan('Essencial');
   await loginGerente(page);

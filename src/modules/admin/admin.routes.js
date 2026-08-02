@@ -208,7 +208,14 @@ router.put('/plans/:id/resources', async (req, res, next) => {
         await connection.execute('DELETE FROM planos_itens WHERE plano = ?', [planId]);
         for (const item of [...new Set(items)]) await connection.execute('INSERT INTO planos_itens (plano, nome) VALUES (?, ?)', [planId, item]);
       }
-      await audit(connection, { companyId: 0, userId: Number(req.auth.sub), action: 'recursos', entity: 'plano', entityId: planId, details: { resourceIds, items: items || [] } });
+      // Cascata: as empresas que já estão neste plano são re-sincronizadas para o novo conjunto de
+      // recursos (núcleo + premium do plano). Sem isso, tirar um recurso do plano não tirava o
+      // acesso de quem já estava nele.
+      const [affected] = await connection.execute('SELECT id FROM empresas WHERE plano = ? AND id > 0', [planId]);
+      for (const company of affected) {
+        await provisionCompanyResources({ companyId: company.id, planId, db: connection });
+      }
+      await audit(connection, { companyId: 0, userId: Number(req.auth.sub), action: 'recursos', entity: 'plano', entityId: planId, details: { resourceIds, items: items || [], empresasAfetadas: affected.length } });
       await connection.commit();
     } catch (error) {
       await connection.rollback();
