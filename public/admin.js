@@ -116,9 +116,18 @@ async function editUserPermissions(userId) {
 
 async function editResources(type, id) {
   const result = await api(`/api/admin/${type}/${id}/resources`);
-  document.querySelector('#admin-modal-title').textContent = 'Recursos disponíveis';
-  document.querySelector('#admin-modal-body').innerHTML = `<div class="field">${result.items.map((item) => `<label><input type="checkbox" name="resourceIds" value="${item.id}" ${item.selecionado === 'Sim' ? 'checked' : ''}> ${esc(item.nome)} <small class="muted">${esc(item.origem || item.chave)}</small></label>`).join('')}</div>`;
-  modalForm.onsubmit = async (event) => { event.preventDefault(); const ids = [...modalForm.querySelectorAll('[name="resourceIds"]:checked')].map((input) => Number(input.value)); try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: { resourceIds: ids } }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; } };
+  document.querySelector('#admin-modal-title').textContent = 'Recursos do plano';
+  // O núcleo é sempre incluído (o ERP não funciona sem ele) — aparece marcado e travado.
+  // Os premium são a escolha real: o que você marca é o que a empresa recebe e o usuário vê.
+  const premium = result.items.filter((item) => item.nucleo !== 'Sim');
+  const nucleo = result.items.filter((item) => item.nucleo === 'Sim');
+  const row = (item, locked) => `<label><input type="checkbox" name="resourceIds" value="${item.id}" ${item.selecionado === 'Sim' || locked ? 'checked' : ''} ${locked ? 'disabled' : ''}> ${esc(item.nome)} ${locked ? '<small class="muted">núcleo · sempre incluído</small>' : `<small class="muted">${esc(item.origem || 'premium')}</small>`}</label>`;
+  document.querySelector('#admin-modal-body').innerHTML = `
+    <p class="muted" style="margin:0 0 8px">Marque os recursos <strong>premium</strong> deste plano. O que você escolher é exatamente o que a empresa recebe e o usuário passa a ver.</p>
+    <div class="field">${premium.map((item) => row(item, false)).join('')}</div>
+    <p class="muted" style="margin:14px 0 6px"><strong>Núcleo</strong> — incluído em todos os planos</p>
+    <div class="field" style="opacity:.7">${nucleo.map((item) => row(item, true)).join('')}</div>`;
+  modalForm.onsubmit = async (event) => { event.preventDefault(); const ids = [...modalForm.querySelectorAll('[name="resourceIds"]:not(:disabled):checked')].map((input) => Number(input.value)); try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: { resourceIds: ids } }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; } };
   modal.showModal();
 }
 

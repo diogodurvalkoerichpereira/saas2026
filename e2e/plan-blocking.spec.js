@@ -34,6 +34,32 @@ async function loginGerente(page) {
 
 test.afterAll(async () => { await setPlan('Enterprise'); }); // devolve a empresa ao estado cheio
 
+test('criar um plano novo com recursos escolhidos entrega exatamente esses ao usuário', async () => {
+  const { ctx, headers } = await saasContext();
+  // 1) cria um plano novo
+  const created = await (await ctx.post('/api/admin/plans', { headers, data: { nome: `Custom ${Date.now()}`, valor: 199.9 } })).json();
+  const novoId = created.id;
+  // 2) escolhe SÓ marketing + orçamentos como premium
+  const res = await (await ctx.get(`/api/admin/plans/${novoId}/resources`, { headers })).json();
+  const escolhidos = res.items.filter((r) => ['marketing', 'orcamentos'].includes(r.chave)).map((r) => r.id);
+  await ctx.put(`/api/admin/plans/${novoId}/resources`, { headers, data: { resourceIds: escolhidos } });
+  // 3) atribui a empresa 1 a esse plano
+  await ctx.patch('/api/admin/companies/1', { headers, data: { plano: novoId } });
+
+  // 4) o usuário recebe exatamente o escolhido: marketing/orçamentos liberam, o resto bloqueia
+  const gtoken = (await (await ctx.post('/api/auth/login', { data: { email: 'gerente.local@saas2026.local', password: 'Teste@2026' } })).json()).token;
+  const h = { authorization: `Bearer ${gtoken}` };
+  expect((await ctx.get('/api/marketing/campaigns', { headers: h })).status(), 'marketing escolhido').toBe(200);
+  expect((await ctx.get('/api/fiscal/config', { headers: h })).status(), 'fiscal não escolhido').toBe(403);
+  expect((await ctx.get('/api/hr/employees', { headers: h })).status(), 'RH não escolhido').toBe(403);
+  expect((await ctx.get('/api/operations/contracts', { headers: h })).status(), 'contratos não escolhido').toBe(403);
+
+  // limpeza: volta a empresa ao Enterprise e desativa o plano de teste (some da vitrine)
+  await setPlan('Enterprise');
+  await ctx.patch(`/api/admin/plans/${novoId}`, { headers, data: { ativo: 'Não' } }).catch(() => {});
+  await ctx.dispose();
+});
+
 test('tirar um recurso do plano remove o acesso de quem já está nele', async () => {
   const { ctx, headers } = await saasContext();
   const profId = await planId(ctx, headers, 'Profissional');

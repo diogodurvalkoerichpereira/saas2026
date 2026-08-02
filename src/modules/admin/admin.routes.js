@@ -6,6 +6,7 @@ const { saasOnly } = require('../../middlewares/saas-only');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
+const { CORE } = require('../../config/features');
 
 const id = z.coerce.number().int().positive();
 const yesNo = z.enum(['Sim', 'Não']);
@@ -184,7 +185,9 @@ router.get('/plans/:id/resources', async (req, res, next) => {
         ORDER BY r.nome`,
       [planId]
     );
-    res.json({ items: rows });
+    // Marca o núcleo: sempre incluído em qualquer plano (o ERP não funciona sem ele). O que o
+    // administrador realmente escolhe são os recursos premium.
+    res.json({ items: rows.map((row) => ({ ...row, nucleo: CORE.has(row.chave) ? 'Sim' : 'Não' })) });
   } catch (error) { next(error); }
 });
 router.put('/plans/:id/resources', async (req, res, next) => {
@@ -239,7 +242,7 @@ router.get('/companies/:id/resources', async (req, res, next) => {
         ORDER BY r.nome`,
       [companyId]
     );
-    res.json({ items: rows });
+    res.json({ items: rows.map((row) => ({ ...row, nucleo: CORE.has(row.chave) ? 'Sim' : 'Não' })) });
   } catch (error) { next(error); }
 });
 router.put('/companies/:id/resources', async (req, res, next) => {
