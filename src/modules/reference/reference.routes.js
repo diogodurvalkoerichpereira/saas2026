@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const service = require('./reference.service');
@@ -55,7 +56,7 @@ const resources = {
     schema: z.object({ nome: name }), orderBy: 'nome'
   },
   coupons: {
-    table: 'cupons', permission: 'cupom', fields: ['codigo', 'valor', 'data', 'quantidade', 'valor_minimo', 'tipo'],
+    table: 'cupons', permission: 'cupom', feature: 'cupons', fields: ['codigo', 'valor', 'data', 'quantidade', 'valor_minimo', 'tipo'],
     schema: z.object({
       codigo: z.string().trim().min(2).max(50), valor: z.number().nonnegative(),
       data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
@@ -65,7 +66,7 @@ const resources = {
     defaults: { data: null, quantidade: 0, valor_minimo: 0, tipo: 'Valor' }, orderBy: 'id DESC'
   },
   'contract-templates': {
-    table: 'contratos', permission: 'modelos_contratos', fields: ['modelo', 'texto', 'mostrar_modelos'],
+    table: 'contratos', permission: 'modelos_contratos', feature: 'contratos', fields: ['modelo', 'texto', 'mostrar_modelos'],
     schema: z.object({ modelo: name.max(50), texto: z.string().trim().min(10).max(50000), mostrar_modelos: yesNo.optional() }),
     defaults: { mostrar_modelos: 'Sim' }, orderBy: 'modelo'
   }
@@ -80,6 +81,11 @@ router.param('resource', (req, res, next, value) => {
   next();
 });
 router.use('/:resource', (req, res, next) => permit(req.resourceConfig.permission)(req, res, next));
+// Cadastros premium (cupons, modelos de contrato) também respeitam o recurso do plano.
+router.use('/:resource', (req, res, next) => {
+  if (!req.resourceConfig.feature) return next();
+  return feature(req.resourceConfig.feature)(req, res, next);
+});
 
 router.get('/:resource', async (req, res, next) => {
   try {

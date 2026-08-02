@@ -3,6 +3,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../../config/database');
+const { companyHasFeature } = require('../../middlewares/feature');
 const { normalizeRecord } = require('../../lib/list-response');
 
 const slugify = (value) => String(value || '')
@@ -54,6 +55,13 @@ async function assertCompany(companyId, db = pool) {
     throw Object.assign(new Error('Loja indisponível.'), { status: 404 });
   }
   return company;
+}
+
+// A loja online é um recurso de plano: sem ele, o catálogo público e o checkout não funcionam.
+async function assertStoreEnabled(companyId, db = pool) {
+  if (!(await companyHasFeature(companyId, 'loja_online', db))) {
+    throw Object.assign(new Error('Loja indisponível.'), { status: 404 });
+  }
 }
 
 // Decisão de página de entrada para visitante não logado (legado: pagina_entrada Site/Login).
@@ -177,6 +185,7 @@ router.get('/:companyId/catalog', async (req, res, next) => {
   try {
     const companyId = companyIdSchema.parse(req.params.companyId);
     await assertCompany(companyId);
+    await assertStoreEnabled(companyId);
     const [[products], [services], [categories], [paymentMethods]] = await Promise.all([
       pool.execute(
         `SELECT p.id, p.codigo, p.nome, p.valor_venda, p.valor_promocional, p.estoque, p.foto,
@@ -217,6 +226,7 @@ router.get('/:companyId/coupons/:code', async (req, res, next) => {
 router.post('/:companyId/checkout', async (req, res, next) => {
   try {
     const companyId = companyIdSchema.parse(req.params.companyId);
+    await assertStoreEnabled(companyId);
     const data = checkoutSchema.parse(req.body);
     const connection = await pool.getConnection();
     try {

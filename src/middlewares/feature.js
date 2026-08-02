@@ -1,6 +1,17 @@
 const { pool } = require('../config/database');
 const { CORE } = require('../config/features');
 
+// A empresa tem este recurso? (núcleo sempre; premium só se estiver em clientes_recursos.)
+// Usado por fluxos que não passam pelo middleware — portal do cliente e loja pública.
+async function companyHasFeature(companyId, chave, db = pool) {
+  if (CORE.has(chave)) return true;
+  const [rows] = await db.execute(
+    "SELECT 1 FROM clientes_recursos cr JOIN recursos r ON r.id = cr.recurso WHERE cr.empresa = ? AND r.chave = ? LIMIT 1",
+    [Number(companyId), chave]
+  );
+  return Boolean(rows[0]);
+}
+
 // Bloqueia a rota quando o PLANO da empresa não inclui o recurso. Semântica OR (como o permit):
 // passa se a empresa tiver qualquer um dos recursos exigidos. É o segundo filtro, além do permit:
 // permit = "o perfil pode?", feature = "a empresa contratou?".
@@ -30,4 +41,4 @@ function feature(...chaves) {
   };
 }
 
-module.exports = { feature };
+module.exports = { feature, companyHasFeature };

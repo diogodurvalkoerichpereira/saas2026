@@ -52,6 +52,14 @@ router.post('/login', loginRateLimit, async (req, res, next) => {
     if (!client || client.ativo !== 'Sim' || !activeCompany || !client.senha_crip || !(await bcrypt.compare(data.password, client.senha_crip))) {
       throw Object.assign(new Error('E-mail, empresa ou senha inválidos.'), { status: 401 });
     }
+    // O portal do cliente é um recurso de plano: a empresa precisa tê-lo contratado.
+    const [portalRes] = await pool.execute(
+      "SELECT 1 FROM clientes_recursos cr JOIN recursos r ON r.id = cr.recurso WHERE cr.empresa = ? AND r.chave = 'portal_cliente' LIMIT 1",
+      [client.empresa]
+    );
+    if (!portalRes[0]) {
+      throw Object.assign(new Error('O portal do cliente não está disponível no plano desta empresa.'), { status: 403 });
+    }
     const token = jwt.sign({ sub: client.id, companyId: client.empresa, role: 'Cliente', kind: 'client' }, env.jwtSecret, { expiresIn: '8h' });
     res.json({
       token,

@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 
@@ -16,7 +17,7 @@ const transitions = {
   Cancelado: []
 };
 
-router.use(authenticate, permit('vendas'), authorize('Administrador', 'Gerente', 'Comum'));
+router.use(authenticate, permit('vendas'), feature('loja_online'), authorize('Administrador', 'Gerente', 'Comum'));
 
 router.get('/orders', async (req, res, next) => {
   try {

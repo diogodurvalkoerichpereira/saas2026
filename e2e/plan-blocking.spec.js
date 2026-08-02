@@ -49,8 +49,13 @@ test('no plano Essencial, o Gerente não vê nem acessa módulos premium', async
 
   // E a API recusa o módulo premium mesmo se chamada direto.
   const token = await page.evaluate(() => sessionStorage.getItem('saas2026.token'));
-  const api = await page.request.get('/api/work/budgets', { headers: { authorization: `Bearer ${token}` } });
-  expect(api.status()).toBe(403);
+  const auth = { authorization: `Bearer ${token}` };
+  // Todos os módulos premium fora do Essencial recusam a API (não só o Orçamentos).
+  for (const path of ['/api/work/budgets', '/api/marketing/campaigns', '/api/operations/commissions', '/api/operations/contracts', '/api/reference/coupons', '/api/store/orders', '/api/hr/employees', '/api/fiscal/config']) {
+    expect((await page.request.get(path, { headers: auth })).status(), `${path} deveria recusar`).toBe(403);
+  }
+  // Chamados está em todos os planos — continua liberado no Essencial.
+  expect((await page.request.get('/api/collaboration/tickets', { headers: auth })).status()).toBe(200);
 });
 
 test('o Administrador da própria empresa também é limitado pelo plano', async ({ page }) => {

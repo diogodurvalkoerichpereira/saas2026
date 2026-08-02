@@ -5,6 +5,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 
@@ -165,7 +166,7 @@ router.delete('/tasks/:id', taskPermission, authorize('Administrador', 'Gerente'
   } catch (error) { next(error); }
 });
 
-router.get('/tickets', permit('chamados'), async (req, res, next) => {
+router.get('/tickets', permit('chamados'), feature('chamados'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT c.id, c.data, c.titulo, c.texto, c.status, c.respondido, c.empresa,
@@ -176,7 +177,7 @@ router.get('/tickets', permit('chamados'), async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['titulo', 'texto'], statusField: 'status', dateField: 'data', defaultSort: 'data' }));
   } catch (error) { next(error); }
 });
-router.get('/tickets/:id', permit('chamados'), async (req, res, next) => {
+router.get('/tickets/:id', permit('chamados'), feature('chamados'), async (req, res, next) => {
   try {
     const ticketId = id.parse(req.params.id);
     const [tickets] = await pool.execute('SELECT id, data, titulo, texto, status, respondido, empresa FROM chamados WHERE id = ? AND empresa = ?', [ticketId, Number(req.auth.companyId)]);
@@ -191,7 +192,7 @@ router.get('/tickets/:id', permit('chamados'), async (req, res, next) => {
     res.json({ ...normalizeRecord(tickets[0]), replies: replies.map(normalizeRecord) });
   } catch (error) { next(error); }
 });
-router.post('/tickets', permit('chamados'), async (req, res, next) => {
+router.post('/tickets', permit('chamados'), feature('chamados'), async (req, res, next) => {
   try {
     const data = ticketSchema.parse(req.body);
     const [result] = await pool.execute(
@@ -203,7 +204,7 @@ router.post('/tickets', permit('chamados'), async (req, res, next) => {
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.patch('/tickets/:id', permit('chamados'), async (req, res, next) => {
+router.patch('/tickets/:id', permit('chamados'), feature('chamados'), async (req, res, next) => {
   try {
     const ticketId = id.parse(req.params.id);
     const data = ticketSchema.partial().parse(req.body);
@@ -215,7 +216,7 @@ router.patch('/tickets/:id', permit('chamados'), async (req, res, next) => {
     res.status(204).end();
   } catch (error) { next(error); }
 });
-router.post('/tickets/:id/replies', permit('chamados'), async (req, res, next) => {
+router.post('/tickets/:id/replies', permit('chamados'), feature('chamados'), async (req, res, next) => {
   try {
     const ticketId = id.parse(req.params.id);
     const data = replySchema.parse(req.body);

@@ -386,7 +386,7 @@ function renderContract(text, { client, company }) {
   return Object.entries(values).reduce((output, [key, value]) => output.split(key).join(value), text);
 }
 
-router.get('/contracts', permit('listar_contratos', 'rel_contratos'), async (req, res, next) => {
+router.get('/contracts', permit('listar_contratos', 'rel_contratos'), feature('contratos'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT c.id, c.cliente, c.modelo_id, c.titulo, c.status, c.inicio, c.fim, c.valor,
@@ -400,7 +400,7 @@ router.get('/contracts', permit('listar_contratos', 'rel_contratos'), async (req
     res.json(listResponse(rows, req.query, { searchFields: ['titulo', 'cliente_nome', 'modelo_nome'], statusField: 'status', defaultSort: 'criado_em' }));
   } catch (error) { next(error); }
 });
-router.get('/contracts/:id', permit('listar_contratos', 'rel_contratos'), async (req, res, next) => {
+router.get('/contracts/:id', permit('listar_contratos', 'rel_contratos'), feature('contratos'), async (req, res, next) => {
   try {
     const contractId = id.parse(req.params.id);
     const [rows] = await pool.execute(
@@ -416,7 +416,7 @@ router.get('/contracts/:id', permit('listar_contratos', 'rel_contratos'), async 
     res.json(normalizeRecord(rows[0]));
   } catch (error) { next(error); }
 });
-router.post('/contracts', permit('rel_contratos'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
+router.post('/contracts', permit('rel_contratos'), feature('contratos'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
   try {
     const data = contractSchema.parse(req.body);
     const [clients] = await pool.execute('SELECT nome, cpf, endereco, numero, cidade, estado FROM clientes WHERE id = ? AND empresa = ?', [data.clientId, Number(req.auth.companyId)]);
@@ -440,7 +440,7 @@ router.post('/contracts', permit('rel_contratos'), authorize('Administrador', 'G
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.patch('/contracts/:id', permit('rel_contratos'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
+router.patch('/contracts/:id', permit('rel_contratos'), feature('contratos'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
   try {
     const contractId = id.parse(req.params.id);
     const data = contractSchema.partial().parse(req.body);
@@ -457,7 +457,7 @@ router.patch('/contracts/:id', permit('rel_contratos'), authorize('Administrador
   } catch (error) { next(error); }
 });
 
-router.get('/commissions', permit('comissoes', 'minhas_comissoes'), async (req, res, next) => {
+router.get('/commissions', permit('comissoes', 'minhas_comissoes'), feature('comissoes'), async (req, res, next) => {
   try {
     const onlyOwn = req.auth.role !== 'Administrador' && req.auth.role !== 'Gerente';
     const params = [Number(req.auth.companyId)];
@@ -477,7 +477,7 @@ router.get('/commissions', permit('comissoes', 'minhas_comissoes'), async (req, 
     res.json(listResponse(rows, req.query, { searchFields: ['funcionario_nome', 'tipo'], statusField: 'pago', dateField: 'data', defaultSort: 'data' }));
   } catch (error) { next(error); }
 });
-router.patch('/commissions/:id/pay', permit('comissoes'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+router.patch('/commissions/:id/pay', permit('comissoes'), feature('comissoes'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const itemId = z.coerce.number().int().positive().parse(req.params.id);
     const paid = z.object({ pago: z.enum(['Sim', 'Não']).default('Sim') }).parse(req.body).pago;
