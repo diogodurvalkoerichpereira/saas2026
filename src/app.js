@@ -2,6 +2,10 @@ const cors = require('cors');
 const express = require('express');
 const helmet = require('helmet');
 const path = require('node:path');
+const { z } = require('zod');
+const { errorMap } = require('./config/zod-pt');
+// Mensagens de validação em português para toda a aplicação (evita os textos padrão em inglês).
+z.setErrorMap(errorMap);
 const { env } = require('./config/env');
 const { errorHandler, notFound } = require('./middlewares/error-handler');
 const healthRoutes = require('./modules/health/health.routes');
