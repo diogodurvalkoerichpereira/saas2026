@@ -176,6 +176,25 @@ async function cancelScheduled(companyId, db = pool) {
   await db.execute('UPDATE empresas SET plano_agendado = NULL, plano_agendado_em = NULL WHERE id = ?', [companyId]);
 }
 
+// Aplica o downgrade agendado de UMA empresa, se a data já chegou. Chamado no login para o
+// agendamento valer mesmo com os jobs desligados (JOBS_ENABLED=false) — sem isso, a troca ficaria
+// pendente indefinidamente. Silencioso: nunca derruba o login.
+async function applyScheduledDowngradeFor(companyId, db = pool) {
+  try {
+    const [rows] = await db.execute(
+      'SELECT plano_agendado FROM empresas WHERE id = ? AND plano_agendado IS NOT NULL AND plano_agendado_em <= CURRENT_DATE LIMIT 1',
+      [companyId]
+    );
+    if (!rows[0]) return false;
+    await applyUpgrade({ companyId, planId: rows[0].plano_agendado, db });
+    await cancelScheduled(companyId, db);
+    return true;
+  } catch (error) {
+    console.error('Falha ao aplicar downgrade agendado:', String(error?.message || error).slice(0, 200));
+    return false;
+  }
+}
+
 // Aplica os downgrades cujo agendamento já chegou. Chamado pelo job diário: na data marcada, a
 // empresa passa para o plano menor e os recursos são reaplicados.
 async function applyScheduledDowngrades(db = pool) {
@@ -191,4 +210,4 @@ async function applyScheduledDowngrades(db = pool) {
   return aplicados;
 }
 
-module.exports = { listUpgrades, requestUpgrade, applyUpgrade, proRata, cancelScheduled, applyScheduledDowngrades };
+module.exports = { listUpgrades, requestUpgrade, applyUpgrade, proRata, cancelScheduled, applyScheduledDowngrades, applyScheduledDowngradeFor };

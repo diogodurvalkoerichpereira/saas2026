@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../../config/database');
 const { env } = require('../../config/env');
 const { CORE } = require('../../config/features');
+const { applyScheduledDowngradeFor } = require('../../services/plan-upgrade');
 
 async function authenticate({ email, password }) {
   const [users] = await pool.execute(
@@ -57,6 +58,9 @@ async function authenticate({ email, password }) {
     const [all] = await pool.execute('SELECT chave FROM recursos ORDER BY chave');
     resources = all.map((row) => row.chave);
   } else {
+    // Se havia downgrade agendado e a data chegou, aplica antes de montar os recursos — assim a
+    // troca vale mesmo com os jobs desligados, e o usuário já entra com o plano correto.
+    await applyScheduledDowngradeFor(user.empresa);
     const [rows] = await pool.execute(
       `SELECT r.chave FROM clientes_recursos cr JOIN recursos r ON r.id = cr.recurso
         WHERE cr.empresa = ? ORDER BY r.chave`,
