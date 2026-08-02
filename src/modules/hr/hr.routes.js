@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 
@@ -50,7 +51,7 @@ function calculateTimes(data, planned) {
   return { total: formatTime(worked), interval: formatTime(interval), overtime: formatTime(Math.max(0, worked - plannedSeconds)) };
 }
 
-router.use(authenticate, permit('rh', 'funcionarios'));
+router.use(authenticate, permit('rh', 'funcionarios'), feature('recursos_humanos'));
 
 router.get('/attendance', async (req, res, next) => {
   try {

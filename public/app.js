@@ -125,10 +125,19 @@ function showApp() {
   document.querySelector('#topbar-avatar').textContent = initial;
   document.querySelector('#profile-menu-name').textContent = user?.name || 'Usuário';
   document.querySelector('#profile-menu-role').textContent = user?.role || 'Perfil';
+  const isAdmin = user?.role === 'Administrador';
   const permissions = new Set(user?.permissions || []);
   document.querySelectorAll('[data-permission]').forEach((element) => {
     const accepted = element.dataset.permission.split(',').map((value) => value.trim());
-    element.hidden = user?.role !== 'Administrador' && !accepted.some((key) => permissions.has(key));
+    element.hidden = !isAdmin && !accepted.some((key) => permissions.has(key));
+  });
+  // Segundo filtro: recursos do PLANO da empresa. Uma guia com data-feature some quando o plano não
+  // inclui aquele recurso (o backend também recusa a API). Admin do sistema não é limitado.
+  const resources = new Set(user?.resources || []);
+  document.querySelectorAll('[data-feature]').forEach((element) => {
+    if (element.hidden) return; // já escondida por permissão
+    const needed = element.dataset.feature.split(',').map((value) => value.trim());
+    if (!isAdmin && !needed.some((key) => resources.has(key))) element.hidden = true;
   });
   hideEmptyGroups();
   applyGreeting(user);

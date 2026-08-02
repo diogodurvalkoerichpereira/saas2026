@@ -5,6 +5,7 @@ const { authenticate } = require('../../middlewares/authenticate');
 const { saasOnly } = require('../../middlewares/saas-only');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
+const { provisionCompanyResources } = require('../../services/plan-provisioning');
 
 const id = z.coerce.number().int().positive();
 const yesNo = z.enum(['Sim', 'Não']);
@@ -96,6 +97,8 @@ router.post('/companies', async (req, res, next) => {
         data.ativo ?? 'Sim', data.plano ?? null, data.url_site ?? '', data.frequencia ?? null, data.dispositivos ?? 0
       ]
     );
+    // Provisiona os recursos da empresa a partir do plano (núcleo + premium do plano).
+    await provisionCompanyResources({ companyId: result.insertId, planId: data.plano ?? null });
     await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'criar', entity: 'empresa', entityId: result.insertId });
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
@@ -109,6 +112,10 @@ router.patch('/companies/:id', async (req, res, next) => {
     if (!fields.length) return res.status(204).end();
     const [result] = await pool.execute(`UPDATE empresas SET ${fields.map((field) => `${field} = ?`).join(', ')} WHERE id = ?`, [...fields.map((field) => data[field]), companyId]);
     if (!result.affectedRows) throw Object.assign(new Error('Empresa não encontrada.'), { status: 404 });
+    // Se o plano mudou, ressincroniza os recursos liberados da empresa.
+    if (Object.prototype.hasOwnProperty.call(data, 'plano')) {
+      await provisionCompanyResources({ companyId, planId: data.plano ?? null });
+    }
     await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'editar', entity: 'empresa', entityId: companyId, details: fields });
     res.status(204).end();
   } catch (error) { next(error); }

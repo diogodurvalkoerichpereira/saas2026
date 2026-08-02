@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { configFor, listWork, getWork, createWork, updateWork, updateStatus } = require('./work.service');
@@ -49,7 +50,7 @@ const workSchema = z.object({
   items: z.array(workItemSchema).max(100).optional()
 });
 
-router.use(authenticate, permit('orcamentos', 'os'));
+router.use(authenticate, permit('orcamentos', 'os'), feature('orcamentos', 'ordens_servico'));
 router.get('/:type', async (req, res, next) => {
   try {
     const type = typeSchema.parse(req.params.type);

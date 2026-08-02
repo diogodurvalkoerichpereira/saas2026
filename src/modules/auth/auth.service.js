@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../../config/database');
 const { env } = require('../../config/env');
+const { CORE } = require('../../config/features');
 
 async function authenticate({ email, password }) {
   const [users] = await pool.execute(
@@ -47,6 +48,22 @@ async function authenticate({ email, password }) {
       [user.id]
     );
   const permissions = permissionRows.map((row) => row.chave);
+
+  // Recursos (features do plano) da empresa. Admin do sistema e painel SaaS (empresa 0) enxergam
+  // tudo; empresa comum recebe os recursos do seu plano ∪ o núcleo (via provisionamento).
+  let resources = [];
+  if (!isTenantUser || user.nivel === 'Administrador') {
+    const [all] = await pool.execute('SELECT chave FROM recursos ORDER BY chave');
+    resources = all.map((row) => row.chave);
+  } else {
+    const [rows] = await pool.execute(
+      `SELECT r.chave FROM clientes_recursos cr JOIN recursos r ON r.id = cr.recurso
+        WHERE cr.empresa = ? ORDER BY r.chave`,
+      [user.empresa]
+    );
+    resources = [...new Set([...CORE, ...rows.map((row) => row.chave)])];
+  }
+
   const mostrarRegistros = user.mostrar_registros !== 'Não';
   const payload = { sub: user.id, companyId: user.empresa || 0, role: user.nivel, kind: 'staff', mostrarRegistros };
   const token = jwt.sign(payload, env.jwtSecret, { expiresIn: '8h' });
@@ -59,7 +76,8 @@ async function authenticate({ email, password }) {
       role: user.nivel,
       companyId: user.empresa || 0,
       mostrarRegistros,
-      permissions
+      permissions,
+      resources
     }
   };
 }

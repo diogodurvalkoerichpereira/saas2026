@@ -1,0 +1,87 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { CORE, PREMIUM, isCore, effectiveResources } = require('../src/config/features');
+const { feature } = require('../src/middlewares/feature');
+
+// --- helpers de mock ---
+const mkRes = () => {
+  const res = { statusCode: null, body: null };
+  res.status = (code) => { res.statusCode = code; return res; };
+  res.json = (payload) => { res.body = payload; return res; };
+  return res;
+};
+// Banco falso: devolve linha quando a empresa tem o recurso pedido.
+const fakeDb = (empresaTemChaves = []) => ({
+  execute: async (_sql, params) => {
+    const empresa = params[0];
+    const pedidas = params.slice(1);
+    const tem = empresa && pedidas.some((c) => empresaTemChaves.includes(c));
+    return [tem ? [{ '?column?': 1 }] : []];
+  }
+});
+
+test('núcleo e premium não se sobrepõem', () => {
+  for (const chave of CORE) assert.equal(PREMIUM.has(chave), false, `${chave} não pode ser núcleo e premium`);
+  assert.equal(isCore('financeiro'), true);
+  assert.equal(isCore('marketing'), false);
+});
+
+test('recursos efetivos sempre incluem o núcleo', () => {
+  const eff = effectiveResources(['marketing']);
+  assert.equal(eff.has('marketing'), true);
+  assert.equal(eff.has('dashboard'), true); // núcleo entra mesmo sem estar na lista
+});
+
+test('feature() libera recurso de núcleo sem consultar o banco', async () => {
+  let consultou = false;
+  const db = { execute: async () => { consultou = true; return [[]]; } };
+  const mw = feature('financeiro'); // núcleo
+  const res = mkRes();
+  let chamouNext = false;
+  await mw({ auth: { role: 'Gerente', companyId: 5 }, db }, res, () => { chamouNext = true; });
+  assert.equal(chamouNext, true);
+  assert.equal(consultou, false);
+});
+
+test('feature() bloqueia recurso premium ausente com 403', async () => {
+  const mw = feature('marketing');
+  const req = { auth: { role: 'Gerente', companyId: 5 } };
+  req.execute = undefined;
+  const res = mkRes();
+  // injeta db pelo pool: usamos o middleware real, mas com um pool mockado via require cache
+  // Aqui testamos a decisão passando o db no req não é suportado; então validamos via pool mock:
+  const orig = require('../src/config/database').pool.execute;
+  require('../src/config/database').pool.execute = fakeDb([]).execute;
+  try {
+    let chamouNext = false;
+    await mw(req, res, () => { chamouNext = true; });
+    assert.equal(chamouNext, false);
+    assert.equal(res.statusCode, 403);
+    assert.equal(res.body.code, 'RECURSO_NAO_INCLUIDO');
+  } finally { require('../src/config/database').pool.execute = orig; }
+});
+
+test('feature() libera recurso premium presente', async () => {
+  const mw = feature('marketing');
+  const res = mkRes();
+  const orig = require('../src/config/database').pool.execute;
+  require('../src/config/database').pool.execute = fakeDb(['marketing']).execute;
+  try {
+    let chamouNext = false;
+    await mw({ auth: { role: 'Gerente', companyId: 5 } }, res, () => { chamouNext = true; });
+    assert.equal(chamouNext, true);
+    assert.equal(res.statusCode, null);
+  } finally { require('../src/config/database').pool.execute = orig; }
+});
+
+test('Administrador e painel SaaS (empresa 0) não são limitados por plano', async () => {
+  const mw = feature('marketing');
+  for (const auth of [{ role: 'Administrador', companyId: 5 }, { role: 'Gerente', companyId: 0 }]) {
+    const res = mkRes();
+    let chamouNext = false;
+    await mw({ auth }, res, () => { chamouNext = true; });
+    assert.equal(chamouNext, true, `${JSON.stringify(auth)} deveria passar`);
+  }
+});

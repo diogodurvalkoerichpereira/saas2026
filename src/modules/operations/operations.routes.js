@@ -4,6 +4,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 
@@ -134,7 +135,7 @@ const purchaseSchema = z.object({
   })).min(1).max(200)
 });
 
-router.get('/purchases', permit('compras'), async (req, res, next) => {
+router.get('/purchases', permit('compras'), feature('compras'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT p.id, p.fornecedor, p.data, p.vencimento, p.total, p.pago, p.status, p.observacoes,
@@ -150,7 +151,7 @@ router.get('/purchases', permit('compras'), async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['fornecedor_nome', 'observacoes', 'forma_pgto_nome'], statusField: 'status', dateField: 'data', defaultSort: 'data' }));
   } catch (error) { next(error); }
 });
-router.get('/purchases/:id', permit('compras'), async (req, res, next) => {
+router.get('/purchases/:id', permit('compras'), feature('compras'), async (req, res, next) => {
   try {
     const purchaseId = id.parse(req.params.id);
     const [rows] = await pool.execute(
@@ -172,7 +173,7 @@ router.get('/purchases/:id', permit('compras'), async (req, res, next) => {
     res.json({ ...normalizeRecord(rows[0]), items });
   } catch (error) { next(error); }
 });
-router.post('/purchases', permit('compras'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
+router.post('/purchases', permit('compras'), feature('compras'), authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
   try {
     const data = purchaseSchema.parse(req.body);
     const connection = await pool.getConnection();
@@ -220,7 +221,7 @@ router.post('/purchases', permit('compras'), authorize('Administrador', 'Gerente
     } finally { connection.release(); }
   } catch (error) { next(error); }
 });
-router.delete('/purchases/:id', permit('compras'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+router.delete('/purchases/:id', permit('compras'), feature('compras'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const purchaseId = id.parse(req.params.id);
     const { reason: cancellationReason } = z.object({ reason }).parse(req.body);
@@ -268,7 +269,7 @@ const recurringSchema = z.object({
   fine: z.number().nonnegative().optional()
 });
 
-router.get('/recurring', permit('cobrancas'), async (req, res, next) => {
+router.get('/recurring', permit('cobrancas'), feature('cobrancas_recorrentes'), async (req, res, next) => {
   try {
     const [rows] = await pool.execute(
       `SELECT c.id, c.cliente, c.valor, c.juros, c.multa, c.data, c.data_venc, c.frequencia,
@@ -283,7 +284,7 @@ router.get('/recurring', permit('cobrancas'), async (req, res, next) => {
     res.json(listResponse(rows, req.query, { searchFields: ['descricao', 'cliente_nome', 'frequencia_nome'], statusField: 'node_status', dateField: 'data_venc', defaultSort: 'data_venc' }));
   } catch (error) { next(error); }
 });
-router.post('/recurring', permit('cobrancas'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
+router.post('/recurring', permit('cobrancas'), feature('cobrancas_recorrentes'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
   try {
     const data = recurringSchema.parse(req.body);
     const [client] = await pool.execute('SELECT id FROM clientes WHERE id = ? AND empresa = ? AND ativo = \'Sim\'', [data.clientId, Number(req.auth.companyId)]);
@@ -301,7 +302,7 @@ router.post('/recurring', permit('cobrancas'), authorize('Administrador', 'Geren
     res.status(201).json({ id: result.insertId });
   } catch (error) { next(error); }
 });
-router.patch('/recurring/:id', permit('cobrancas'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
+router.patch('/recurring/:id', permit('cobrancas'), feature('cobrancas_recorrentes'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
   try {
     const recurringId = id.parse(req.params.id);
     const data = recurringSchema.partial().parse(req.body);
@@ -317,7 +318,7 @@ router.patch('/recurring/:id', permit('cobrancas'), authorize('Administrador', '
     res.status(204).end();
   } catch (error) { next(error); }
 });
-router.delete('/recurring/:id', permit('cobrancas'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
+router.delete('/recurring/:id', permit('cobrancas'), feature('cobrancas_recorrentes'), authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const recurringId = id.parse(req.params.id);
     const data = z.object({ reason }).parse(req.body);
@@ -327,7 +328,7 @@ router.delete('/recurring/:id', permit('cobrancas'), authorize('Administrador', 
     res.status(204).end();
   } catch (error) { next(error); }
 });
-router.post('/recurring/:id/generate', permit('cobrancas'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
+router.post('/recurring/:id/generate', permit('cobrancas'), feature('cobrancas_recorrentes'), authorize('Administrador', 'Gerente', 'Financeiro'), async (req, res, next) => {
   try {
     const recurringId = id.parse(req.params.id);
     const [rows] = await pool.execute(

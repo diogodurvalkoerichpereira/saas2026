@@ -1,4 +1,11 @@
-# Planos, recursos e faixas de valor — desenho
+# Planos, recursos e faixas de valor
+
+> **Status: IMPLEMENTADO.** O bloqueio real está ativo (backend + sidebar), com os 4 planos e a
+> divisão abaixo semeados. Provisionamento automático ao atribuir o plano no painel SaaS. Coberto
+> por testes (unit do middleware + browser do bloqueio na sidebar). O texto abaixo é o desenho
+> original; as decisões de preço/divisão seguem editáveis no painel SaaS.
+
+
 
 Levantamento do legado + estado atual do Node, e a proposta para **planos que dividem recursos
 com faixa de preço e bloqueio real**. (Investigado antes de implementar, como combinado.)

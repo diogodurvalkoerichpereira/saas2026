@@ -57,7 +57,7 @@
             <a href="#/frequencies" data-route="frequencies" data-permission="frequencias" title="Frequências"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#repeat"></use></svg>Frequências</a>
             <a href="#/positions" data-route="positions" data-permission="cargos" title="Cargos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#user"></use></svg>Cargos</a>
             <a href="#/account-plans" data-route="account-plans" data-permission="plano_contas" title="Plano de contas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Plano de contas</a>
-            <a href="#/coupons" data-route="coupons" data-permission="cupom" title="Cupons"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#tag"></use></svg>Cupons</a>
+            <a href="#/coupons" data-route="coupons" data-feature="cupons" data-permission="cupom" title="Cupons"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#tag"></use></svg>Cupons</a>
           </div>
         </div>
 
@@ -68,7 +68,7 @@
             <a href="#/subcategories" data-route="subcategories" data-permission="sub_categorias" title="Subcategorias"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Subcategorias</a>
             <a href="#/products" data-route="products" data-permission="produtos" title="Produtos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#box"></use></svg>Produtos</a>
             <a href="#/inventory" data-route="inventory" data-permission="estoque,entradas,saidas,produtos" title="Estoque"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#inventory"></use></svg>Estoque</a>
-            <a href="#/purchases" data-route="purchases" data-permission="compras" title="Compras"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Compras</a>
+            <a href="#/purchases" data-route="purchases" data-feature="compras" data-permission="compras" title="Compras"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#truck"></use></svg>Compras</a>
           </div>
         </div>
 
@@ -76,7 +76,7 @@
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg><span class="side-group-label">Vendas</span><span class="nav-caret" aria-hidden="true"></span></button>
           <div class="side-group-list">
             <a href="#/sales" data-route="sales" data-permission="vendas" title="Vendas / PDV"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Vendas / PDV</a>
-            <a href="#/fiscal" data-route="fiscal" data-permission="vendas" title="Notas fiscais"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Notas fiscais</a>
+            <a href="#/fiscal" data-route="fiscal" data-feature="fiscal" data-permission="vendas" title="Notas fiscais"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Notas fiscais</a>
             <a href="#/online-orders" data-route="online-orders" data-permission="vendas" title="Pedidos online"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cart"></use></svg>Pedidos online</a>
           </div>
         </div>
@@ -84,26 +84,26 @@
         <div class="side-group" data-group="orcamentos">
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg><span class="side-group-label">Orçamentos</span><span class="nav-caret" aria-hidden="true"></span></button>
           <div class="side-group-list">
-            <a href="#/quotes" data-route="quotes" data-permission="orcamentos" title="Novo orçamento"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Novo orçamento</a>
-            <a href="#/quotes?status=Pendente" data-route="quotes" data-status="Pendente" data-permission="orcamentos" title="Orçamentos pendentes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Pendentes</a>
-            <a href="#/quotes?status=Aprovado" data-route="quotes" data-status="Aprovado" data-permission="orcamentos" title="Orçamentos aprovados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aprovados</a>
-            <a href="#/quotes?status=Reprovado" data-route="quotes" data-status="Reprovado" data-permission="orcamentos" title="Orçamentos reprovados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Reprovados</a>
+            <a href="#/quotes" data-route="quotes" data-feature="orcamentos" data-permission="orcamentos" title="Novo orçamento"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Novo orçamento</a>
+            <a href="#/quotes?status=Pendente" data-route="quotes" data-feature="orcamentos" data-status="Pendente" data-permission="orcamentos" title="Orçamentos pendentes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Pendentes</a>
+            <a href="#/quotes?status=Aprovado" data-route="quotes" data-feature="orcamentos" data-status="Aprovado" data-permission="orcamentos" title="Orçamentos aprovados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aprovados</a>
+            <a href="#/quotes?status=Reprovado" data-route="quotes" data-feature="orcamentos" data-status="Reprovado" data-permission="orcamentos" title="Orçamentos reprovados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Reprovados</a>
           </div>
         </div>
 
         <div class="side-group" data-group="os">
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg><span class="side-group-label">Ordens de serviço</span><span class="nav-caret" aria-hidden="true"></span></button>
           <div class="side-group-list">
-            <a href="#/orders" data-route="orders" data-permission="os" title="Nova ordem de serviço"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg>Nova OS</a>
-            <a href="#/orders?status=Aberta" data-route="orders" data-status="Aberta" data-permission="os" title="OS abertas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Abertas</a>
-            <a href="#/orders?status=Iniciada" data-route="orders" data-status="Iniciada" data-permission="os" title="OS iniciadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Iniciadas</a>
-            <a href="#/orders?status=Em%20andamento" data-route="orders" data-status="Em andamento" data-permission="os" title="OS em andamento"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Em andamento</a>
-            <a href="#/orders?status=Aguardando%20Pe%C3%A7a" data-route="orders" data-status="Aguardando Peça" data-permission="os" title="OS aguardando peça"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aguardando peça</a>
-            <a href="#/orders?status=Aguardando%20Aprova%C3%A7%C3%A3o" data-route="orders" data-status="Aguardando Aprovação" data-permission="os" title="OS aguardando aprovação"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aguardando aprovação</a>
-            <a href="#/orders?status=Finalizada" data-route="orders" data-status="Finalizada" data-permission="os" title="OS finalizadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Finalizadas</a>
-            <a href="#/orders?status=Entregue" data-route="orders" data-status="Entregue" data-permission="os" title="OS entregues"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Entregues</a>
-            <a href="#/orders?status=Sem%20Reparo" data-route="orders" data-status="Sem Reparo" data-permission="os" title="OS sem reparo"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Sem reparo</a>
-            <a href="#/orders?status=N%C3%A3o%20Aprovada" data-route="orders" data-status="Não Aprovada" data-permission="os" title="OS não aprovadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Não aprovadas</a>
+            <a href="#/orders" data-route="orders" data-feature="ordens_servico" data-permission="os" title="Nova ordem de serviço"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard-check"></use></svg>Nova OS</a>
+            <a href="#/orders?status=Aberta" data-route="orders" data-feature="ordens_servico" data-status="Aberta" data-permission="os" title="OS abertas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Abertas</a>
+            <a href="#/orders?status=Iniciada" data-route="orders" data-feature="ordens_servico" data-status="Iniciada" data-permission="os" title="OS iniciadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Iniciadas</a>
+            <a href="#/orders?status=Em%20andamento" data-route="orders" data-feature="ordens_servico" data-status="Em andamento" data-permission="os" title="OS em andamento"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Em andamento</a>
+            <a href="#/orders?status=Aguardando%20Pe%C3%A7a" data-route="orders" data-feature="ordens_servico" data-status="Aguardando Peça" data-permission="os" title="OS aguardando peça"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aguardando peça</a>
+            <a href="#/orders?status=Aguardando%20Aprova%C3%A7%C3%A3o" data-route="orders" data-feature="ordens_servico" data-status="Aguardando Aprovação" data-permission="os" title="OS aguardando aprovação"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Aguardando aprovação</a>
+            <a href="#/orders?status=Finalizada" data-route="orders" data-feature="ordens_servico" data-status="Finalizada" data-permission="os" title="OS finalizadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Finalizadas</a>
+            <a href="#/orders?status=Entregue" data-route="orders" data-feature="ordens_servico" data-status="Entregue" data-permission="os" title="OS entregues"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Entregues</a>
+            <a href="#/orders?status=Sem%20Reparo" data-route="orders" data-feature="ordens_servico" data-status="Sem Reparo" data-permission="os" title="OS sem reparo"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Sem reparo</a>
+            <a href="#/orders?status=N%C3%A3o%20Aprovada" data-route="orders" data-feature="ordens_servico" data-status="Não Aprovada" data-permission="os" title="OS não aprovadas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#list"></use></svg>Não aprovadas</a>
           </div>
         </div>
 
@@ -111,9 +111,9 @@
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg><span class="side-group-label">Financeiro</span><span class="nav-caret" aria-hidden="true"></span></button>
           <div class="side-group-list">
             <a href="#/finance" data-route="finance" data-permission="financeiro,receber,pagar" title="Contas a pagar e receber"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>Contas a pagar e receber</a>
-            <a href="#/recurring" data-route="recurring" data-permission="cobrancas" title="Cobranças recorrentes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#repeat"></use></svg>Cobranças recorrentes</a>
+            <a href="#/recurring" data-route="recurring" data-feature="cobrancas_recorrentes" data-permission="cobrancas" title="Cobranças recorrentes"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#repeat"></use></svg>Cobranças recorrentes</a>
             <a href="#/cash" data-route="cash" data-permission="caixas" title="Caixas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#cashbox"></use></svg>Caixas</a>
-            <a href="#/commissions" data-route="commissions" data-permission="comissoes,minhas_comissoes" title="Comissões"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Comissões</a>
+            <a href="#/commissions" data-route="commissions" data-feature="comissoes" data-permission="comissoes,minhas_comissoes" title="Comissões"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Comissões</a>
             <a href="#/reports" data-route="reports" data-permission="rel_financeiro,rel_vendas,home" title="Relatórios"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>Relatórios</a>
           </div>
         </div>
@@ -121,16 +121,16 @@
         <div class="side-group" data-group="contratos">
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg><span class="side-group-label">Contratos</span><span class="nav-caret" aria-hidden="true"></span></button>
           <div class="side-group-list">
-            <a href="#/contracts" data-route="contracts" data-permission="listar_contratos,rel_contratos" title="Contratos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Contratos</a>
+            <a href="#/contracts" data-route="contracts" data-feature="contratos" data-permission="listar_contratos,rel_contratos" title="Contratos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#clipboard"></use></svg>Contratos</a>
             <a href="#/contract-templates" data-route="contract-templates" data-permission="modelos_contratos" title="Modelos de contrato"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Modelos de contrato</a>
           </div>
         </div>
 
-        <a href="#/marketing" data-route="marketing" data-permission="marketing,grupos_disparos,dispositivos" title="WhatsApp e campanhas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#megaphone"></use></svg>WhatsApp e campanhas</a>
-        <a href="#/hr" data-route="hr" data-permission="rh,funcionarios" title="Recursos humanos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Recursos humanos</a>
+        <a href="#/marketing" data-route="marketing" data-feature="marketing" data-permission="marketing,grupos_disparos,dispositivos" title="WhatsApp e campanhas"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#megaphone"></use></svg>WhatsApp e campanhas</a>
+        <a href="#/hr" data-route="hr" data-feature="recursos_humanos" data-permission="rh,funcionarios" title="Recursos humanos"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#briefcase"></use></svg>Recursos humanos</a>
         <a href="#/tasks" data-route="tasks" data-permission="tarefas,tarefas_clientes" title="Tarefas / Agenda"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#calendar"></use></svg>Tarefas / Agenda</a>
         <a href="#/notes" data-route="notes" data-permission="anotacoes,home" title="Anotações"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#file-text"></use></svg>Anotações</a>
-        <a href="#/tickets" data-route="tickets" data-permission="chamados" title="Chamados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>Chamados</a>
+        <a href="#/tickets" data-route="tickets" data-feature="chamados" data-permission="chamados" title="Chamados"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>Chamados</a>
 
         <div class="side-group" data-group="sistema">
           <button type="button" class="side-group-toggle"><svg class="nav-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg><span class="side-group-label">Site e sistema</span><span class="nav-caret" aria-hidden="true"></span></button>

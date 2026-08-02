@@ -5,6 +5,7 @@ const { env } = require('../../config/env');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { processDueDispatches } = require('../../jobs/marketing.job');
@@ -36,7 +37,7 @@ function phone(value) {
   return digits.startsWith('55') ? digits : `55${digits}`;
 }
 
-router.use(authenticate, permit('marketing', 'grupos_disparos', 'dispositivos'));
+router.use(authenticate, permit('marketing', 'grupos_disparos', 'dispositivos'), feature('marketing'));
 
 // Situação da integração DESTA empresa: qual provedor escolheu e se já tem token.
 router.get('/status', async (req, res, next) => {

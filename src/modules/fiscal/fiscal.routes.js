@@ -7,6 +7,7 @@ const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
 const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
+const { feature } = require('../../middlewares/feature');
 const { audit } = require('../../services/audit.service');
 const { getFiscalConfig, publicFiscalConfig, upsertFiscalConfig, saveCertificate, getDocument, listDocuments, emitNfseFromSale, emitNfeFromSale } = require('./fiscal.service');
 
@@ -28,7 +29,7 @@ const configSchema = z.object({
   }).optional()
 });
 
-router.use(authenticate, permit('vendas'));
+router.use(authenticate, permit('vendas'), feature('fiscal'));
 
 // GET /config junta a configuração fiscal (sem segredos) com os dados fiscais do emitente
 // (tabela empresas), para preencher o formulário da aba Configuração.
