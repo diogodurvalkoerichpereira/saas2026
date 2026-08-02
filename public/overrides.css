@@ -111,7 +111,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px 16px;
   margin: 0 0 14px;
   padding: 12px 15px;
   border: 1px solid var(--line);
@@ -681,17 +682,6 @@ input:focus,
     flex-shrink: 0;
   }
 
-  /* "Alterar senha" e "Sair" viram apenas ícone no celular */
-  #change-password,
-  #logout {
-    gap: 0;
-    padding: 0;
-    width: 38px;
-    height: 38px;
-    font-size: 0;
-    justify-content: center;
-  }
-
   /* trava qualquer rolagem horizontal residual da área de trabalho */
   .workspace {
     overflow-x: hidden;
@@ -699,9 +689,7 @@ input:focus,
 }
 
 @media (max-width: 430px) {
-  .icon-button,
-  #change-password,
-  #logout {
+  .icon-button {
     width: 34px;
     height: 34px;
   }
