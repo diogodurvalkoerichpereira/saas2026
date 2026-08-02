@@ -121,13 +121,32 @@ async function editResources(type, id) {
   // Os premium são a escolha real: o que você marca é o que a empresa recebe e o usuário vê.
   const premium = result.items.filter((item) => item.nucleo !== 'Sim');
   const nucleo = result.items.filter((item) => item.nucleo === 'Sim');
-  const row = (item, locked) => `<label><input type="checkbox" name="resourceIds" value="${item.id}" ${item.selecionado === 'Sim' || locked ? 'checked' : ''} ${locked ? 'disabled' : ''}> ${esc(item.nome)} ${locked ? '<small class="muted">núcleo · sempre incluído</small>' : `<small class="muted">${esc(item.origem || 'premium')}</small>`}</label>`;
+  const row = (item, locked) => `<label class="res-item" data-name="${esc(item.nome.toLowerCase())}"><input type="checkbox" name="resourceIds" value="${item.id}" ${item.selecionado === 'Sim' || locked ? 'checked' : ''} ${locked ? 'disabled' : ''}> <span>${esc(item.nome)}</span> ${locked ? '<small class="muted">sempre incluído</small>' : `<small class="muted">${esc(item.origem || 'premium')}</small>`}</label>`;
   document.querySelector('#admin-modal-body').innerHTML = `
-    <p class="muted" style="margin:0 0 8px">Marque os recursos <strong>premium</strong> deste plano. O que você escolher é exatamente o que a empresa recebe e o usuário passa a ver.</p>
-    <div class="field">${premium.map((item) => row(item, false)).join('')}</div>
-    <p class="muted" style="margin:14px 0 6px"><strong>Núcleo</strong> — incluído em todos os planos</p>
-    <div class="field" style="opacity:.7">${nucleo.map((item) => row(item, true)).join('')}</div>`;
-  modalForm.onsubmit = async (event) => { event.preventDefault(); const ids = [...modalForm.querySelectorAll('[name="resourceIds"]:not(:disabled):checked')].map((input) => Number(input.value)); try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: { resourceIds: ids } }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; } };
+    <p class="muted" style="margin:0 0 10px">Marque os recursos deste ${type === 'plans' ? 'plano' : 'cliente'}. O que você escolher é exatamente o que a empresa recebe e o usuário passa a ver.</p>
+    <div class="res-toolbar">
+      <input type="search" class="res-search" placeholder="Buscar recurso…" aria-label="Buscar recurso">
+      <span class="res-count" data-res-count></span>
+      <button type="button" class="button ghost small" data-res-all>Marcar todos</button>
+      <button type="button" class="button ghost small" data-res-none>Limpar</button>
+    </div>
+    <div class="res-list">${premium.map((item) => row(item, false)).join('')}</div>
+    ${nucleo.length ? `<p class="muted res-core-title"><strong>Núcleo</strong> — incluído em qualquer plano</p>
+    <div class="res-list res-core">${nucleo.map((item) => row(item, true)).join('')}</div>` : ''}`;
+
+  const body = document.querySelector('#admin-modal-body');
+  const boxes = () => [...body.querySelectorAll('[name="resourceIds"]:not(:disabled)')];
+  const refresh = () => { body.querySelector('[data-res-count]').textContent = `${boxes().filter((b) => b.checked).length} de ${boxes().length} marcados`; };
+  refresh();
+  body.addEventListener('change', refresh);
+  body.querySelector('[data-res-all]').addEventListener('click', () => { boxes().forEach((b) => { b.checked = true; }); refresh(); });
+  body.querySelector('[data-res-none]').addEventListener('click', () => { boxes().forEach((b) => { b.checked = false; }); refresh(); });
+  body.querySelector('.res-search').addEventListener('input', (event) => {
+    const term = event.target.value.trim().toLowerCase();
+    body.querySelectorAll('.res-item').forEach((item) => { item.hidden = Boolean(term) && !item.dataset.name.includes(term); });
+  });
+
+  modalForm.onsubmit = async (event) => { event.preventDefault(); const ids = boxes().filter((b) => b.checked).map((b) => Number(b.value)); try { await api(`/api/admin/${type}/${id}/resources`, { method: 'PUT', body: { resourceIds: ids } }); modal.close(); } catch (error) { document.querySelector('#admin-modal-error').textContent = error.message; } };
   modal.showModal();
 }
 

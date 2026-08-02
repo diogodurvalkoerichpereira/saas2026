@@ -27,3 +27,18 @@ input:focus,.field input:focus,.field select:focus,.field textarea:focus,.toolba
 
 /* Rodapé da sidebar do admin: evita botões truncados/sobrepostos */
 .side footer{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+
+/* Editor de recursos do plano/empresa (painel SaaS) */
+.res-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.res-search { flex: 1; min-width: 170px; padding: 9px 11px; border: 1px solid var(--line, #dce7e2); border-radius: 9px; font: inherit; }
+.res-count { font-size: .8rem; color: var(--muted, #5f726b); font-weight: 700; white-space: nowrap; }
+.res-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 2px 14px; max-height: 44vh; overflow: auto;
+  border: 1px solid var(--line, #dce7e2); border-radius: 10px; padding: 10px 12px;
+}
+.res-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: .88rem; cursor: pointer; }
+.res-item span { flex: 1; }
+.res-item small { font-size: .7rem; opacity: .7; }
+.res-core-title { margin: 14px 0 6px; }
+.res-core { opacity: .7; }

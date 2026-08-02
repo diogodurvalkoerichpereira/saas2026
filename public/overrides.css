@@ -885,3 +885,29 @@ input:focus,
 .upgrade-items li::before { content: "✓"; color: var(--brand); font-weight: 800; }
 .upgrade-diff { margin: 4px 0 0; font-size: .84rem; }
 .upgrade-card .button { margin-top: auto; }
+
+/* Tela de permissões do usuário: agrupada, com busca e ações em massa */
+.perm-note { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff8e6; color: #7a5c00; font-size: .84rem; }
+.perm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.perm-search { flex: 1; min-width: 180px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit; }
+.perm-count { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.perm-groups { display: grid; gap: 12px; max-height: 52vh; overflow: auto; padding-right: 4px; }
+.perm-group { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
+.perm-group > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; background: #f4f8f6; border-bottom: 1px solid var(--line);
+}
+.perm-group > header strong { font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; color: #35564b; }
+.perm-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 10px; padding: 10px 12px; }
+.perm-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: .87rem; cursor: pointer; }
+.perm-item:hover span { color: var(--brand); }
+
+/* Editor de recursos do plano (painel SaaS) */
+.res-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.res-search { flex: 1; min-width: 170px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit; }
+.res-count { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.res-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 12px; max-height: 40vh; overflow: auto; }
+.res-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: .88rem; cursor: pointer; }
+.res-item small { margin-left: auto; font-size: .72rem; }
+.res-core-title { margin: 14px 0 6px; }
+.res-core { opacity: .65; }

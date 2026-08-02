@@ -264,19 +264,89 @@ function printLabels(html) {
   setTimeout(() => frame.remove(), 1000);
 }
 
+// Nomes dos grupos do catálogo de acessos (coluna `grupo`), para a tela não ser uma lista solta.
+const PERMISSION_GROUPS = {
+  1: 'Pessoas', 2: 'Produtos e estoque', 3: 'Financeiro', 4: 'Vendas e serviços',
+  5: 'Recursos humanos', 6: 'Contratos', 7: 'Tarefas e atendimento', 8: 'Marketing', 9: 'Sistema'
+};
+
 async function openPermissions(user) {
   const [options, selected] = await Promise.all([api('/api/users/permissions/options'), api(`/api/users/${user.id}/permissions`)]);
   const dialog = document.querySelector('#app-modal');
   const form = document.querySelector('#modal-form');
+  const chosen = new Set(selected);
   document.querySelector('#modal-title').textContent = `Permissões de ${user.nome}`;
   document.querySelector('#modal-eyebrow').textContent = 'Controle de acesso';
-  document.querySelector('#modal-body').innerHTML = `<div class="modal-grid">${options.map((option) => `<label class="field"><span><input type="checkbox" name="permissionIds" value="${option.id}" ${selected.includes(option.id) ? 'checked' : ''}> ${escapeHtml(option.nome)}</span></label>`).join('')}</div>`;
+
+  // Agrupa por área e ordena os grupos pelo nome.
+  const groups = new Map();
+  for (const option of options) {
+    const label = PERMISSION_GROUPS[option.grupo] || 'Outros';
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(option);
+  }
+  const ordered = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+
+  const isAdmin = user.nivel === 'Administrador';
+  document.querySelector('#modal-body').innerHTML = `
+    ${isAdmin ? '<p class="perm-note">Este usuário é <strong>Administrador</strong> e já enxerga todos os módulos permitidos pelo plano — as marcações abaixo servem se o perfil for alterado depois.</p>' : ''}
+    <div class="perm-toolbar">
+      <input type="search" class="perm-search" placeholder="Buscar permissão…" aria-label="Buscar permissão">
+      <span class="perm-count" data-perm-count></span>
+      <button type="button" class="button ghost small" data-perm-all>Marcar todas</button>
+      <button type="button" class="button ghost small" data-perm-none>Limpar</button>
+    </div>
+    <div class="perm-groups">${ordered.map(([label, items]) => `
+      <section class="perm-group" data-group>
+        <header>
+          <strong>${escapeHtml(label)}</strong>
+          <button type="button" class="button ghost small" data-group-toggle>Alternar</button>
+        </header>
+        <div class="perm-items">${items.map((option) => `
+          <label class="perm-item" data-name="${escapeHtml(option.nome.toLowerCase())}">
+            <input type="checkbox" name="permissionIds" value="${option.id}" ${chosen.has(option.id) ? 'checked' : ''}>
+            <span>${escapeHtml(option.nome)}</span>
+          </label>`).join('')}</div>
+      </section>`).join('')}</div>`;
   document.querySelector('#modal-error').textContent = '';
   document.querySelector('#modal-submit-label').textContent = 'Salvar';
+
+  const body = document.querySelector('#modal-body');
+  const boxes = () => [...body.querySelectorAll('[name=permissionIds]')];
+  const refreshCount = () => {
+    const total = boxes().length;
+    const marked = boxes().filter((b) => b.checked).length;
+    body.querySelector('[data-perm-count]').textContent = `${marked} de ${total} marcadas`;
+  };
+  refreshCount();
+  body.addEventListener('change', refreshCount);
+  body.querySelector('[data-perm-all]').addEventListener('click', () => { boxes().forEach((b) => { b.checked = true; }); refreshCount(); });
+  body.querySelector('[data-perm-none]').addEventListener('click', () => { boxes().forEach((b) => { b.checked = false; }); refreshCount(); });
+  body.querySelectorAll('[data-group-toggle]').forEach((button) => button.addEventListener('click', () => {
+    const group = button.closest('[data-group]');
+    const items = [...group.querySelectorAll('[name=permissionIds]')];
+    const marcarTodos = items.some((b) => !b.checked);
+    items.forEach((b) => { b.checked = marcarTodos; });
+    refreshCount();
+  }));
+  // Busca: esconde os itens que não casam e os grupos que ficaram vazios.
+  body.querySelector('.perm-search').addEventListener('input', (event) => {
+    const term = event.target.value.trim().toLowerCase();
+    body.querySelectorAll('[data-group]').forEach((group) => {
+      let visiveis = 0;
+      group.querySelectorAll('.perm-item').forEach((item) => {
+        const casa = !term || item.dataset.name.includes(term);
+        item.hidden = !casa;
+        if (casa) visiveis += 1;
+      });
+      group.hidden = visiveis === 0;
+    });
+  });
+
   const handler = async (event) => {
     event.preventDefault();
     try {
-      const permissionIds = [...form.querySelectorAll('[name=permissionIds]:checked')].map((input) => Number(input.value));
+      const permissionIds = boxes().filter((b) => b.checked).map((b) => Number(b.value));
       await api(`/api/users/${user.id}/permissions`, { method: 'PUT', body: { permissionIds } });
       dialog.close();
       toast('Permissões atualizadas.');
