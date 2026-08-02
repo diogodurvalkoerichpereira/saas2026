@@ -178,7 +178,12 @@ const siteFields = [
   { name: 'link_rodape', label: 'Link do botão final (#plans para rolar até os planos)', full: true },
   { name: 'descricao_rodape', label: 'Texto da chamada final', type: 'textarea' }
 ];
-const siteTabs = { content: 'Conteúdo', features: 'Recursos', faqs: 'Perguntas' };
+const siteTabs = { content: 'Conteúdo', images: 'Imagens', features: 'Recursos', faqs: 'Perguntas' };
+const siteImages = [
+  { slot: 'logo', coluna: 'logo', label: 'Logo do topo', ajuda: 'Aparece acima da chamada. PNG com fundo transparente fica melhor.' },
+  { slot: 'fundo', coluna: 'fundo_topo', label: 'Fundo do topo', ajuda: 'Imagem de fundo do bloco da chamada, no computador. Uma camada escura entra por cima para o texto continuar legível.' },
+  { slot: 'fundo-mobile', coluna: 'fundo_topo_mobile', label: 'Fundo do topo (celular)', ajuda: 'Opcional. Sem esta, o celular usa a imagem do computador.' }
+];
 const siteCruds = {
   features: {
     path: '/api/admin/site/features', singular: 'card de recurso',
@@ -201,6 +206,63 @@ const siteCruds = {
   }
 };
 
+// Envia o arquivo como corpo binário puro, com o tipo no header — o mesmo formato que o upload de
+// imagem de produto usa, para não precisar de multipart nem de dependência nova.
+async function uploadSiteImage(slot, file) {
+  const response = await fetch(`/api/admin/site/image/${slot}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/octet-stream', 'x-file-type': file.type, authorization: `Bearer ${current.token}` },
+    body: file
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'Não foi possível enviar a imagem.');
+  return payload;
+}
+
+async function renderSiteImages(intro, tabs) {
+  const site = await api('/api/admin/site');
+  const cartao = (img) => {
+    const arquivo = site[img.coluna];
+    return `<div class="img-slot">
+      <strong>${esc(img.label)}</strong>
+      <small class="muted">${esc(img.ajuda)}</small>
+      <div class="img-preview">${arquivo ? `<img src="/api/media/site/${encodeURIComponent(arquivo)}" alt="${esc(img.label)}">` : '<span class="muted">Nenhuma imagem enviada</span>'}</div>
+      <div class="actions">
+        <label class="button ghost small">Enviar imagem<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${img.slot}" hidden></label>
+        ${arquivo ? `<button class="button danger small" data-drop="${img.slot}">Remover</button>` : ''}
+      </div>
+    </div>`;
+  };
+  root.innerHTML = `${intro}${tabs}<section class="panel">
+    <div class="img-grid">${siteImages.map(cartao).join('')}</div>
+    <label class="field img-toggle">Exibir a logo no topo
+      <select data-logo-topo>
+        <option value="Sim" ${site.logo_topo !== 'Não' ? 'selected' : ''}>Sim</option>
+        <option value="Não" ${site.logo_topo === 'Não' ? 'selected' : ''}>Não</option>
+      </select>
+      <small class="muted">Esconde a logo sem apagar o arquivo enviado.</small>
+    </label>
+    <p class="error" data-img-error></p></section>`;
+
+  const erro = root.querySelector('[data-img-error]');
+  root.querySelectorAll('[data-upload]').forEach((input) => input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    erro.textContent = '';
+    try { await uploadSiteImage(input.dataset.upload, file); await render(); }
+    catch (error) { erro.textContent = error.message; }
+  }));
+  root.querySelectorAll('[data-drop]').forEach((button) => button.addEventListener('click', async () => {
+    if (!confirm('Remover esta imagem da página de planos?')) return;
+    try { await api(`/api/admin/site/image/${button.dataset.drop}`, { method: 'DELETE' }); await render(); }
+    catch (error) { erro.textContent = error.message; }
+  }));
+  root.querySelector('[data-logo-topo]').addEventListener('change', async (event) => {
+    try { await api('/api/admin/site', { method: 'PUT', body: { logo_topo: event.target.value } }); }
+    catch (error) { erro.textContent = error.message; }
+  });
+}
+
 async function renderSite() {
   const tab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') || 'content';
   const tabs = `<div class="split-tabs">${Object.entries(siteTabs).map(([key, label]) => `<a class="${tab === key ? 'active' : ''}" href="#/site?tab=${key}">${label}</a>`).join('')}</div>`;
@@ -219,6 +281,8 @@ async function renderSite() {
     }));
     return;
   }
+
+  if (tab === 'images') return renderSiteImages(intro, tabs);
 
   const config = siteCruds[tab];
   const result = await api(`${config.path}?pageSize=100`);

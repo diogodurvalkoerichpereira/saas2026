@@ -18,4 +18,13 @@ router.get('/catalog/:companyId/:filename', (req, res) => {
   });
 });
 
+// Logo e fundos da landing de planos (empresa 0). São imagens de página pública por definição —
+// qualquer visitante as vê no navegador antes de existir qualquer sessão.
+router.get('/site/:filename', (req, res) => {
+  if (!safeName.test(req.params.filename)) return res.status(404).end();
+  res.sendFile(path.join(uploadRoot, '0', 'site', req.params.filename), (error) => {
+    if (error && !res.headersSent) res.status(404).end();
+  });
+});
+
 module.exports = router;

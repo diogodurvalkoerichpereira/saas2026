@@ -1,4 +1,8 @@
-const router = require('express').Router();
+const express = require('express');
+const path = require('node:path');
+const fs = require('node:fs/promises');
+const { randomUUID } = require('node:crypto');
+const router = express.Router();
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { authenticate } = require('../../middlewares/authenticate');
@@ -402,6 +406,50 @@ function registerSiteCrud(path, { table, schema, entity, orderBy }) {
 
 registerSiteCrud('/site/features', { table: 'recursos_site', schema: siteFeatureSchema, entity: 'site_recurso', orderBy: 'posicao_recurso, id' });
 registerSiteCrud('/site/faqs', { table: 'perguntas_site', schema: siteFaqSchema, entity: 'site_pergunta', orderBy: 'posicao_pergunta, id' });
+
+// Logo e imagens de fundo da landing (legado: `site.logo`, `fundo_topo`, `fundo_topo_mobile`, com
+// upload em sas/paginas/site.php). Guarda em uploads/0/site/<uuid> e grava só o nome na coluna;
+// quem exibe é a rota pública /api/media/site (um <img> não manda header de autenticação).
+const siteImageColumns = { logo: 'logo', fundo: 'fundo_topo', 'fundo-mobile': 'fundo_topo_mobile' };
+const siteImageExtensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
+const siteUploadFolder = path.resolve(__dirname, '..', '..', '..', 'uploads', '0', 'site');
+
+router.post('/site/image/:slot', express.raw({ type: 'application/octet-stream', limit: '6mb' }), async (req, res, next) => {
+  try {
+    const column = siteImageColumns[req.params.slot];
+    if (!column) throw Object.assign(new Error('Imagem desconhecida.'), { status: 400 });
+    const mimeType = String(req.headers['x-file-type'] || '').toLowerCase();
+    if (!siteImageExtensions[mimeType]) throw Object.assign(new Error('Envie uma imagem JPEG, PNG ou WebP.'), { status: 415 });
+    if (!Buffer.isBuffer(req.body) || !req.body.length) throw Object.assign(new Error('A imagem está vazia.'), { status: 400 });
+
+    const [rows] = await pool.execute(`SELECT ${column} AS atual FROM site WHERE empresa = 0 ORDER BY id DESC LIMIT 1`);
+    await fs.mkdir(siteUploadFolder, { recursive: true });
+    const storedName = `${randomUUID()}${siteImageExtensions[mimeType]}`;
+    await fs.writeFile(path.join(siteUploadFolder, storedName), req.body, { flag: 'wx' });
+    await pool.execute(
+      `INSERT INTO site (empresa, ${column}) VALUES (0, ?)
+       ON CONFLICT (empresa) DO UPDATE SET ${column} = EXCLUDED.${column}`,
+      [storedName]
+    );
+    // Só apaga a anterior depois que a nova está gravada — se algo falhar antes, a landing continua
+    // com a imagem que já funcionava.
+    if (rows[0]?.atual) await fs.unlink(path.join(siteUploadFolder, rows[0].atual)).catch(() => {});
+    await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'imagem', entity: 'site_saas', entityId: 0, details: { slot: req.params.slot } });
+    res.status(201).json({ [column]: storedName });
+  } catch (error) { next(error); }
+});
+
+router.delete('/site/image/:slot', async (req, res, next) => {
+  try {
+    const column = siteImageColumns[req.params.slot];
+    if (!column) throw Object.assign(new Error('Imagem desconhecida.'), { status: 400 });
+    const [rows] = await pool.execute(`SELECT ${column} AS atual FROM site WHERE empresa = 0 ORDER BY id DESC LIMIT 1`);
+    await pool.execute(`UPDATE site SET ${column} = NULL WHERE empresa = 0`);
+    if (rows[0]?.atual) await fs.unlink(path.join(siteUploadFolder, rows[0].atual)).catch(() => {});
+    await audit(pool, { companyId: 0, userId: Number(req.auth.sub), action: 'excluir', entity: 'site_saas', entityId: 0, details: { slot: req.params.slot } });
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
 
 router.get('/billing', async (req, res, next) => {
   try {

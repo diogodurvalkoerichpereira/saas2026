@@ -111,7 +111,8 @@ router.get('/landing', async (_req, res, next) => {
   try {
     const [[siteRows], [features], [faqs], [configRows]] = await Promise.all([
       pool.execute(
-        `SELECT titulo, subtitulo, botao1, botao2, botao3, item1, item2, item3, logo, logo_topo,
+        `SELECT titulo, subtitulo, botao1, botao2, botao3, item1, item2, item3,
+                logo, logo_topo, fundo_topo, fundo_topo_mobile,
                 titulo_recursos, titulo_perguntas, titulo_rodape, descricao_rodape, botao_rodape, link_rodape
            FROM site WHERE empresa = 0 ORDER BY id DESC LIMIT 1`
       ),

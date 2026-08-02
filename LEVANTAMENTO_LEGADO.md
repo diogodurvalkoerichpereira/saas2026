@@ -212,8 +212,19 @@ pergunta exigia deploy. As colunas `item1/2/3`, `logo`, `logo_topo`, `fundo_topo
 existiam na tabela `site`, e a empresa 0 não tinha linha em `config` — o legado criava essa linha
 sozinho na primeira execução (`conexao.php:65`). Corrigido em `db/migrations/013_site_saas.sql`,
 que também semeia o conteúdo inicial com exatamente o texto que estava no HTML, para o visual não
-mudar no deploy. O que ainda não foi portado: **logo e imagem de fundo** do topo (as colunas
-existem, falta a tela de upload) — hoje a landing usa a marca textual.
+mudar no deploy.
+
+**Logo e imagens de fundo** (aba Imagens do painel) fecham a lista: `logo`, `fundo_topo` e
+`fundo_topo_mobile`, com o mesmo interruptor `logo_topo` do legado, que esconde a logo sem apagar o
+arquivo. O upload manda o binário cru com o tipo no header (igual ao da foto de produto — sem
+multipart nem dependência nova), guarda em `uploads/0/site/<uuid>` e grava só o nome na coluna;
+quem exibe é `/api/media/site/:arquivo`, pública porque um `<img>` não manda header de autenticação.
+A imagem anterior só é apagada **depois** que a nova está gravada, para uma falha no meio não deixar
+a landing sem imagem. Sobre foto, entra uma camada escura no bloco do topo e o texto vira branco —
+inclusive os botões de contorno, que sumiriam em verde sobre fundo escuro.
+
+> **No deploy:** `uploads/` precisa de volume persistente (`/app/uploads` no Coolify). Sem ele a
+> logo e os fundos somem a cada deploy, junto com anexos e certificados.
 
 **Erro corrigido junto:** a faixa "Todos os planos incluem" prometia Vendas/PDV, Estoque,
 Financeiro, Clientes, Relatórios, Usuários e Chamados em *qualquer* plano. Isso deixou de ser

@@ -100,6 +100,58 @@ test('as características do plano são editadas no painel e aparecem no card', 
   await ctx.dispose();
 });
 
+// PNG 1x1 verde, o menor arquivo válido — o teste é do fluxo, não da imagem.
+const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+
+test('logo e fundo enviados no painel aparecem no topo da landing', async ({ page }) => {
+  const { ctx, headers } = await saas();
+  const enviar = (slot) => ctx.post(`/api/admin/site/image/${slot}`, {
+    headers: { ...headers, 'content-type': 'application/octet-stream', 'x-file-type': 'image/png' },
+    data: PNG_1X1
+  });
+
+  const logo = await (await enviar('logo')).json();
+  await enviar('fundo');
+  expect(logo.logo, 'o upload devolve o nome do arquivo gravado').toMatch(/\.png$/);
+
+  await page.goto('/planos.html');
+  await expect(page.locator('#hero-logo')).toBeVisible();
+  // A imagem precisa de fato carregar: um nome gravado sem arquivo servível seria um <img> quebrado.
+  expect(await page.locator('#hero-logo').evaluate((n) => n.complete && n.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('.hero')).toHaveClass(/has-bg/);
+
+  // O interruptor esconde a logo sem apagar o arquivo enviado.
+  await ctx.put('/api/admin/site', { headers, data: { logo_topo: 'Não' } });
+  await page.reload();
+  await expect(page.locator('#hero-logo')).toBeHidden();
+  await expect(page.locator('.hero')).toHaveClass(/has-bg/);
+
+  // Remover no painel tira da página.
+  await ctx.put('/api/admin/site', { headers, data: { logo_topo: 'Sim' } });
+  await ctx.delete('/api/admin/site/image/logo', { headers });
+  await ctx.delete('/api/admin/site/image/fundo', { headers });
+  await page.reload();
+  await expect(page.locator('#hero-logo')).toBeHidden();
+  await expect(page.locator('.hero')).not.toHaveClass(/has-bg/);
+  await ctx.dispose();
+});
+
+test('o upload de imagem do site recusa arquivo que não é imagem', async () => {
+  const { ctx, headers } = await saas();
+  const resposta = await ctx.post('/api/admin/site/image/logo', {
+    headers: { ...headers, 'content-type': 'application/octet-stream', 'x-file-type': 'application/pdf' },
+    data: Buffer.from('%PDF-1.4 nao sou imagem')
+  });
+  expect(resposta.status()).toBe(415);
+  // E o slot inventado também não passa.
+  const slot = await ctx.post('/api/admin/site/image/qualquer', {
+    headers: { ...headers, 'content-type': 'application/octet-stream', 'x-file-type': 'image/png' },
+    data: PNG_1X1
+  });
+  expect(slot.status()).toBe(400);
+  await ctx.dispose();
+});
+
 test('seção sem conteúdo não vira título solto na página', async ({ page }) => {
   const { ctx, headers } = await saas();
   // Admin apaga a chamada final inteira: a faixa some, em vez de aparecer vazia.

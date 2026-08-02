@@ -59,3 +59,13 @@ input:focus,.field input:focus,.field select:focus,.field textarea:focus,.toolba
 .site-preview dd { margin: 4px 0 0; font-size: .9rem; }
 .panel > .button.primary { margin: 0 18px 18px; }
 .panel > .page-header { padding: 14px 18px 0; margin-bottom: 12px; }
+
+/* Imagens da landing (logo e fundos) */
+.img-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; padding: 18px; }
+.img-slot { display: grid; gap: 6px; align-content: start; padding: 14px; border: 1px solid var(--line, #dce5e1); border-radius: 12px; }
+.img-slot small { font-size: .78rem; }
+.img-preview { display: grid; place-items: center; min-height: 130px; margin: 4px 0 8px; padding: 10px; border-radius: 10px; background: #f2f7f5; background-image: linear-gradient(45deg, #e6eeea 25%, transparent 25%, transparent 75%, #e6eeea 75%), linear-gradient(45deg, #e6eeea 25%, transparent 25%, transparent 75%, #e6eeea 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.img-preview img { max-width: 100%; max-height: 160px; object-fit: contain; }
+.img-slot label.button { cursor: pointer; }
+.img-toggle { max-width: 320px; margin: 0 18px 18px; }
+[data-img-error] { padding: 0 18px 14px; }

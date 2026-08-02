@@ -86,8 +86,28 @@ function fill(selector, text, { html = false } = {}) {
   return true;
 }
 
+const mediaUrl = (arquivo) => `/api/media/site/${encodeURIComponent(arquivo)}`;
+
+// Logo do topo e imagem de fundo, enviadas no painel. `logo_topo = 'Não'` esconde a logo sem
+// precisar apagar o arquivo — é o mesmo interruptor do legado.
+function renderImagens(site) {
+  const logo = document.querySelector('#hero-logo');
+  const mostrarLogo = site.logo && site.logo_topo !== 'Não';
+  logo.hidden = !mostrarLogo;
+  if (mostrarLogo) logo.src = mediaUrl(site.logo);
+
+  const hero = document.querySelector('.hero');
+  hero.classList.toggle('has-bg', Boolean(site.fundo_topo || site.fundo_topo_mobile));
+  // O fundo do celular só existe se o admin enviou um; senão o de desktop serve os dois.
+  const desktop = site.fundo_topo || site.fundo_topo_mobile;
+  const mobile = site.fundo_topo_mobile || site.fundo_topo;
+  if (desktop) document.documentElement.style.setProperty('--hero-bg', `url("${mediaUrl(desktop)}")`);
+  if (mobile) document.documentElement.style.setProperty('--hero-bg-mobile', `url("${mediaUrl(mobile)}")`);
+}
+
 // Cabeçalho, selos e botões — todos escritos no painel SaaS em Site e planos.
 function renderHero(site) {
+  renderImagens(site);
   fill('#hero-title', site.titulo || 'Escolha o plano ideal para o seu negócio');
   fill('#hero-subtitle', site.subtitulo);
   const selos = [site.item1, site.item2, site.item3].filter(Boolean);

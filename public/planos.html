@@ -41,6 +41,20 @@
 
     /* Hero */
     .hero { text-align: center; padding: clamp(28px, 5vw, 56px) 0 8px; }
+    #hero-logo { max-width: min(260px, 70%); max-height: 96px; margin: 0 auto 22px; display: block; object-fit: contain; }
+    /* Fundo enviado pelo painel. Sem imagem a classe não entra e o bloco fica como antes; com
+       imagem, a camada escura por cima garante que o texto continue legível sobre qualquer foto. */
+    .hero.has-bg {
+      position: relative; border-radius: 20px; overflow: hidden; padding: clamp(34px, 5vw, 62px) clamp(18px, 4vw, 44px);
+      background-image: linear-gradient(rgba(10,26,20,.62), rgba(10,26,20,.62)), var(--hero-bg, none);
+      background-size: cover; background-position: center; color: #fff;
+    }
+    .hero.has-bg h1, .hero.has-bg p, .hero.has-bg .eyebrow { color: #fff; }
+    .hero.has-bg .trust span { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); color: #fff; }
+    /* O verde do botão "ghost" some sobre o fundo escuro — sobre imagem ele vira contorno branco. */
+    .hero.has-bg .btn.ghost { color: #fff; border-color: rgba(255,255,255,.55); }
+    .hero.has-bg .btn.ghost:hover { background: rgba(255,255,255,.14); border-color: #fff; }
+    @media (max-width: 768px) { .hero.has-bg { background-image: linear-gradient(rgba(10,26,20,.62), rgba(10,26,20,.62)), var(--hero-bg-mobile, var(--hero-bg, none)); } }
     .eyebrow { font-size: .74rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--brand-bright); margin: 0 0 12px; }
     .hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; letter-spacing: -.02em; margin: 0 auto 14px; max-width: 16ch; }
     .hero p { color: var(--muted); font-size: 1.08rem; margin: 0 auto; max-width: 52ch; }
@@ -149,6 +163,7 @@
     </header>
 
     <section class="hero">
+      <img id="hero-logo" alt="" hidden>
       <p class="eyebrow">Planos</p>
       <h1 id="hero-title">Carregando…</h1>
       <p id="hero-subtitle"></p>
