@@ -1001,6 +1001,11 @@ async function renderTutorials() {
     ], result.items)}</section>`;
 }
 
+// Limite de plano para exibição: vazio/0 = ilimitado (o backend também trata assim).
+function planLimit(value) {
+  return (value === null || value === undefined || Number(value) <= 0) ? 'Ilimitado' : number(value);
+}
+
 async function renderSubscription() {
   loading();
   const data = await api('/api/content/subscription');
@@ -1008,9 +1013,9 @@ async function renderSubscription() {
   root().innerHTML = `${pageHeader('Assinatura e limites', 'Plano atual, consumo de recursos e mensalidades administrativas.')}
     <div class="metric-grid compact-metrics">
       <div class="metric-card"><span>Plano</span><strong>${escapeHtml(c.plano_nome || 'Sem plano')}</strong><small>${money(c.plano_valor ?? c.mensalidade)}</small></div>
-      <div class="metric-card"><span>Clientes</span><strong>${number(data.usage.clientes)}</strong><small>Limite: ${number(c.limite_clientes)}</small></div>
-      <div class="metric-card"><span>Usuários</span><strong>${number(data.usage.usuarios)}</strong><small>Limite: ${number(c.limite_usuarios)}</small></div>
-      <div class="metric-card"><span>Dispositivos</span><strong>${number(data.usage.dispositivos)}</strong><small>Limite: ${number(c.limite_dispositivos)}</small></div>
+      <div class="metric-card"><span>Clientes</span><strong>${number(data.usage.clientes)}</strong><small>Limite: ${planLimit(c.limite_clientes)}</small></div>
+      <div class="metric-card"><span>Usuários</span><strong>${number(data.usage.usuarios)}</strong><small>Limite: ${planLimit(c.limite_usuarios)}</small></div>
+      <div class="metric-card"><span>Dispositivos</span><strong>${number(data.usage.dispositivos)}</strong><small>Limite: ${planLimit(c.limite_dispositivos)}</small></div>
     </div>
     <section class="panel" style="margin-bottom:14px"><div class="toolbar"><strong>Recursos habilitados</strong></div><div class="check-list" style="padding:14px">${data.resources.length ? data.resources.map((item) => `<span class="badge success">${escapeHtml(item.nome)}</span>`).join(' ') : '<p class="muted">Nenhum recurso específico cadastrado.</p>'}</div></section>
     <section class="panel"><div class="toolbar"><strong>Últimas mensalidades</strong></div>${table([

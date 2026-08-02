@@ -6,6 +6,7 @@ const { authorize } = require('../../middlewares/authorize');
 const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
+const { assertWithinPlanLimit } = require('../../services/plan-limits');
 const { listUsers, getUser, createUser, updateUser, setUserActive, changeOwnPassword, listPermissionOptions, listPermissions, replacePermissions } = require('./users.service');
 
 const userIdSchema = z.coerce.number().int().positive();
@@ -64,6 +65,7 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const data = userSchema.extend({ password: z.string().min(8).max(72) }).parse(req.body);
+    await assertWithinPlanLimit({ companyId: Number(req.auth.companyId || 0), kind: 'usuarios' });
     const id = await createUser(data, Number(req.auth.companyId || 0));
     await audit(pool, { companyId: Number(req.auth.companyId || 0), userId: Number(req.auth.sub), action: 'criar', entity: 'usuario', entityId: id });
     res.status(201).json({ id });
@@ -89,6 +91,7 @@ router.delete('/:id', authorize('Administrador', 'Gerente'), async (req, res, ne
 router.post('/:id/restore', authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const id = userIdSchema.parse(req.params.id);
+    await assertWithinPlanLimit({ companyId: Number(req.auth.companyId || 0), kind: 'usuarios' });
     await setUserActive(id, true, Number(req.auth.sub), Number(req.auth.companyId || 0));
     await audit(pool, { companyId: Number(req.auth.companyId || 0), userId: Number(req.auth.sub), action: 'reativar', entity: 'usuario', entityId: id });
     res.status(204).end();

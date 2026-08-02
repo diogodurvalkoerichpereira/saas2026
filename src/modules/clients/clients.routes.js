@@ -6,6 +6,7 @@ const { permit } = require('../../middlewares/permit');
 const { listResponse, normalizeRecord } = require('../../lib/list-response');
 const { audit } = require('../../services/audit.service');
 const { pool } = require('../../config/database');
+const { assertWithinPlanLimit } = require('../../services/plan-limits');
 const { listClients, getClient, createClient, updateClient, setClientActive } = require('./clients.service');
 
 const clientSchema = z.object({
@@ -31,6 +32,7 @@ router.get('/:id', async (req, res, next) => {
 });
 router.post('/', authorize('Administrador', 'Gerente', 'Comum'), async (req, res, next) => {
   try {
+    await assertWithinPlanLimit({ companyId: Number(req.auth.companyId), kind: 'clientes' });
     const id = await createClient(clientSchema.parse(req.body), Number(req.auth.companyId), Number(req.auth.sub));
     await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'criar', entity: 'cliente', entityId: id });
     res.status(201).json({ id });
@@ -56,6 +58,7 @@ router.delete('/:id', authorize('Administrador', 'Gerente'), async (req, res, ne
 router.post('/:id/restore', authorize('Administrador', 'Gerente'), async (req, res, next) => {
   try {
     const id = idSchema.parse(req.params.id);
+    await assertWithinPlanLimit({ companyId: Number(req.auth.companyId), kind: 'clientes' });
     await setClientActive(id, true, Number(req.auth.companyId));
     await audit(pool, { companyId: Number(req.auth.companyId), userId: Number(req.auth.sub), action: 'reativar', entity: 'cliente', entityId: id });
     res.status(204).end();

@@ -7,7 +7,7 @@
 UPDATE planos SET clientes = 500,   usuarios = 2,   dispositivos = 1  WHERE nome = 'Essencial';
 UPDATE planos SET clientes = 2000,  usuarios = 5,   dispositivos = 3  WHERE nome = 'Profissional';
 UPDATE planos SET clientes = 10000, usuarios = 15,  dispositivos = 10 WHERE nome = 'Avançado';
-UPDATE planos SET clientes = 99999, usuarios = 999, dispositivos = 99 WHERE nome = 'Enterprise';
+UPDATE planos SET clientes = 0,     usuarios = 0,   dispositivos = 0  WHERE nome = 'Enterprise'; -- 0 = ilimitado
 
 -- 2) Itens (bullets) por plano — cada plano se descreve por completo, no espírito cumulativo.
 DELETE FROM planos_itens
