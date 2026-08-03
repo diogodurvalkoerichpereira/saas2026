@@ -3,6 +3,10 @@
 ## Fluxo de Git (preferência explícita do dono do repositório)
 
 - **Sempre trabalhar e commitar direto na branch `main`.**
+- **Sempre salvar no git — commit E push — sem precisar pedir.** Ao terminar cada peça de trabalho
+  que funcione e esteja verificada, commitar e dar `git push -u origin main` na hora. Não acumular
+  trabalho pronto sem commit, não esperar o fim da conversa, não perguntar "quer que eu commite?".
+  O ambiente desta sessão é efêmero: o que não foi enviado se perde quando o contêiner é reciclado.
 - **Nunca criar branches novas** (nem `claude/*`, nem de feature) — mesmo que o fluxo padrão de tarefas automatizadas sugira uma branch dedicada.
 - **Nunca abrir Pull Request** a menos que explicitamente solicitado.
 - Se uma sessão automatizada já tiver criado/aberto uma branch antes desta instrução ser lida, mesclar (fast-forward) o resultado direto em `main` e continuar o trabalho local em `main`.
