@@ -12,6 +12,7 @@ const { audit } = require('../../services/audit.service');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { CORE } = require('../../config/features');
 const { applyUpgrade } = require('../../services/plan-upgrade');
+const { confirmarPagamento } = require('../../services/billing-confirm.service');
 
 const id = z.coerce.number().int().positive();
 const yesNo = z.enum(['Sim', 'Não']);
@@ -518,33 +519,10 @@ router.get('/billing', async (req, res, next) => {
 router.post('/billing/:id/pay', async (req, res, next) => {
   try {
     const billingId = id.parse(req.params.id);
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
-      const [rows] = await connection.execute(
-        "SELECT id, cliente, referencia, id_ref, pago FROM receber_sas WHERE id = ? LIMIT 1",
-        [billingId]
-      );
-      const conta = rows[0];
-      if (!conta) throw Object.assign(new Error('Cobrança não encontrada.'), { status: 404 });
-      if (conta.pago === 'Sim') throw Object.assign(new Error('Esta cobrança já está paga.'), { status: 409 });
-
-      await connection.execute(
-        "UPDATE receber_sas SET pago = 'Sim', data_pgto = CURRENT_DATE, usuario_pgto = ? WHERE id = ?",
-        [Number(req.auth.sub), billingId]
-      );
-
-      let upgrade = null;
-      if (conta.referencia === 'Upgrade' && conta.id_ref) {
-        upgrade = await applyUpgrade({ companyId: Number(conta.cliente), planId: Number(conta.id_ref), db: connection });
-      }
-      await audit(connection, { companyId: 0, userId: Number(req.auth.sub), action: 'pagar', entity: 'receber_sas', entityId: billingId, details: upgrade ? { upgradePara: upgrade.plano.nome } : null });
-      await connection.commit();
-      res.json({ id: billingId, upgrade: upgrade ? upgrade.plano : null });
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally { connection.release(); }
+    const resultado = await confirmarPagamento({ billingId, userId: Number(req.auth.sub), origem: 'painel' });
+    // Pelo painel, confirmar de novo é engano do operador e merece aviso; pelo webhook é rotina.
+    if (resultado.jaEstavaPaga) throw Object.assign(new Error('Esta cobrança já está paga.'), { status: 409 });
+    res.json({ id: resultado.id, upgrade: resultado.upgrade });
   } catch (error) { next(error); }
 });
 

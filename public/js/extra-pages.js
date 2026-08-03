@@ -883,6 +883,8 @@ const companySettingsFields = [
   { name: 'chave_api_asaas', label: 'Asaas · Chave da API (em branco mantém a atual)', optional: true, max: 255 },
   { name: 'access_token', label: 'Mercado Pago · Access Token (em branco mantém o atual)', optional: true, max: 255 },
   { name: 'public_key', label: 'Mercado Pago · Public Key', optional: true, max: 255 },
+  // Sem este segredo o webhook é recusado: é ele que prova que a notificação veio do provedor.
+  { name: 'webhook_pagamento', label: 'Webhook · Segredo de verificação (em branco mantém o atual)', optional: true, full: true, max: 255 },
   { name: 'dados_pagamento', label: 'Dados para pagamento manual (usado quando não há provedor)', type: 'textarea', optional: true, full: true, max: 5000 },
 
   { type: 'section', label: 'Site e página de entrada' },
@@ -927,6 +929,7 @@ async function renderSettings() {
       <div><small>Pagamento (provedor)</small><strong>${escapeHtml(paymentProviderOptions.find((option) => option.value === (settings.api_pagamento || ''))?.label || 'Nenhuma (cobrança manual)')}</strong></div>
       <div><small>Chave Asaas</small><strong>${settings.chave_api_asaas_configurado ? 'Configurada' : 'Não configurada'}</strong></div>
       <div><small>Access Token Mercado Pago</small><strong>${settings.access_token_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
+      <div><small>Webhook de pagamento</small><strong>${settings.webhook_pagamento_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
     </div></section>`;
   root().querySelector('[data-edit]').addEventListener('click', () => openForm({
     title: 'Configurações da empresa', eyebrow: 'Administração', fields: companySettingsFields, record: settings,

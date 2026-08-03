@@ -52,12 +52,14 @@ const settingsSchema = z.object({
   // Provedor de pagamento da empresa: '' = nenhuma (cobrança manual), como no legado.
   api_pagamento: z.enum(['', ...Object.keys(paymentProviders)]).optional(),
   chave_api_asaas: optional(255), access_token: optional(255),
-  public_key: optional(255), dados_pagamento: optional(5000)
+  public_key: optional(255), dados_pagamento: optional(5000),
+  // Segredo que autentica o webhook do provedor (HMAC no Mercado Pago, token no Asaas).
+  webhook_pagamento: optional(255)
 });
 
 // Segredos: cifrados em repouso, nunca devolvidos pela API — só um indicador de "configurado".
 // `public_key` não entra: a chave pública do Mercado Pago existe para aparecer no checkout.
-const SECRET_FIELDS = ['token_whatsapp', 'chave_api_asaas', 'access_token'];
+const SECRET_FIELDS = ['token_whatsapp', 'chave_api_asaas', 'access_token', 'webhook_pagamento'];
 
 router.use(authenticate);
 
@@ -71,7 +73,7 @@ router.get('/settings', permit('configuracoes', 'home'), feature('configuracoes'
               mao_obra_orc, senha_aparelho_orc, defeito_orc, avarias_orc, acessorios_orc, laudo_orc,
               mao_obra_os, senha_aparelho_os, defeito_os, avarias_os, acessorios_os, laudo_os,
               api_whatsapp, token_whatsapp, instancia_whatsapp,
-              api_pagamento, chave_api_asaas, access_token, public_key, dados_pagamento
+              api_pagamento, chave_api_asaas, access_token, public_key, dados_pagamento, webhook_pagamento
          FROM config WHERE empresa = ? ORDER BY id DESC LIMIT 1`,
       [Number(req.auth.companyId)]
     );
