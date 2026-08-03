@@ -161,6 +161,10 @@ test('ao subir para Profissional, os módulos incluídos aparecem', async ({ pag
   // Profissional inclui marketing e orçamentos (não ficam escondidos pelo plano).
   await expect(page.locator('#sidebar [data-feature="marketing"]').first()).toHaveJSProperty('hidden', false);
   await expect(page.locator('#sidebar [data-feature="orcamentos"]').first()).toHaveJSProperty('hidden', false);
-  // Mas fiscal é só Avançado+ — continua escondido.
-  await expect(page.locator('#sidebar [data-feature="fiscal"]').first()).toHaveJSProperty('hidden', true);
+  // Emissão fiscal também: o Profissional passou a incluí-la quando o plano Fiscal (R$ 99,90) foi
+  // criado abaixo dele — sem isso, subir do Fiscal para o Profissional custaria mais e entregaria
+  // menos. Ver e2e/plan-ladder.spec.js, que trava essa regra para toda a escada.
+  await expect(page.locator('#sidebar [data-feature="fiscal"]').first()).toHaveJSProperty('hidden', false);
+  // Mas contratos é só Avançado+ — continua escondido, então o bloqueio por plano segue valendo.
+  await expect(page.locator('#sidebar [data-feature="contratos"]').first()).toHaveJSProperty('hidden', true);
 });
