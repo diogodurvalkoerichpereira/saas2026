@@ -66,6 +66,13 @@
     /* `stretch` deixa os cards com a mesma altura mesmo quando um plano tem menos características —
        sem isso a fileira fica desalinhada, com os botões "Assinar" em alturas diferentes. */
     .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 34px 0 12px; align-items: stretch; }
+    /* Com 5 ou 6 planos, 4 colunas deixam uma segunda fila torta (4+2). Três colunas dividem em
+       3+3 ou 3+2, que fecham melhor. O número de planos vem do banco, então a regra segue o dado.
+       Precisa estar dentro de um min-width: como seletor de atributo tem especificidade maior que
+       as regras responsivas abaixo, sem isso ele venceria também no celular e estouraria a tela. */
+    @media (min-width: 901px) {
+      .plans-grid[data-planos="5"], .plans-grid[data-planos="6"] { grid-template-columns: repeat(3, 1fr); }
+    }
     .plan-card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px 20px;
       display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-sm); position: relative;
@@ -91,6 +98,35 @@
     /* Hero buttons (textos vindos do painel) */
     .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 22px; }
     .hero-cta a { width: auto; padding: 12px 22px; }
+
+    /* Tabela de comparação */
+    .compare { margin: 34px 0; }
+    .compare-head { text-align: center; margin-bottom: 18px; }
+    .compare-head h2 { margin: 0 0 6px; font-size: 1.35rem; }
+    .compare-head p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .compare-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .compare-table th, .compare-table td { padding: 11px 10px; text-align: center; border-bottom: 1px solid var(--line-soft); }
+    .compare-table th.rec, .compare-table td.rec {
+      text-align: left; min-width: 210px; font-weight: 600;
+      /* A coluna do recurso fica fixa: sem isso, rolar para o lado perde a referência da linha. */
+      position: sticky; left: 0; z-index: 1; background: var(--panel);
+    }
+    .compare-table thead th { position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line); }
+    .compare-table thead th.rec { z-index: 3; }
+    .compare-table thead .cp-nome { display: block; font-weight: 800; font-size: .95rem; }
+    .compare-table thead .cp-valor { display: block; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .compare-table tbody tr:last-child td { border-bottom: 0; }
+    .compare-table .cp-grupo td {
+      text-align: left; background: var(--mint); font-size: .72rem; font-weight: 800;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--brand-bright);
+    }
+    .compare-table .cp-sim { color: var(--yes); font-weight: 900; }
+    .compare-table .cp-nao { color: var(--faint); }
+    .compare-table tfoot td { font-weight: 700; font-variant-numeric: tabular-nums; border-top: 1px solid var(--line); background: var(--panel); }
+    .compare-table tfoot td.rec { font-weight: 800; }
+    .compare-cta { padding: 14px 10px 4px; }
+    .compare-cta .btn { width: auto; padding: 9px 18px; font-size: .84rem; }
 
     /* Feature cards */
     .included { margin: 34px 0; padding: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
@@ -172,6 +208,14 @@
     </section>
 
     <div class="plans-grid" id="plans"><p class="muted">Carregando planos…</p></div>
+
+    <section class="compare" id="compare-section" hidden>
+      <div class="compare-head">
+        <h2>Compare os planos recurso por recurso</h2>
+        <p>Tudo que cada plano libera. Role para o lado para ver todos os planos.</p>
+      </div>
+      <div class="compare-scroll"><table class="compare-table" id="compare-table"></table></div>
+    </section>
 
     <section class="included" id="features-section" hidden>
       <h2 id="features-title"></h2>

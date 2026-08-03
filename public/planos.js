@@ -125,6 +125,46 @@ function renderHero(site) {
   cta.innerHTML = botoes.map((b) => `<a class="btn ${b.classe}" href="${esc(b.href)}">${esc(b.texto)}</a>`).join('');
 }
 
+// Tabela de comparação: cada linha é um recurso do catálogo, cada coluna um plano ativo. Os
+// recursos do núcleo aparecem marcados em todos os planos — eles não estão em planos_recursos
+// porque qualquer plano os inclui, e omiti-los faria a tabela mentir para o cliente.
+function renderCompare(plans, recursos) {
+  const section = document.querySelector('#compare-section');
+  if (plans.length < 2 || !recursos.length) { section.hidden = true; return; }
+  section.hidden = false;
+
+  const liberados = plans.map((plan) => new Set(plan.chaves || []));
+  const marca = (temRecurso) => (temRecurso
+    ? '<span class="cp-sim" role="img" aria-label="incluído">✓</span>'
+    : '<span class="cp-nao" role="img" aria-label="não incluído">–</span>');
+
+  const cabecalho = `<thead><tr><th class="rec">Recurso</th>${plans.map((plan) =>
+    `<th><span class="cp-nome">${esc(plan.nome)}</span><span class="cp-valor">${money(plan.valor)}</span></th>`).join('')}</tr></thead>`;
+
+  // Agrupa preservando a ordem em que os grupos aparecem (o backend já ordena por `posicao`).
+  const grupos = [];
+  for (const recurso of recursos) {
+    let grupo = grupos.find((g) => g.nome === recurso.grupo);
+    if (!grupo) grupos.push(grupo = { nome: recurso.grupo, itens: [] });
+    grupo.itens.push(recurso);
+  }
+
+  const corpo = `<tbody>${grupos.map((grupo) => `
+    <tr class="cp-grupo"><td colspan="${plans.length + 1}">${esc(grupo.nome)}</td></tr>
+    ${grupo.itens.map((recurso) => `<tr><td class="rec">${esc(recurso.nome)}</td>${liberados.map((chaves) =>
+      `<td>${marca(recurso.nucleo === 'Sim' || chaves.has(recurso.chave))}</td>`).join('')}</tr>`).join('')}`).join('')}</tbody>`;
+
+  const limite = (valor, unidade) => (Number(valor) > 0 ? Number(valor).toLocaleString('pt-BR') : `${unidade} ilimitados`);
+  const rodape = `<tfoot>
+    <tr><td class="rec">Usuários</td>${plans.map((p) => `<td>${esc(limite(p.usuarios, 'Usuários'))}</td>`).join('')}</tr>
+    <tr><td class="rec">Clientes</td>${plans.map((p) => `<td>${esc(limite(p.clientes, 'Clientes'))}</td>`).join('')}</tr>
+    <tr><td class="rec"></td>${plans.map((p) =>
+      `<td class="compare-cta"><button class="btn primary" data-plan="${p.id}" data-nome="${esc(p.nome)}" data-valor="${esc(p.valor)}">Assinar</button></td>`).join('')}</tr>
+  </tfoot>`;
+
+  document.querySelector('#compare-table').innerHTML = cabecalho + corpo + rodape;
+}
+
 function renderFeatures(titulo, features) {
   const section = document.querySelector('#features-section');
   if (!features.length) { section.hidden = true; return; }
@@ -170,6 +210,7 @@ function renderPlans(plans) {
   let destaque = 0;
   plans.forEach((plan, index) => { if (Number(plan.recursos || 0) > Number(plans[destaque].recursos || 0)) destaque = index; });
   if (!Number(plans[destaque].recursos || 0)) destaque = -1;
+  grid.dataset.planos = String(plans.length);
   grid.innerHTML = plans.map((plan, index) => planCard(plan, index === destaque)).join('');
 }
 
@@ -179,6 +220,7 @@ async function load() {
     const site = data.site || {};
     renderHero(site);
     renderPlans(data.plans || []);
+    renderCompare(data.plans || [], data.recursos || []);
     renderFeatures(site.titulo_recursos, data.features || []);
     renderFaqs(site.titulo_perguntas, data.faqs || []);
     renderClosing(site);
@@ -206,7 +248,9 @@ function applyBrand(config) {
   }
 }
 
-grid.addEventListener('click', (event) => {
+// Delegado no documento: os botões "Assinar" existem nos cards e também no rodapé da tabela de
+// comparação, e os dois blocos são reescritos quando a página carrega.
+document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-plan]');
   if (button) openSubscribe(button.dataset.plan, button.dataset.nome, button.dataset.valor);
 });

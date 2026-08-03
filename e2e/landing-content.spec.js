@@ -152,6 +152,61 @@ test('o upload de imagem do site recusa arquivo que não é imagem', async () =>
   await ctx.dispose();
 });
 
+test('a tabela de comparação reflete exatamente os recursos de cada plano', async ({ page }) => {
+  await page.goto('/planos.html');
+  await page.waitForSelector('.compare-table tbody tr');
+
+  const dados = await page.evaluate(() => fetch('/api/public/landing').then((r) => r.json()));
+  const colunas = await page.$$eval('.compare-table thead .cp-nome', (n) => n.map((x) => x.textContent));
+  expect(colunas, 'uma coluna por plano ativo, na ordem de preço').toEqual(dados.plans.map((p) => p.nome));
+
+  // Confere a matriz inteira contra a API: cada célula tem de bater com o que o plano libera.
+  const celulas = await page.$$eval('.compare-table tbody tr:not(.cp-grupo)', (linhas) => linhas.map((linha) => ({
+    recurso: linha.querySelector('td.rec').textContent.trim(),
+    marcas: [...linha.querySelectorAll('td')].slice(1).map((td) => td.textContent.trim())
+  })));
+  const porNome = new Map(dados.recursos.map((r) => [r.nome, r]));
+  expect(celulas.length, 'toda linha do catálogo aparece na tabela').toBe(dados.recursos.length);
+
+  for (const { recurso, marcas } of celulas) {
+    const meta = porNome.get(recurso);
+    expect(meta, `"${recurso}" precisa existir no catálogo`).toBeTruthy();
+    const esperado = dados.plans.map((plan) =>
+      (meta.nucleo === 'Sim' || (plan.chaves || []).includes(meta.chave) ? '✓' : '–'));
+    expect(marcas, `linha "${recurso}" não bate com os recursos dos planos`).toEqual(esperado);
+  }
+});
+
+test('publicar um plano no painel acrescenta a coluna na comparação', async ({ page }) => {
+  const { ctx, headers } = await saas();
+  const nome = `Comparação ${Date.now()}`;
+  const criado = await (await ctx.post('/api/admin/plans', { headers, data: { nome, valor: 9.9, ativo: 'Sim', usuarios: 1, clientes: 10 } })).json();
+  const catalogo = await (await ctx.get(`/api/admin/plans/${criado.id}/resources`, { headers })).json();
+  const clientes = catalogo.items.find((r) => r.chave === 'clientes');
+  await ctx.put(`/api/admin/plans/${criado.id}/resources`, { headers, data: { resourceIds: [clientes.id] } });
+
+  await page.goto('/planos.html');
+  await page.waitForSelector('.compare-table tbody tr');
+  // Plano mais barato de todos: entra como primeira coluna (índice 0 depois da coluna do recurso).
+  const coluna = await page.$$eval('.compare-table thead .cp-nome', (n) => n.map((x) => x.textContent));
+  expect(coluna[0]).toBe(nome);
+
+  const linhaDe = async (rotulo) => page.$$eval('.compare-table tbody tr', (linhas, r) => {
+    const linha = linhas.find((l) => l.querySelector('td.rec')?.textContent.trim() === r);
+    return [...linha.querySelectorAll('td')].slice(1).map((td) => td.textContent.trim());
+  }, rotulo);
+  expect((await linhaDe('Clientes'))[0], 'o único recurso marcado aparece incluído').toBe('✓');
+  expect((await linhaDe('Estoque'))[0], 'o que não foi marcado aparece de fora').toBe('–');
+  expect((await linhaDe('Dashboard'))[0], 'o núcleo aparece em qualquer plano').toBe('✓');
+
+  // Tirar da vitrine remove a coluna — a tabela é o banco, não uma lista escrita à mão.
+  await ctx.delete(`/api/admin/plans/${criado.id}`, { headers });
+  await page.reload();
+  await page.waitForSelector('.compare-table tbody tr');
+  expect(await page.$$eval('.compare-table thead .cp-nome', (n) => n.map((x) => x.textContent))).not.toContain(nome);
+  await ctx.dispose();
+});
+
 test('seção sem conteúdo não vira título solto na página', async ({ page }) => {
   const { ctx, headers } = await saas();
   // Admin apaga a chamada final inteira: a faixa some, em vez de aparecer vazia.

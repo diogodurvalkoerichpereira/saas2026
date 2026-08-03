@@ -1047,7 +1047,7 @@ async function renderUpgrades() {
     box.innerHTML = `${agendado}<div class="upgrade-grid">${data.plans.map((plan) => {
       const isDown = plan.tipo === 'downgrade';
       return `<article class="upgrade-card${isDown ? ' is-downgrade' : ''}">
-        <div class="upgrade-name">${escapeHtml(plan.nome)}${isDown ? '<span class="upgrade-tag">plano menor</span>' : ''}</div>
+        <div class="upgrade-name"><span class="upgrade-plan">${escapeHtml(plan.nome)}</span>${isDown ? '<span class="upgrade-tag">plano menor</span>' : ''}</div>
         <div class="upgrade-price">${money(plan.valor)}<small> /mês</small></div>
         ${plan.itens && plan.itens.length ? `<ul class="upgrade-items">${plan.itens.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
         <p class="upgrade-diff">${isDown

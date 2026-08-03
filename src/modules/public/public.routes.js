@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { companyHasFeature } = require('../../middlewares/feature');
+const { CORE } = require('../../config/features');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { normalizeRecord } = require('../../lib/list-response');
 
@@ -92,11 +93,29 @@ async function listPublicPlans() {
        FROM planos p WHERE p.ativo = 'Sim' ORDER BY p.valor ASC, p.id ASC`
   );
   const itemsByPlan = {};
+  const chavesByPlan = {};
   if (plans.length) {
-    const [items] = await pool.query('SELECT plano, nome FROM planos_itens WHERE plano IN (?) ORDER BY id', [plans.map((p) => p.id)]);
+    const ids = plans.map((p) => p.id);
+    const [items] = await pool.query('SELECT plano, nome FROM planos_itens WHERE plano IN (?) ORDER BY id', [ids]);
     for (const item of items) { (itemsByPlan[item.plano] = itemsByPlan[item.plano] || []).push(item.nome); }
+    // `chaves` alimenta a tabela de comparação: para cada plano, quais recursos ele libera.
+    const [vinculos] = await pool.query(
+      'SELECT pr.plano, r.chave FROM planos_recursos pr JOIN recursos r ON r.id = pr.recurso WHERE pr.plano IN (?)',
+      [ids]
+    );
+    for (const v of vinculos) { (chavesByPlan[v.plano] = chavesByPlan[v.plano] || []).push(v.chave); }
   }
-  return plans.map((plan) => ({ ...normalizeRecord(plan), itens: itemsByPlan[plan.id] || [] }));
+  return plans.map((plan) => ({ ...normalizeRecord(plan), itens: itemsByPlan[plan.id] || [], chaves: chavesByPlan[plan.id] || [] }));
+}
+
+// Catálogo de recursos agrupado, para a tabela de comparação da página de planos. O núcleo entra
+// marcado: são os recursos que qualquer plano inclui, mesmo sem estarem em planos_recursos.
+async function listPublicResources() {
+  const [rows] = await pool.execute(
+    `SELECT chave, nome, COALESCE(grupo, 'Outros recursos') AS grupo, COALESCE(posicao, 999) AS posicao
+       FROM recursos ORDER BY posicao, nome`
+  );
+  return rows.map((row) => ({ ...row, nucleo: CORE.has(row.chave) ? 'Sim' : 'Não' }));
 }
 
 router.get('/plans', async (_req, res, next) => {
@@ -125,7 +144,8 @@ router.get('/landing', async (_req, res, next) => {
       config: normalizeRecord(configRows[0] || {}),
       features,
       faqs,
-      plans: await listPublicPlans()
+      plans: await listPublicPlans(),
+      recursos: await listPublicResources()
     });
   } catch (error) { next(error); }
 });

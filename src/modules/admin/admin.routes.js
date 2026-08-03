@@ -41,7 +41,10 @@ const planSchema = z.object({
 });
 const resourceSchema = z.object({
   nome: z.string().trim().min(2).max(50),
-  chave: z.string().trim().regex(/^[a-z0-9_]+$/).max(50)
+  chave: z.string().trim().regex(/^[a-z0-9_]+$/).max(50),
+  // Agrupam e ordenam a tabela de comparação da página pública de planos.
+  grupo: optional(40),
+  posicao: z.number().int().min(0).max(9999).optional()
 });
 const alertSchema = z.object({
   titulo: z.string().trim().min(2).max(100),
@@ -178,7 +181,8 @@ function registerSimpleCrud(path, { table, schema, entity, orderBy = 'id DESC' }
 }
 
 registerSimpleCrud('/plans', { table: 'planos', schema: planSchema, entity: 'plano', orderBy: 'nome' });
-registerSimpleCrud('/resources', { table: 'recursos', schema: resourceSchema, entity: 'recurso', orderBy: 'nome' });
+// Ordenado como a tabela de comparação pública mostra, para o painel espelhar o que o cliente vê.
+registerSimpleCrud('/resources', { table: 'recursos', schema: resourceSchema, entity: 'recurso', orderBy: 'posicao, nome' });
 registerSimpleCrud('/alerts', { table: 'alertas_sas', schema: alertSchema, entity: 'alerta_sas', orderBy: 'data DESC, id DESC' });
 
 // Exclusão de plano. O legado apagava direto (excluir.php) e deixava `empresas.plano` apontando

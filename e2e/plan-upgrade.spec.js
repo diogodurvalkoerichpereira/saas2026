@@ -31,12 +31,19 @@ test('lojista vê só planos superiores com a diferença proporcional e solicita
   await page.goto('/#/subscription');
   const cards = page.locator('.upgrade-card');
   await expect(cards.first()).toBeVisible();
-  // No Essencial (o mais barato), os 3 superiores aparecem — e o próprio Essencial, não.
-  // Confere pelos NOMES dos planos (os itens de um card podem citar "Tudo do Essencial").
-  await expect(cards).toHaveCount(3);
-  expect(await page.locator('.upgrade-name').allTextContents()).toEqual(['Profissional', 'Avançado', 'Enterprise']);
-  // Cada card mostra quanto custa migrar hoje.
-  await expect(cards.first()).toContainText('Para migrar hoje');
+  // No Essencial aparecem os 4 planos acima dele e o Micro abaixo (como downgrade) — o próprio
+  // Essencial, não. Confere pelos NOMES (os itens de um card podem citar "Tudo do Essencial").
+  await expect(cards).toHaveCount(5);
+  expect(await page.locator('.upgrade-plan').allTextContents())
+    .toEqual(['Micro', 'Fiscal', 'Profissional', 'Avançado', 'Enterprise']);
+  // Pelo NOME do plano: filtrar o card por texto pega vizinhos (o card do Avançado cita "fiscal"
+  // entre as características, e o do Profissional cita "Essencial").
+  const cardDoPlano = (nome) => cards.filter({ has: page.locator('.upgrade-plan', { hasText: new RegExp(`^${nome}$`) }) });
+  // O plano mais barato vem marcado como descida, para ninguém confundir com upgrade.
+  await expect(cardDoPlano('Micro').locator('.upgrade-tag')).toHaveText('plano menor');
+  // Card de subida mostra quanto custa migrar hoje; o de descida diz que não há cobrança agora.
+  await expect(cardDoPlano('Fiscal')).toContainText('Para migrar hoje');
+  await expect(cardDoPlano('Micro')).toContainText('Sem cobrança agora');
 });
 
 test('upgrade só troca o plano depois do pagamento confirmado', async () => {

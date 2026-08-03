@@ -76,8 +76,13 @@ const configs = {
   },
   resources: {
     title: 'Recursos', path: '/api/admin/resources', singular: 'recurso',
-    columns: [{ key: 'nome', label: 'Recurso' }, { key: 'chave', label: 'Chave' }],
-    fields: [{ name: 'nome', label: 'Nome', required: true }, { name: 'chave', label: 'Chave técnica', required: true }]
+    columns: [{ key: 'posicao', label: 'Ordem' }, { key: 'grupo', label: 'Grupo' }, { key: 'nome', label: 'Recurso' }, { key: 'chave', label: 'Chave' }],
+    fields: [
+      { name: 'nome', label: 'Nome', required: true }, { name: 'chave', label: 'Chave técnica', required: true },
+      // Onde o recurso aparece na tabela de comparação de /planos.html.
+      { name: 'grupo', label: 'Grupo na comparação' },
+      { name: 'posicao', label: 'Ordem', type: 'number', min: 0, numeric: true }
+    ]
   },
   alerts: {
     title: 'Alertas', path: '/api/admin/alerts', singular: 'alerta',
