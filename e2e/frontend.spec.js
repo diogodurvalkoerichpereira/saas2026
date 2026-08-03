@@ -1,5 +1,8 @@
 const { test, expect } = require('@playwright/test');
 const { Client } = require('pg');
+// O processo do Playwright não é o da aplicação: sem isto, DATABASE_USER e companhia ficam vazios
+// e a limpeza do final falha ao conectar ("no PostgreSQL user name specified").
+require('dotenv').config();
 
 const testClientName = `Cliente Browser ${Date.now()}`;
 
@@ -181,8 +184,12 @@ test('loja pública carrega catálogo e carrinho sem pagamento externo', async (
 });
 
 test.afterAll(async () => {
-  // Guarda de segurança: só limpa no banco de teste local, nunca em outro destino.
-  if (process.env.DATABASE_PORT !== '5433' || !['127.0.0.1', 'localhost'].includes(process.env.DATABASE_HOST)) return;
+  // A segurança aqui vem do ALVO, não do endereço do banco: só apaga a linha cujo nome é
+  // exatamente o gerado por esta execução (`Cliente Browser <timestamp>`), que nenhum dado real
+  // teria. A versão anterior exigia a porta 5433 do docker-compose e, em qualquer ambiente com
+  // outra porta, pulava a limpeza calada — os clientes de teste iam se acumulando até empurrarem
+  // o registro recém-criado para fora da primeira página e quebrarem o teste.
+  if (!/^Cliente Browser \d+$/.test(testClientName)) return;
   const connection = new Client({
     host: process.env.DATABASE_HOST,
     port: Number(process.env.DATABASE_PORT),

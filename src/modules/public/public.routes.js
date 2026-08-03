@@ -5,6 +5,8 @@ const { z } = require('zod');
 const { pool } = require('../../config/database');
 const { companyHasFeature } = require('../../middlewares/feature');
 const { CORE } = require('../../config/features');
+const { abrirCobranca, checkoutProvider } = require('../../services/checkout.service');
+const { metodoOptions } = require('../../integrations/payment.providers');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { normalizeRecord } = require('../../lib/list-response');
 
@@ -12,18 +14,33 @@ const slugify = (value) => String(value || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'empresa';
 
-// Rate limit simples por IP para a auto-assinatura pública (endpoint não autenticado).
+// Rate limit por IP para a auto-assinatura pública (endpoint não autenticado). O middleware apenas
+// VERIFICA o limite; quem consome uma tentativa é `registrarAssinatura`, chamada só quando o
+// cadastro chega à criação da empresa. Assim errar o CPF ou esquecer o CEP sai de graça — do
+// contrário cinco erros de digitação impediriam a pessoa de assinar, que é o oposto do que o limite
+// deveria proteger. O que ele barra é criação de conta em massa, e essa continua contando.
+const JANELA_ASSINATURA = 15 * 60 * 1000;
+const LIMITE_ASSINATURA = 5;
 const subscribeAttempts = new Map();
+
 function subscribeRateLimit(req, res, next) {
-  const now = Date.now();
   const entry = subscribeAttempts.get(req.ip);
-  if (!entry || now - entry.first >= 15 * 60 * 1000) { subscribeAttempts.set(req.ip, { count: 1, first: now }); return next(); }
-  if (entry.count >= 5) return res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' });
-  entry.count += 1;
+  if (entry && Date.now() - entry.first < JANELA_ASSINATURA && entry.count >= LIMITE_ASSINATURA) {
+    return res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' });
+  }
   next();
 }
 
+// Consome uma tentativa. Chamada só quando o cadastro passou pela validação e vai virar empresa.
+function registrarAssinatura(req) {
+  const now = Date.now();
+  const entry = subscribeAttempts.get(req.ip);
+  if (!entry || now - entry.first >= JANELA_ASSINATURA) subscribeAttempts.set(req.ip, { count: 1, first: now });
+  else entry.count += 1;
+}
+
 const companyIdSchema = z.coerce.number().int().positive();
+const optional = (max) => z.string().trim().max(max).optional();
 const checkoutSchema = z.object({
   customer: z.object({
     name: z.string().trim().min(2).max(50),
@@ -145,7 +162,10 @@ router.get('/landing', async (_req, res, next) => {
       features,
       faqs,
       plans: await listPublicPlans(),
-      recursos: await listPublicResources()
+      recursos: await listPublicResources(),
+      // Sem provedor configurado o checkout não pergunta forma de pagamento — seria coletar dado
+      // para uma cobrança que ninguém vai abrir. O nome do provedor não vai para o navegador.
+      pagamento: { habilitado: Boolean(await checkoutProvider()), metodos: metodoOptions }
     });
   } catch (error) { next(error); }
 });
@@ -153,13 +173,34 @@ router.get('/landing', async (_req, res, next) => {
 // Auto-assinatura pública: cria a empresa, o usuário administrador, copia os recursos do
 // plano e gera a primeira mensalidade (pendente). Não processa pagamento — isso depende de
 // gateway/credenciais e é tratado à parte.
+// Dados do checkout. Tudo aqui é cadastro que o provedor exige para abrir uma cobrança no Brasil —
+// NÃO há campo de cartão. Número e CVV são digitados na página do provedor, nunca no nosso
+// servidor (ver a nota no topo de src/services/checkout.service.js).
 const subscribeSchema = z.object({
   planId: z.coerce.number().int().positive(),
   nome: z.string().trim().min(2).max(50),
   email: z.string().trim().email().max(50),
   telefone: z.string().trim().min(8).max(20),
   tipo_pessoa: z.enum(['Física', 'Jurídica']).optional(),
-  cpf: z.string().trim().max(25).optional()
+  // Obrigatório: nenhum provedor abre cobrança no Brasil sem CPF ou CNPJ.
+  cpf: z.string().trim().min(11).max(25),
+  forma_pagamento: z.enum(['pix', 'boleto', 'cartao']).default('pix'),
+  cep: optional(20), endereco: optional(100), numero: optional(10),
+  bairro: optional(50), cidade: optional(50), estado: optional(50)
+}).superRefine((data, ctx) => {
+  const digitos = String(data.cpf).replace(/\D/g, '');
+  if (digitos.length !== 11 && digitos.length !== 14) {
+    ctx.addIssue({ code: 'custom', path: ['cpf'], message: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos).' });
+  }
+  // Boleto e cartão precisam de endereço de cobrança; Pix não. Cobrar CEP de quem escolheu Pix
+  // seria fricção sem motivo no plano mais barato, que é justo onde ela custa mais caro.
+  if (data.forma_pagamento === 'pix') return;
+  if (!String(data.cep || '').trim()) {
+    ctx.addIssue({ code: 'custom', path: ['cep'], message: 'CEP é obrigatório para boleto e cartão.' });
+  }
+  if (!String(data.numero || '').trim()) {
+    ctx.addIssue({ code: 'custom', path: ['numero'], message: 'Número do endereço é obrigatório para boleto e cartão.' });
+  }
 });
 router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
   let conn;
@@ -172,16 +213,23 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
     if (dups[0]) throw Object.assign(new Error('E-mail ou telefone já cadastrado. Faça login para continuar.'), { status: 409 });
 
     const mensalidade = Number(plan.valor) || 0;
-    const today = new Date().toISOString().slice(0, 10);
     const dataTeste = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    // A cobrança vence no fim do teste, não hoje. A página promete "3 dias grátis, a cobrança
+    // acontece após o período de teste" — com vencimento hoje a primeira mensalidade já nascia
+    // vencida no dia seguinte, contradizendo a oferta.
+    const vencimento = dataTeste;
     const tempPassword = randomBytes(9).toString('base64url');
     const senhaCrip = await bcrypt.hash(tempPassword, 12);
 
+    // Daqui para baixo o cadastro vira empresa: agora sim conta para o limite por IP.
+    registrarAssinatura(req);
     await conn.beginTransaction();
     const [emp] = await conn.execute(
-      `INSERT INTO empresas (nome, cpf, telefone, email, tipo_pessoa, data_cad, dias_teste, mensalidade, ativo, data_teste, plano, frequencia, dispositivos)
-       VALUES (?, ?, ?, ?, ?, CURRENT_DATE, 3, ?, 'Sim', ?, ?, 30, ?)`,
-      [data.nome, data.cpf ?? null, data.telefone, data.email, data.tipo_pessoa ?? 'Jurídica', mensalidade, dataTeste, plan.id, plan.dispositivos ?? null]
+      `INSERT INTO empresas (nome, cpf, telefone, email, tipo_pessoa, data_cad, dias_teste, mensalidade, ativo, data_teste, plano, frequencia, dispositivos,
+                             cep, endereco, numero, bairro, cidade, estado)
+       VALUES (?, ?, ?, ?, ?, CURRENT_DATE, 3, ?, 'Sim', ?, ?, 30, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.nome, data.cpf, data.telefone, data.email, data.tipo_pessoa ?? 'Jurídica', mensalidade, dataTeste, plan.id, plan.dispositivos ?? null,
+       data.cep ?? null, data.endereco ?? null, data.numero ?? null, data.bairro ?? null, data.cidade ?? null, data.estado ?? null]
     );
     const companyId = emp.insertId;
     const slug = `${slugify(data.nome)}-${companyId}`;
@@ -196,9 +244,9 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
     let receivableId = null;
     if (mensalidade > 0) {
       const [rec] = await conn.execute(
-        `INSERT INTO receber_sas (descricao, cliente, valor, subtotal, vencimento, data_lanc, referencia, pago, empresa)
-         VALUES ('Mensalidade SAAS', ?, ?, ?, ?, CURRENT_DATE, 'Mensalidade', 'Não', 0)`,
-        [companyId, mensalidade, mensalidade, today]
+        `INSERT INTO receber_sas (descricao, cliente, valor, subtotal, vencimento, data_lanc, referencia, pago, empresa, cobranca_metodo)
+         VALUES ('Mensalidade SAAS', ?, ?, ?, ?, CURRENT_DATE, 'Mensalidade', 'Não', 0, ?)`,
+        [companyId, mensalidade, mensalidade, vencimento, data.forma_pagamento]
       );
       receivableId = rec.insertId;
     }
@@ -206,12 +254,32 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
       [companyId, data.nome, data.email, data.telefone, slug]);
     await conn.commit();
 
+    // A cobrança é aberta DEPOIS do commit, de propósito: a conta do cliente não pode deixar de
+    // existir porque o gateway está fora do ar. Sem provedor configurado (ou se ele falhar), a
+    // mensalidade fica pendente para cobrança manual — o comportamento que já existia.
+    let pagamento = null;
+    if (receivableId) {
+      pagamento = await abrirCobranca({
+        empresa: { id: companyId, nome: data.nome, email: data.email, telefone: data.telefone, cpf: data.cpf,
+                   cep: data.cep, endereco: data.endereco, numero: data.numero, bairro: data.bairro },
+        plano: plan,
+        mensalidade,
+        vencimento,
+        metodo: data.forma_pagamento
+      });
+      if (pagamento) {
+        await pool.execute('UPDATE receber_sas SET cobranca_id = ?, cobranca_url = ?, cobranca_metodo = ? WHERE id = ?',
+          [pagamento.id, pagamento.url, pagamento.metodo, receivableId]);
+      }
+    }
+
     res.status(201).json({
       companyId,
       email: data.email,
       tempPassword,
       plano: { nome: plan.nome, valor: mensalidade },
-      mensalidade: mensalidade > 0 ? { id: receivableId, valor: mensalidade, vencimento: today } : null
+      mensalidade: mensalidade > 0 ? { id: receivableId, valor: mensalidade, vencimento } : null,
+      pagamento
     });
   } catch (error) {
     if (conn) { try { await conn.rollback(); } catch { /* ignore */ } }

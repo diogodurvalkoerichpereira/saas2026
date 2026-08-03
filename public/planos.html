@@ -180,8 +180,25 @@
     .sub-field input, .sub-field select { padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--panel); color: var(--ink); }
     .sub-field input:focus, .sub-field select:focus { outline: none; border-color: var(--brand-bright); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-bright) 22%, transparent); }
     .form-error { color: #d0483b; font-size: .82rem; min-height: 1em; margin: 2px 0 10px; }
-    .secure { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .78rem; }
-    .secure::before { content: "🔒"; }
+    .secure { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+    .secure::before { content: "🔒"; flex: 0 0 auto; }
+    .sub-sep { margin: 18px 0 10px; font-size: .74rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--brand-bright); }
+    .sub-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+    .sub-row:has(.sub-uf) { grid-template-columns: 1fr 1fr .5fr; }
+    .sub-metodos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .sub-metodo {
+      display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+      padding: 11px 8px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel);
+      font-size: .84rem; font-weight: 700; text-align: center;
+    }
+    /* Visualmente oculto, mas ainda no fluxo de foco: com width/height zerados alguns navegadores
+       tiram o elemento da ordem de tabulação, e aí a escolha só funcionaria com mouse. */
+    .sub-metodo input { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; pointer-events: none; }
+    .sub-metodo:has(input:checked) { border-color: var(--brand-bright); background: var(--mint); color: var(--brand-bright); }
+    .sub-metodo:has(input:focus-visible) { outline: 2px solid var(--brand-bright); outline-offset: 2px; }
+    .pay-box { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--mint); }
+    .pay-box .pay-metodo { font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-bright); }
+    @media (max-width: 420px) { .sub-metodos { grid-template-columns: 1fr; } .sub-row, .sub-row:has(.sub-uf) { grid-template-columns: 1fr; } }
     .sub-success { display: grid; gap: 12px; }
     .cred-box { padding: 14px 16px; border: 1px dashed var(--line); border-radius: 12px; background: var(--mint); display: grid; gap: 7px; font-size: .9rem; }
     .cred-box code { font-weight: 800; }
@@ -251,10 +268,28 @@
         <div class="sub-field"><label>E-mail</label><input name="email" type="email" maxlength="50" required></div>
         <div class="sub-field"><label>Telefone / WhatsApp</label><input name="telefone" maxlength="20" required placeholder="(00) 00000-0000"></div>
         <div class="sub-field"><label>Tipo de pessoa</label><select name="tipo_pessoa"><option value="Jurídica">Jurídica</option><option value="Física">Física</option></select></div>
-        <div class="sub-field"><label>CPF / CNPJ (opcional)</label><input name="cpf" maxlength="25"></div>
+        <div class="sub-field"><label>CPF / CNPJ</label><input name="cpf" maxlength="25" required inputmode="numeric" placeholder="Somente números"></div>
+
+        <div id="sub-pagamento" hidden>
+          <p class="sub-sep">Forma de pagamento</p>
+          <div class="sub-metodos" id="sub-metodos" role="radiogroup" aria-label="Forma de pagamento"></div>
+          <div id="sub-endereco" hidden>
+            <div class="sub-row">
+              <div class="sub-field"><label>CEP</label><input name="cep" maxlength="9" inputmode="numeric" autocomplete="postal-code"></div>
+              <div class="sub-field"><label>Número</label><input name="numero" maxlength="10"></div>
+            </div>
+            <div class="sub-field"><label>Endereço</label><input name="endereco" maxlength="100" autocomplete="street-address"></div>
+            <div class="sub-row">
+              <div class="sub-field"><label>Bairro</label><input name="bairro" maxlength="50"></div>
+              <div class="sub-field"><label>Cidade</label><input name="cidade" maxlength="50"></div>
+              <div class="sub-field sub-uf"><label>UF</label><input name="estado" maxlength="2"></div>
+            </div>
+          </div>
+        </div>
+
         <p class="form-error" id="sub-error" role="alert"></p>
         <button class="btn primary" type="submit">Criar minha conta</button>
-        <p class="secure">Pagamento e dados protegidos. A cobrança só acontece após o período de teste.</p>
+        <p class="secure" id="sub-secure">Não pedimos dados de cartão aqui — o pagamento é feito na página segura do nosso provedor. A cobrança só acontece após o período de teste.</p>
       </form>
       <div class="sub-success" id="sub-success" hidden></div>
     </div>

@@ -1020,7 +1020,11 @@ async function renderSubscription() {
     <section class="panel" style="margin-bottom:14px"><div class="toolbar"><strong>Recursos habilitados</strong></div><div class="check-list" style="padding:14px">${data.resources.length ? data.resources.map((item) => `<span class="badge success">${escapeHtml(item.nome)}</span>`).join(' ') : '<p class="muted">Nenhum recurso específico cadastrado.</p>'}</div></section>
     <section class="panel" id="upgrade-panel" style="margin-bottom:14px"><div class="toolbar"><strong>Trocar de plano</strong></div><div id="upgrade-body" style="padding:14px"><p class="muted">Carregando planos…</p></div></section>
     <section class="panel"><div class="toolbar"><strong>Últimas mensalidades</strong></div>${table([
-      { key: 'descricao', label: 'Descrição' }, { key: 'vencimento', label: 'Vencimento', render: date }, { key: 'subtotal', label: 'Valor', render: money }, { key: 'pago', label: 'Pago', render: badge }, { key: 'data_pgto', label: 'Pagamento', render: date }
+      { key: 'descricao', label: 'Descrição' }, { key: 'vencimento', label: 'Vencimento', render: date }, { key: 'subtotal', label: 'Valor', render: money }, { key: 'pago', label: 'Pago', render: badge }, { key: 'data_pgto', label: 'Pagamento', render: date },
+      // Cobrança em aberto com link do provedor: dá para pagar daqui, sem refazer o cadastro.
+      { key: 'cobranca_url', label: 'Cobrança', render: (url, row) => (url && row.pago !== 'Sim'
+        ? `<a class="button ghost small" href="${escapeHtml(url)}" target="_blank" rel="noopener">Pagar</a>`
+        : '<span class="muted">—</span>') }
     ], data.billing)}</section>`;
   await renderUpgrades();
 }

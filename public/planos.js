@@ -10,6 +10,7 @@ const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'cu
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // 0 ou vazio = ilimitado (mesma regra do backend).
 const limitLabel = (value, unit) => (Number(value) > 0 ? `${value} ${unit}` : `${unit} ilimitados`);
+const dataBR = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : '');
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -35,6 +36,31 @@ function planCard(plan, destaque) {
   </article>`;
 }
 
+// Formas de pagamento aceitas, vindas do backend. Sem provedor configurado o bloco nem aparece:
+// perguntar "Pix ou boleto?" sem ter como abrir a cobrança é pedir dado à toa.
+let pagamentoConfig = { habilitado: false, metodos: [] };
+
+function montarMetodos() {
+  const bloco = document.querySelector('#sub-pagamento');
+  bloco.hidden = !pagamentoConfig.habilitado || !pagamentoConfig.metodos.length;
+  if (bloco.hidden) return;
+  document.querySelector('#sub-metodos').innerHTML = pagamentoConfig.metodos.map((metodo, index) =>
+    `<label class="sub-metodo"><input type="radio" name="forma_pagamento" value="${esc(metodo.value)}" ${index === 0 ? 'checked' : ''}>${esc(metodo.label)}</label>`
+  ).join('');
+  atualizarEndereco();
+}
+
+// Pix não precisa de endereço de cobrança; boleto e cartão precisam. Mostrar os campos só quando
+// fazem falta evita fricção no plano de entrada, que é onde ela custa mais caro.
+function atualizarEndereco() {
+  const escolhido = form.querySelector('[name=forma_pagamento]:checked')?.value || 'pix';
+  const endereco = document.querySelector('#sub-endereco');
+  const precisa = escolhido !== 'pix';
+  endereco.hidden = !precisa;
+  endereco.querySelector('[name=cep]').required = precisa;
+  endereco.querySelector('[name=numero]').required = precisa;
+}
+
 function openSubscribe(planId, nome, valor) {
   form.hidden = false;
   successBox.hidden = true;
@@ -44,6 +70,7 @@ function openSubscribe(planId, nome, valor) {
   document.querySelector('#sub-plan-id').value = planId;
   planName.textContent = nome;
   planPrice.innerHTML = `${money(valor)}<small> /mês</small>`;
+  montarMetodos();
   modal.showModal();
 }
 
@@ -65,8 +92,15 @@ async function submitSubscribe(event) {
         <div>Senha temporária: <code>${esc(result.tempPassword)}</code></div>
         <div class="muted">Guarde esta senha e troque no primeiro acesso.</div>
       </div>
-      ${result.mensalidade ? `<p class="muted">Primeira mensalidade de <strong>${money(result.mensalidade.valor)}</strong> gerada como pendente — a cobrança acontece após o período de teste.</p>` : ''}
-      <a class="btn primary" href="/index.html?acesso=1">Acessar o sistema</a>`;
+      ${result.pagamento?.url ? `
+        <div class="pay-box">
+          <span class="pay-metodo">Pagamento por ${esc(result.pagamento.metodoLabel || 'link seguro')}</span>
+          <p class="muted" style="margin:0">Primeira mensalidade de <strong>${money(result.mensalidade.valor)}</strong>, com vencimento em ${dataBR(result.mensalidade.vencimento)}. Você paga na página segura do nosso provedor.</p>
+          <a class="btn primary" href="${esc(result.pagamento.url)}" target="_blank" rel="noopener">Pagar agora</a>
+        </div>
+        <p class="muted" style="font-size:.84rem">O link também fica disponível dentro do sistema, em Assinatura — dá para pagar depois.</p>`
+        : result.mensalidade ? `<p class="muted">Primeira mensalidade de <strong>${money(result.mensalidade.valor)}</strong> gerada como pendente, com vencimento em ${dataBR(result.mensalidade.vencimento)} — entraremos em contato com as instruções de pagamento.</p>` : ''}
+      <a class="btn ${result.pagamento?.url ? 'ghost' : 'primary'}" href="/index.html?acesso=1">Acessar o sistema</a>`;
   } catch (error) {
     errorEl.textContent = error.message;
   } finally {
@@ -225,6 +259,7 @@ async function load() {
     renderFaqs(site.titulo_perguntas, data.faqs || []);
     renderClosing(site);
     applyBrand(data.config || {});
+    if (data.pagamento) pagamentoConfig = data.pagamento;
   } catch (error) {
     grid.innerHTML = `<p class="muted">Não foi possível carregar os planos: ${esc(error.message)}</p>`;
   }
@@ -255,6 +290,7 @@ document.addEventListener('click', (event) => {
   if (button) openSubscribe(button.dataset.plan, button.dataset.nome, button.dataset.valor);
 });
 form.addEventListener('submit', submitSubscribe);
+form.addEventListener('change', (event) => { if (event.target.name === 'forma_pagamento') atualizarEndereco(); });
 modal.querySelector('[data-close]').addEventListener('click', () => modal.close());
 modal.addEventListener('click', (event) => { if (event.target === modal) modal.close(); });
 

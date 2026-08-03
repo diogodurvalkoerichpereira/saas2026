@@ -10,7 +10,11 @@ const SECRET_COLUMNS = ['token_whatsapp', 'chave_api_asaas', 'access_token'];
 // Carrega a configuração de integrações da empresa, já decifrada. Uma consulta só, porque
 // WhatsApp e pagamento moram na mesma linha de `config`.
 async function loadIntegrations(companyId, db = pool) {
-  if (!companyId) return null;
+  // Compara com null/undefined em vez de usar `!companyId`: a empresa 0 é o próprio SaaS, e a
+  // configuração dela é justamente a que abre a cobrança da assinatura. Com o teste de falsidade,
+  // `loadIntegrations(0)` devolvia null e o checkout nunca achava provedor nenhum.
+  if (companyId === null || companyId === undefined || companyId === '') return null;
+  if (!Number.isFinite(Number(companyId))) return null;
   const [rows] = await db.execute(
     `SELECT api_whatsapp, token_whatsapp, instancia_whatsapp,
             api_pagamento, chave_api_asaas, access_token, public_key, dados_pagamento

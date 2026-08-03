@@ -212,7 +212,9 @@ router.get('/subscription', permit('home'), async (req, res, next) => {
         [companies[0].plano, companyId]
       ),
       pool.execute(
-        `SELECT id, descricao, subtotal, vencimento, pago, data_pgto, node_status
+        // `cobranca_url` é o link de pagamento aberto no provedor: quem fechou a aba do cadastro
+        // (ou vai pagar depois) encontra a cobrança aqui em vez de precisar assinar de novo.
+        `SELECT id, descricao, subtotal, vencimento, pago, data_pgto, node_status, cobranca_url, cobranca_metodo
            FROM receber_sas WHERE cliente = ? ORDER BY vencimento DESC, id DESC LIMIT 24`,
         [companyId]
       ),
