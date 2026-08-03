@@ -20,6 +20,18 @@ function table(columns, items, actions) {
   return `<div class="table-wrap"><table class="table"><thead><tr>${columns.map((c) => `<th>${esc(c.label)}</th>`).join('')}${actions ? '<th>Ações</th>' : ''}</tr></thead><tbody>${items.map((item) => `<tr>${columns.map((c) => `<td>${c.render ? c.render(item[c.key], item) : esc(item[c.key] ?? 'Não informado')}</td>`).join('')}${actions ? `<td><div class="actions">${actions(item)}</div></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
 }
 const header = (title, subtitle, action = '') => `<div class="page-header"><div><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div>${action}</div>`;
+
+// Aviso flutuante. Recusas explicadas (ex.: "não dá para excluir porque 3 empresas assinam") são
+// longas e precisam ser lidas — a mensagem some sozinha, mas fica tempo suficiente.
+function toast(message, tipo = 'ok') {
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = `toast${tipo === 'error' ? ' toast-error' : ''}`;
+  el.setAttribute('role', 'status');
+  el.textContent = message;
+  document.body.append(el);
+  setTimeout(() => el.remove(), tipo === 'error' ? 9000 : 3500);
+}
 const routeName = () => (location.hash.replace(/^#\//, '') || 'dashboard').split('?')[0];
 const yesNo = [{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }];
 const nivelOptions = ['Administrador', 'Gerente', 'Comum', 'Técnico', 'Tesoureiro', 'Financeiro'].map((value) => ({ value, label: value }));
@@ -87,13 +99,19 @@ const configs = {
 
 async function renderCrud(config) {
   const result = await api(`${config.path}?pageSize=100`);
-  root.innerHTML = `${header(config.title, `Administração de ${config.title.toLowerCase()}.`, `<button class="button primary" data-new>Adicionar ${esc(config.singular)}</button>`)}<section class="panel">${table(config.columns, result.items, (item) => `<button class="button ghost small" data-edit="${item.id}">Editar</button>${config === configs.companies ? `<button class="button ghost small" data-access="${item.id}">Recursos</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-restore="${item.id}">Reativar</button>`}` : config === configs.plans ? `<button class="button ghost small" data-plan-resources="${item.id}">Recursos</button>` : config === configs.users ? `<button class="button ghost small" data-user-permissions="${item.id}">Permissões</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-user-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-user-restore="${item.id}">Reativar</button>`}` : ''}`)}</section>`;
+  root.innerHTML = `${header(config.title, `Administração de ${config.title.toLowerCase()}.`, `<button class="button primary" data-new>Adicionar ${esc(config.singular)}</button>`)}<section class="panel">${table(config.columns, result.items, (item) => `<button class="button ghost small" data-edit="${item.id}">Editar</button>${config === configs.companies ? `<button class="button ghost small" data-access="${item.id}">Recursos</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-restore="${item.id}">Reativar</button>`}` : config === configs.plans ? `<button class="button ghost small" data-plan-resources="${item.id}">Recursos</button><button class="button danger small" data-plan-delete="${item.id}">Excluir</button>` : config === configs.users ? `<button class="button ghost small" data-user-permissions="${item.id}">Permissões</button>${item.ativo === 'Sim' ? `<button class="button danger small" data-user-disable="${item.id}">Inativar</button>` : `<button class="button ghost small" data-user-restore="${item.id}">Reativar</button>`}` : ''}`)}</section>`;
   const byId = new Map(result.items.map((item) => [String(item.id), item]));
   root.querySelector('[data-new]').addEventListener('click', () => openForm({ title: `Adicionar ${config.singular}`, fields: config.fields, submit: (values) => api(config.path, { method: 'POST', body: values }) }));
   root.querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', () => openForm({ title: `Editar ${config.singular}`, fields: config.fields, record: byId.get(button.dataset.edit), submit: (values) => api(`${config.path}/${button.dataset.edit}`, { method: 'PATCH', body: values }) })));
   root.querySelectorAll('[data-disable]').forEach((button) => button.addEventListener('click', async () => { if (confirm('Inativar esta empresa?')) { await api(`/api/admin/companies/${button.dataset.disable}`, { method: 'DELETE', body: { reason: 'Inativação pela administração SaaS' } }); await render(); } }));
   root.querySelectorAll('[data-restore]').forEach((button) => button.addEventListener('click', async () => { await api(`/api/admin/companies/${button.dataset.restore}/restore`, { method: 'POST', body: {} }); await render(); }));
   root.querySelectorAll('[data-plan-resources]').forEach((button) => button.addEventListener('click', () => editResources('plans', button.dataset.planResources)));
+  root.querySelectorAll('[data-plan-delete]').forEach((button) => button.addEventListener('click', async () => {
+    const plano = byId.get(button.dataset.planDelete);
+    if (!confirm(`Excluir o plano "${plano.nome}"? As características e os recursos dele também são apagados. Quem já assina não é afetado — o backend recusa a exclusão nesse caso.`)) return;
+    try { await api(`/api/admin/plans/${button.dataset.planDelete}`, { method: 'DELETE' }); toast('Plano excluído.'); await render(); }
+    catch (error) { toast(error.message, 'error'); }
+  }));
   root.querySelectorAll('[data-access]').forEach((button) => button.addEventListener('click', () => editResources('companies', button.dataset.access)));
   root.querySelectorAll('[data-user-permissions]').forEach((button) => button.addEventListener('click', () => editUserPermissions(button.dataset.userPermissions)));
   root.querySelectorAll('[data-user-disable]').forEach((button) => button.addEventListener('click', async () => { if (confirm('Inativar este usuário?')) { await api(`/api/users/${button.dataset.userDisable}`, { method: 'DELETE', body: { reason: 'Inativação pela administração SaaS' } }); await render(); } }));

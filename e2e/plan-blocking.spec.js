@@ -56,8 +56,10 @@ test('plano criado SEM habilitar nada não libera nenhum módulo', async () => {
     expect((await ctx.get(path, { headers: h })).status(), `${path} deveria recusar em plano vazio`).toBe(403);
   }
 
+  // Limpeza: a empresa volta ao Enterprise e o plano de teste é excluído de verdade. A exclusão só
+  // passa depois de a empresa sair dele — é exatamente a regra que o backend cobra.
   await setPlan('Enterprise');
-  await ctx.patch(`/api/admin/plans/${criado.id}`, { headers, data: { ativo: 'Não' } }).catch(() => {});
+  await ctx.delete(`/api/admin/plans/${criado.id}`, { headers }).catch(() => {});
   await ctx.dispose();
 });
 
@@ -81,9 +83,9 @@ test('criar um plano novo com recursos escolhidos entrega exatamente esses ao us
   expect((await ctx.get('/api/hr/employees', { headers: h })).status(), 'RH não escolhido').toBe(403);
   expect((await ctx.get('/api/operations/contracts', { headers: h })).status(), 'contratos não escolhido').toBe(403);
 
-  // limpeza: volta a empresa ao Enterprise e desativa o plano de teste (some da vitrine)
+  // limpeza: volta a empresa ao Enterprise e exclui o plano de teste
   await setPlan('Enterprise');
-  await ctx.patch(`/api/admin/plans/${novoId}`, { headers, data: { ativo: 'Não' } }).catch(() => {});
+  await ctx.delete(`/api/admin/plans/${novoId}`, { headers }).catch(() => {});
   await ctx.dispose();
 });
 

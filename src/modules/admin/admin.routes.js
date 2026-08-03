@@ -181,6 +181,51 @@ registerSimpleCrud('/plans', { table: 'planos', schema: planSchema, entity: 'pla
 registerSimpleCrud('/resources', { table: 'recursos', schema: resourceSchema, entity: 'recurso', orderBy: 'nome' });
 registerSimpleCrud('/alerts', { table: 'alertas_sas', schema: alertSchema, entity: 'alerta_sas', orderBy: 'data DESC, id DESC' });
 
+// Exclusão de plano. O legado apagava direto (excluir.php) e deixava `empresas.plano` apontando
+// para um plano que não existe mais — a empresa continuava cobrando, mas sem nome de plano, sem
+// limites e sem conseguir fazer upgrade. Aqui a exclusão só passa quando ninguém depende do plano;
+// caso contrário devolve 409 dizendo o que está preso. Para tirar um plano de circulação sem perder
+// o histórico de quem já assinou, o caminho é marcá-lo como inativo (some da vitrine e do upgrade).
+router.delete('/plans/:id', async (req, res, next) => {
+  try {
+    const planId = id.parse(req.params.id);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [[plan]] = await connection.execute('SELECT id, nome FROM planos WHERE id = ? LIMIT 1', [planId]);
+      if (!plan) throw Object.assign(new Error('Plano não encontrado.'), { status: 404 });
+
+      const [[emAtivo]] = await connection.execute("SELECT COUNT(*) AS total FROM empresas WHERE plano = ? AND id > 0", [planId]);
+      const [[agendado]] = await connection.execute('SELECT COUNT(*) AS total FROM empresas WHERE plano_agendado = ?', [planId]);
+      const [[cobranca]] = await connection.execute(
+        "SELECT COUNT(*) AS total FROM receber_sas WHERE id_ref = ? AND referencia = 'Upgrade' AND pago = 'Não'",
+        [planId]
+      );
+      const presos = [
+        Number(emAtivo.total) && `${emAtivo.total} empresa(s) assinam este plano`,
+        Number(agendado.total) && `${agendado.total} empresa(s) têm downgrade agendado para ele`,
+        Number(cobranca.total) && `${cobranca.total} cobrança(s) de upgrade em aberto apontam para ele`
+      ].filter(Boolean);
+      if (presos.length) {
+        throw Object.assign(
+          new Error(`Não dá para excluir: ${presos.join('; ')}. Marque o plano como inativo para tirá-lo da vitrine sem afetar quem já assinou.`),
+          { status: 409, code: 'PLANO_EM_USO' }
+        );
+      }
+
+      await connection.execute('DELETE FROM planos_itens WHERE plano = ?', [planId]);
+      await connection.execute('DELETE FROM planos_recursos WHERE plano = ?', [planId]);
+      await connection.execute('DELETE FROM planos WHERE id = ?', [planId]);
+      await audit(connection, { companyId: 0, userId: Number(req.auth.sub), action: 'excluir', entity: 'plano', entityId: planId, details: { nome: plan.nome } });
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally { connection.release(); }
+    res.status(204).end();
+  } catch (error) { next(error); }
+});
+
 router.get('/plans/:id/resources', async (req, res, next) => {
   try {
     const planId = id.parse(req.params.id);
