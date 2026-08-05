@@ -326,13 +326,47 @@ async function renderSite() {
   }));
 }
 
+// Aparência: escolha do tema (5 cores de acento + modo claro/escuro). É preferência do
+// navegador — grava em localStorage e aplica data-accent/data-theme, sem chamar a API.
+const themeAccents = [
+  { key: 'magenta', label: 'Magenta', dot: '#e0559b', dot2: '#b95cf0' },
+  { key: 'azul', label: 'Azul', dot: '#4d9fff', dot2: '#6d7bff' },
+  { key: 'esmeralda', label: 'Esmeralda', dot: '#23c48a', dot2: '#37c9c0' },
+  { key: 'violeta', label: 'Violeta', dot: '#a06bff', dot2: '#c77dff' },
+  { key: 'ambar', label: 'Âmbar', dot: '#f0a63c', dot2: '#ff7d6b' }
+];
+function renderAppearance() {
+  const active = localStorage.getItem('accent') || 'magenta';
+  root.innerHTML = `${header('Configurações', 'Aparência do painel. A preferência é salva neste navegador.')}
+    <section class="panel"><div class="toolbar"><strong>Aparência</strong><span class="muted" style="margin-left:auto;font-size:.8rem">Preferência salva neste navegador</span></div>
+      <p class="muted" style="padding:14px 16px 0;margin:0;font-size:.84rem">Cor de acento</p>
+      <div class="theme-picker">${themeAccents.map((accent) => `<button type="button" class="theme-swatch" data-accent="${accent.key}" style="--dot:${accent.dot};--dot2:${accent.dot2}" aria-pressed="${accent.key === active}"><span class="dot"></span>${esc(accent.label)}</button>`).join('')}</div>
+      <div class="theme-mode-row"><span class="muted" style="align-self:center;font-size:.82rem;margin-right:2px">Modo:</span><button class="button ghost" data-mode="dark">Escuro</button><button class="button ghost" data-mode="light">Claro</button></div>
+    </section>`;
+  const swatches = root.querySelectorAll('.theme-swatch');
+  swatches.forEach((button) => button.addEventListener('click', () => {
+    const accent = button.dataset.accent;
+    localStorage.setItem('accent', accent);
+    document.documentElement.dataset.accent = accent;
+    swatches.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.accent === accent)));
+    toast('Cor do tema atualizada.');
+  }));
+  root.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+    const mode = button.dataset.mode;
+    localStorage.setItem('theme', mode);
+    document.documentElement.dataset.theme = mode;
+    toast(`Modo ${mode === 'light' ? 'claro' : 'escuro'} ativado.`);
+  }));
+}
+
 async function render() {
-  const route = routeName(); const titles = { dashboard: 'Visão geral', companies: 'Empresas', plans: 'Planos', resources: 'Recursos', billing: 'Mensalidades', site: 'Site e planos', alerts: 'Alertas', users: 'Usuários SaaS' };
+  const route = routeName(); const titles = { dashboard: 'Visão geral', companies: 'Empresas', plans: 'Planos', resources: 'Recursos', billing: 'Mensalidades', site: 'Site e planos', alerts: 'Alertas', users: 'Usuários SaaS', settings: 'Configurações' };
   document.querySelector('#admin-title').textContent = titles[route] || titles.dashboard;
   document.querySelectorAll('[data-route]').forEach((link) => link.classList.toggle('active', link.dataset.route === route));
   root.innerHTML = '<div class="empty">Carregando…</div>';
   if (configs[route]) return renderCrud(configs[route]);
   if (route === 'site') return renderSite();
+  if (route === 'settings') return renderAppearance();
   if (route === 'dashboard') {
     const data = await api('/api/admin/dashboard');
     root.innerHTML = `${header('Administração SaaS', 'Indicadores globais sem misturar os dados internos das empresas.')}<div class="grid">
