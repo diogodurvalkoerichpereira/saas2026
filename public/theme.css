@@ -1,32 +1,45 @@
 /* ==========================================================================
-   Identidade magenta única, em dois tons via seletor (Claro / Magenta).
-   Carregado por último em index (ERP) e portal/loja/admin (standalone).
+   Tema do sistema: 2 modos (Claro / Escuro) x 5 cores de acento.
 
-   Padrão = escuro (magenta), robusto mesmo sem JS: as regras escuras usam
-   :root:not([data-theme="light"]), então valem por padrão e no modo escuro;
-   :root[data-theme="light"] ativa o modo claro (superfícies claras, MESMA
-   marca magenta). O seletor (#theme-toggle) grava data-theme + localStorage
-   (app.js no ERP; js/theme-toggle.mjs nas demais).
+   - Modo (superfícies): :root[data-theme="light"] vs padrão escuro
+     (:root:not([data-theme="light"])). Alternado pelo #theme-toggle.
+   - Cor de acento: :root[data-accent="magenta|azul|esmeralda|violeta|ambar"],
+     escolhida em Configurações > Aparência. Padrão: magenta.
 
-   A marca nunca é verde; o verde só permanece na semântica de sucesso/check.
-   Reversível: remover o <link> deste arquivo.
+   Todas as cores de marca derivam de --brand/--brand-dark/--accent-2 (via
+   color-mix), então trocar o acento repinta o sistema inteiro de forma
+   coerente, nos dois modos.
    ========================================================================== */
 
-/* ============================ Tokens por tema ============================ */
+/* Tons derivados do acento (recalculados quando --brand muda) */
+:root {
+  --brand-soft: color-mix(in srgb, var(--brand) 60%, #ffffff);
+  --brand-text: color-mix(in srgb, var(--brand) 26%, #cbc4d6);
+  --brand-t08: color-mix(in srgb, var(--brand) 8%, transparent);
+  --brand-t10: color-mix(in srgb, var(--brand) 10%, transparent);
+  --brand-t12: color-mix(in srgb, var(--brand) 12%, transparent);
+  --brand-t14: color-mix(in srgb, var(--brand) 14%, transparent);
+  --brand-t16: color-mix(in srgb, var(--brand) 16%, transparent);
+  --brand-t22: color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+/* ============================ Tokens por modo =========================== */
 :root:not([data-theme="light"]) {
   --brand: #e0559b;
   --brand-dark: #b83a78;
   --accent-2: #b95cf0;
   --ink: #f4eef8;
-  --muted: #b3a2c2;
-  --line: rgba(196, 150, 220, .18);
-  --surface: #1b1022;
-  --sidebar: #130a1b;
-  --dark: #130a1b;
+  --muted: #b1a6c0;
+  --line: rgba(200, 170, 220, .16);
+  --surface: color-mix(in srgb, var(--brand) 7%, #17131f);
+  --surface-glass: color-mix(in srgb, var(--brand) 8%, rgba(28, 22, 40, .72));
+  --sidebar: #140f1d;
+  --dark: #140f1d;
   --danger: #ff6b6b;
   --warning: #f2b13c;
   --success: #35d69b;
   --shadow: 0 16px 40px rgba(0, 0, 0, .5);
+  --bg-0: #0b0912;
 }
 :root[data-theme="light"] {
   --brand: #c02d78;
@@ -34,46 +47,52 @@
   --accent-2: #8b3fd0;
   --ink: #241026;
   --muted: #6b5a6f;
-  --line: #ecd9ef;
+  --line: color-mix(in srgb, var(--brand) 16%, #e6e0ea);
   --surface: #ffffff;
-  --sidebar: #2a1030;
-  --dark: #2a1030;
+  --surface-glass: #ffffff;
+  --sidebar: #1c1226;
+  --dark: #1c1226;
   --danger: #b42318;
   --warning: #9a6700;
   --success: #15704a;
-  --shadow: 0 12px 34px rgba(120, 30, 90, .10);
+  --shadow: 0 12px 34px rgba(80, 30, 70, .10);
+  --bg-0: #f6eff6;
 }
 
-/* ============================ Fundo da página ============================ */
+/* Cor de acento — sobrescreve a marca nos dois modos (magenta é o padrão).
+   Vem depois dos blocos de modo de propósito, para vencer no cascata. */
+:root[data-accent="azul"]      { --brand: #4d9fff; --brand-dark: #2f6fd0; --accent-2: #6d7bff; }
+:root[data-accent="esmeralda"] { --brand: #23c48a; --brand-dark: #159068; --accent-2: #37c9c0; }
+:root[data-accent="violeta"]   { --brand: #a06bff; --brand-dark: #7a45d6; --accent-2: #c77dff; }
+:root[data-accent="ambar"]     { --brand: #f0a63c; --brand-dark: #cf7c1c; --accent-2: #ff7d6b; }
+
+/* ============================ Fundo da página =========================== */
 :root:not([data-theme="light"]) body {
   background:
-    radial-gradient(circle at 50% 96%, rgba(205, 55, 122, .22), transparent 55%),
-    radial-gradient(circle at 84% 4%, rgba(140, 55, 190, .18), transparent 50%),
-    radial-gradient(circle at 8% 20%, rgba(95, 45, 150, .16), transparent 46%),
-    #0c0710;
+    radial-gradient(circle at 50% 96%, color-mix(in srgb, var(--brand) 24%, transparent), transparent 55%),
+    radial-gradient(circle at 84% 4%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 50%),
+    radial-gradient(circle at 8% 20%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 46%),
+    var(--bg-0);
   color: var(--ink);
 }
 :root[data-theme="light"] body {
   background:
-    radial-gradient(circle at 86% 4%, rgba(224, 85, 155, .10), transparent 42%),
-    radial-gradient(circle at 6% 94%, rgba(139, 63, 208, .08), transparent 44%),
-    #f7eff7;
+    radial-gradient(circle at 86% 4%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 42%),
+    radial-gradient(circle at 6% 94%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 44%),
+    var(--bg-0);
   color: var(--ink);
 }
 
-/* ===================== Marca, links e acentos (magenta) ================== */
+/* ===================== Marca, links e acentos =========================== */
 .brand-mark, .avatar { background: linear-gradient(135deg, var(--brand), var(--accent-2)); color: #fff; }
 a { color: var(--brand); }
 .button.primary {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(200, 60, 140, .24);
+  border-color: transparent; color: #fff;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 30%, transparent);
 }
 .button.primary:hover { filter: brightness(1.06); }
 .bell-badge { background: var(--brand); color: #fff; }
-
-/* Foco magenta nos campos (ambos os modos) */
 input:focus, .field input:focus, .field select:focus, .field textarea:focus,
 .toolbar input:focus, .toolbar select:focus, .search:focus {
   border-color: var(--brand);
@@ -81,69 +100,69 @@ input:focus, .field input:focus, .field select:focus, .field textarea:focus,
   outline: none;
 }
 
-/* Faixas dos cards de indicadores → família magenta/roxo (ambos os modos) */
-.metric-grid .metric-card:nth-of-type(5n+1) { --accent: #e0559b; }
-.metric-grid .metric-card:nth-of-type(5n+2) { --accent: #b95cf0; }
-.metric-grid .metric-card:nth-of-type(5n+3) { --accent: #f06bab; }
-.metric-grid .metric-card:nth-of-type(5n+4) { --accent: #c77dff; }
-.metric-grid .metric-card:nth-of-type(5n+5) { --accent: #ff8fc7; }
+/* Faixas dos cards de indicadores → derivadas do acento */
+.metric-grid .metric-card:nth-of-type(5n+1) { --accent: var(--brand); }
+.metric-grid .metric-card:nth-of-type(5n+2) { --accent: var(--accent-2); }
+.metric-grid .metric-card:nth-of-type(5n+3) { --accent: color-mix(in srgb, var(--brand) 65%, #ffffff); }
+.metric-grid .metric-card:nth-of-type(5n+4) { --accent: color-mix(in srgb, var(--accent-2) 60%, #ffffff); }
+.metric-grid .metric-card:nth-of-type(5n+5) { --accent: color-mix(in srgb, var(--brand) 50%, var(--accent-2)); }
 .metric-grid .metric-card.warn { --accent: var(--warning); }
-.grid .card:nth-of-type(4n+1) { --accent: #e0559b; }
-.grid .card:nth-of-type(4n+2) { --accent: #b95cf0; }
-.grid .card:nth-of-type(4n+3) { --accent: #f06bab; }
-.grid .card:nth-of-type(4n+4) { --accent: #c77dff; }
+.grid .card:nth-of-type(4n+1) { --accent: var(--brand); }
+.grid .card:nth-of-type(4n+2) { --accent: var(--accent-2); }
+.grid .card:nth-of-type(4n+3) { --accent: color-mix(in srgb, var(--brand) 65%, #ffffff); }
+.grid .card:nth-of-type(4n+4) { --accent: color-mix(in srgb, var(--accent-2) 60%, #ffffff); }
 
-/* Hero sempre magenta */
-.site-hero, .hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); color: #fff; }
+.site-hero, .hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-2) 55%, #150c1e), color-mix(in srgb, var(--brand-dark) 85%, #150c1e), var(--brand));
+  color: #fff;
+}
 
-/* ===================== Sidebar (escura nos dois modos) =================== */
-.sidebar, .side { background: linear-gradient(180deg, #170c20, #100813); border-right: 1px solid var(--line); }
-.sidebar-nav a, .side nav a, .side-group-toggle { color: #cfbfe0; }
+/* ===================== Sidebar (escura nos dois modos) ================== */
+.sidebar, .side { background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 6%, #170f22), #100b18); border-right: 1px solid var(--line); }
+.sidebar-nav a, .side nav a, .side-group-toggle { color: var(--brand-text); }
 .sidebar-nav a:hover, .sidebar-nav a.active,
 .side nav a:hover, .side nav a.active,
-.side-group-toggle:hover, .side-group.active-group > .side-group-toggle { background: rgba(224, 85, 155, .16); color: #fff; }
+.side-group-toggle:hover, .side-group.active-group > .side-group-toggle { background: var(--brand-t16); color: #fff; }
 .sidebar-nav a.active, .side nav a.active { box-shadow: inset 3px 0 var(--brand); }
-.sidebar-nav p, .side-group-label { color: #b7a6c8; }
-.nav-icon, .side .nav-icon, .sidebar-nav a span, .side-group-toggle .nav-icon { color: #eeaacf; }
+.sidebar-nav p, .side-group-label { color: color-mix(in srgb, var(--brand) 20%, #b0a6bd); }
+.nav-icon, .side .nav-icon, .sidebar-nav a span, .side-group-toggle .nav-icon { color: var(--brand-soft); }
 .sidebar-nav a:hover .nav-icon, .sidebar-nav a.active .nav-icon,
 .side nav a:hover .nav-icon, .side nav a.active .nav-icon,
-.side-group.active-group > .side-group-toggle .nav-icon { color: #ffc9e6; }
-.nav-caret { border-right-color: #b58fcf; border-bottom-color: #b58fcf; }
-.side-group-list { border-left-color: rgba(224, 85, 155, .22); }
+.side-group.active-group > .side-group-toggle .nav-icon { color: #fff; }
+.nav-caret { border-right-color: color-mix(in srgb, var(--brand) 45%, #b7aec6); border-bottom-color: color-mix(in srgb, var(--brand) 45%, #b7aec6); }
+.side-group-list { border-left-color: var(--brand-t22); }
 
 /* ==================== Superfícies só do modo escuro ===================== */
 :root:not([data-theme="light"]) .login-shell,
 :root:not([data-theme="light"]) .auth-shell {
   background:
-    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
-    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
-    #0c0710;
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--accent-2) 40%, transparent), transparent 45%),
+    radial-gradient(circle at 30% 88%, color-mix(in srgb, var(--brand) 38%, transparent), transparent 50%),
+    var(--bg-0);
 }
 :root:not([data-theme="light"]) .login-card,
 :root:not([data-theme="light"]) .auth-card {
-  background: rgba(40, 22, 52, .72); border: 1px solid var(--line); color: var(--ink); backdrop-filter: blur(14px);
+  background: var(--surface-glass); border: 1px solid var(--line); color: var(--ink); backdrop-filter: blur(14px);
 }
 :root:not([data-theme="light"]) .topbar,
-:root:not([data-theme="light"]) .store-header { background: rgba(20, 11, 27, .92); border-bottom: 1px solid var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) .store-header { background: color-mix(in srgb, var(--brand) 6%, rgba(16, 11, 24, .92)); border-bottom: 1px solid var(--line); color: var(--ink); }
 :root:not([data-theme="light"]) .topbar h1 { color: var(--ink); }
-:root:not([data-theme="light"]) .icon-button { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
-:root:not([data-theme="light"]) .icon-button:hover { background: rgba(224, 85, 155, .22); color: #fff; }
+:root:not([data-theme="light"]) .icon-button { background: var(--brand-t12); color: var(--brand-soft); }
+:root:not([data-theme="light"]) .icon-button:hover { background: var(--brand-t22); color: #fff; }
 :root:not([data-theme="light"]) .toolbar { background: rgba(255, 255, 255, .02); }
 :root:not([data-theme="light"]) .card,
-:root:not([data-theme="light"]) .panel { background: rgba(40, 22, 52, .72); border-color: var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) .panel { background: var(--surface-glass); border-color: var(--line); color: var(--ink); }
 :root:not([data-theme="light"]) input,
 :root:not([data-theme="light"]) .field input, :root:not([data-theme="light"]) .field select, :root:not([data-theme="light"]) .field textarea,
 :root:not([data-theme="light"]) .toolbar input, :root:not([data-theme="light"]) .toolbar select, :root:not([data-theme="light"]) .search {
-  background: #170d20; border-color: rgba(196, 150, 220, .22); color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 5%, #140f1c); border-color: color-mix(in srgb, var(--brand) 20%, #2a2436); color: var(--ink);
 }
-:root:not([data-theme="light"]) .detail-list div { background: #1c1126; }
-:root:not([data-theme="light"]) .modal { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
-:root:not([data-theme="light"]) .modal::backdrop { background: rgba(8, 4, 12, .70); }
-:root:not([data-theme="light"]) .cart-drawer { background: var(--surface); color: var(--ink); border-left: 1px solid var(--line); }
-:root:not([data-theme="light"]) .img-preview { background: #170d20; }
-:root:not([data-theme="light"]) .loading-state::before { border-color: rgba(224, 85, 155, .25); border-top-color: var(--brand); }
-
-/* Componentes que o dark original deixava claros */
+:root:not([data-theme="light"]) .detail-list div { background: color-mix(in srgb, var(--brand) 6%, #171220); }
+:root:not([data-theme="light"]) .modal { background: color-mix(in srgb, var(--brand) 6%, #17131f); color: var(--ink); border: 1px solid var(--line); }
+:root:not([data-theme="light"]) .modal::backdrop { background: rgba(8, 5, 12, .70); }
+:root:not([data-theme="light"]) .cart-drawer { background: color-mix(in srgb, var(--brand) 6%, #17131f); color: var(--ink); border-left: 1px solid var(--line); }
+:root:not([data-theme="light"]) .img-preview { background: #140f1c; }
+:root:not([data-theme="light"]) .loading-state::before { border-color: var(--brand-t22); border-top-color: var(--brand); }
 :root:not([data-theme="light"]) .integration-state,
 :root:not([data-theme="light"]) .ticket-thread article,
 :root:not([data-theme="light"]) .contract-preview,
@@ -152,10 +171,10 @@ input:focus, .field input:focus, .field select:focus, .field textarea:focus,
 :root:not([data-theme="light"]) .upgrade-card,
 :root:not([data-theme="light"]) .quick-action,
 :root:not([data-theme="light"]) .perm-group > header,
-:root:not([data-theme="light"]) .upgrade-tag { background: #1c1126; border-color: var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) .upgrade-tag { background: color-mix(in srgb, var(--brand) 6%, #171220); border-color: var(--line); color: var(--ink); }
 :root:not([data-theme="light"]) .quick-login-item:hover,
-:root:not([data-theme="light"]) .quick-action:hover { background: rgba(224, 85, 155, .14); }
-:root:not([data-theme="light"]) .quick-action-icon { background: rgba(224, 85, 155, .16); color: #f0c3dd; }
+:root:not([data-theme="light"]) .quick-action:hover { background: var(--brand-t14); }
+:root:not([data-theme="light"]) .quick-action-icon { background: var(--brand-t16); color: var(--brand-soft); }
 :root:not([data-theme="light"]) .integration-state.enabled { background: rgba(53, 214, 155, .10); border-color: rgba(53, 214, 155, .3); }
 :root:not([data-theme="light"]) .integration-state.disabled,
 :root:not([data-theme="light"]) .perm-note,
@@ -163,32 +182,31 @@ input:focus, .field input:focus, .field select:focus, .field textarea:focus,
 
 /* ============================== Tabelas ================================= */
 :root[data-theme="light"] .data-table th, :root[data-theme="light"] .table th {
-  background: linear-gradient(180deg, #fbeef6, #f6e3f0); color: #8d2e6a; border-bottom: 2px solid var(--line);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff); color: var(--brand-dark); border-bottom: 2px solid var(--line);
 }
 :root:not([data-theme="light"]) .data-table th, :root:not([data-theme="light"]) .table th {
-  background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--brand) 10%, #1c1626); color: color-mix(in srgb, var(--brand) 40%, #e6dcec); border-bottom: 1px solid var(--line);
 }
-:root[data-theme="light"] .data-table tbody tr:hover td, :root[data-theme="light"] .table tbody tr:hover { background: #fbeef6; }
+:root[data-theme="light"] .data-table tbody tr:hover td, :root[data-theme="light"] .table tbody tr:hover { background: color-mix(in srgb, var(--brand) 6%, #ffffff); }
 :root:not([data-theme="light"]) .data-table tbody tr:hover td,
 :root:not([data-theme="light"]) .data-table tr:hover td,
-:root:not([data-theme="light"]) .table tbody tr:hover { background: rgba(224, 85, 155, .07); }
+:root:not([data-theme="light"]) .table tbody tr:hover { background: var(--brand-t08); }
 :root:not([data-theme="light"]) .data-table td, :root:not([data-theme="light"]) .table td { border-top-color: var(--line); }
 .data-table a { color: var(--brand); }
 
 /* =============================== Badges ================================= */
-:root:not([data-theme="light"]) .badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
+:root:not([data-theme="light"]) .badge { background: var(--brand-t14); color: var(--brand-soft); }
 :root:not([data-theme="light"]) .badge.success, :root:not([data-theme="light"]) .badge.ok { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
 :root:not([data-theme="light"]) .badge.danger, :root:not([data-theme="light"]) .badge.bad { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
 :root:not([data-theme="light"]) .badge.warning { background: rgba(242, 177, 60, .16); color: #f5cd7e; }
 .split-tabs a.active { background: var(--brand); color: #fff; }
-:root:not([data-theme="light"]) .split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
+:root:not([data-theme="light"]) .split-tabs a { background: var(--brand-t10); color: var(--brand-soft); }
 
 /* =============================== Toast ================================== */
-.toast { background: #2a1338; color: #fff; }
+.toast { background: color-mix(in srgb, var(--brand) 22%, #1c1030); color: #fff; }
 .toast.error { background: #8d281f; }
 
 /* ======================= Padronização de dimensões ====================== */
-/* Referência = ERP; alinha standalone (planos é alinhado no próprio arquivo). */
 .shell { grid-template-columns: 250px minmax(0, 1fr); }
 .side .nav-icon { width: 20px; height: 20px; }
 .card, .panel { border-radius: 16px; }
@@ -203,14 +221,28 @@ input:focus, .field input:focus, .field select:focus, .field textarea:focus,
 .theme-toggle {
   display: grid; place-items: center; width: 38px; height: 38px;
   border: 0; border-radius: 9px; cursor: pointer;
-  background: rgba(224, 85, 155, .12); color: #f0c3dd;
+  background: var(--brand-t12); color: var(--brand-soft);
 }
-.theme-toggle:hover { background: rgba(224, 85, 155, .22); color: #fff; }
-:root[data-theme="light"] .theme-toggle { background: #f2e3f1; color: #9d2160; }
+.theme-toggle:hover { background: var(--brand-t22); color: #fff; }
+:root[data-theme="light"] .theme-toggle { background: color-mix(in srgb, var(--brand) 12%, #ffffff); color: var(--brand-dark); }
 .theme-toggle .ui-icon { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 #theme-toggle .icon-sun { display: none; }
 :root:not([data-theme="light"]) #theme-toggle .icon-sun { display: block; }
 :root:not([data-theme="light"]) #theme-toggle .icon-moon { display: none; }
 
+/* ==================== Seletor de cores (Configurações) ================== */
+.theme-picker { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px; }
+.theme-swatch {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 13px 9px 9px; border: 1px solid var(--line); border-radius: 11px;
+  background: var(--surface); color: var(--ink); cursor: pointer; font: inherit; font-weight: 700; font-size: .85rem;
+  transition: border-color .16s, transform .16s;
+}
+.theme-swatch:hover { transform: translateY(-1px); }
+.theme-swatch[aria-pressed="true"] { border-color: var(--dot); box-shadow: 0 0 0 2px var(--dot); }
+.theme-swatch .dot { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--dot), var(--dot2)); box-shadow: 0 2px 8px color-mix(in srgb, var(--dot) 45%, transparent); }
+.theme-mode-row { display: flex; gap: 8px; padding: 0 16px 16px; }
+.theme-mode-row .button { flex: 0 0 auto; }
+
 /* Barra de rolagem discreta */
-* { scrollbar-color: rgba(224, 85, 155, .35) transparent; }
+* { scrollbar-color: var(--brand-t22) transparent; }

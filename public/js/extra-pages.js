@@ -913,6 +913,14 @@ const companySettingsFields = [
 async function renderSettings() {
   loading();
   const settings = await api('/api/content/settings') || {};
+  const accents = [
+    { key: 'magenta', label: 'Magenta', dot: '#e0559b', dot2: '#b95cf0' },
+    { key: 'azul', label: 'Azul', dot: '#4d9fff', dot2: '#6d7bff' },
+    { key: 'esmeralda', label: 'Esmeralda', dot: '#23c48a', dot2: '#37c9c0' },
+    { key: 'violeta', label: 'Violeta', dot: '#a06bff', dot2: '#c77dff' },
+    { key: 'ambar', label: 'Âmbar', dot: '#f0a63c', dot2: '#ff7d6b' }
+  ];
+  const activeAccent = localStorage.getItem('accent') || 'magenta';
   root().innerHTML = `${pageHeader('Configurações da empresa', 'Dados operacionais e integração de WhatsApp. O token é gravado de forma protegida e não é reexibido após salvo.', `<button class="button primary" data-edit>${icon('edit')}Editar configurações</button>`)}
     <section class="panel settings-summary"><div class="detail-list">
       <div><small>Empresa</small><strong>${escapeHtml(settings.nome || 'Não configurado')}</strong></div>
@@ -930,10 +938,29 @@ async function renderSettings() {
       <div><small>Chave Asaas</small><strong>${settings.chave_api_asaas_configurado ? 'Configurada' : 'Não configurada'}</strong></div>
       <div><small>Access Token Mercado Pago</small><strong>${settings.access_token_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
       <div><small>Webhook de pagamento</small><strong>${settings.webhook_pagamento_configurado ? 'Configurado' : 'Não configurado'}</strong></div>
-    </div></section>`;
+    </div></section>
+    <section class="panel" style="margin-top:16px"><div class="toolbar"><strong>Aparência</strong><span class="muted" style="margin-left:auto;font-size:.8rem">Preferência salva neste navegador</span></div>
+      <p class="muted" style="padding:14px 16px 0;margin:0;font-size:.84rem">Cor de acento</p>
+      <div class="theme-picker">${accents.map((accent) => `<button type="button" class="theme-swatch" data-accent="${accent.key}" style="--dot:${accent.dot};--dot2:${accent.dot2}" aria-pressed="${accent.key === activeAccent}"><span class="dot"></span>${accent.label}</button>`).join('')}</div>
+      <div class="theme-mode-row"><span class="muted" style="align-self:center;font-size:.82rem;margin-right:2px">Modo:</span><button class="button ghost" data-mode="dark">Escuro</button><button class="button ghost" data-mode="light">Claro</button></div>
+    </section>`;
   root().querySelector('[data-edit]').addEventListener('click', () => openForm({
     title: 'Configurações da empresa', eyebrow: 'Administração', fields: companySettingsFields, record: settings,
     onSubmit: async (values) => { await api('/api/content/settings', { method: 'PUT', body: values }); toast('Configurações atualizadas.'); await renderSettings(); }
+  }));
+  const swatches = root().querySelectorAll('.theme-swatch');
+  swatches.forEach((button) => button.addEventListener('click', () => {
+    const accent = button.dataset.accent;
+    localStorage.setItem('accent', accent);
+    document.documentElement.dataset.accent = accent;
+    swatches.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.accent === accent)));
+    toast('Cor do tema atualizada.');
+  }));
+  root().querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+    const mode = button.dataset.mode;
+    localStorage.setItem('theme', mode);
+    document.documentElement.dataset.theme = mode;
+    toast(`Modo ${mode === 'light' ? 'claro' : 'escuro'} ativado.`);
   }));
 }
 

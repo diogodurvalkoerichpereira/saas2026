@@ -45,6 +45,7 @@ function setupSidebarGroups() {
 
 function setupTheme() {
   document.documentElement.dataset.theme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.accent = localStorage.getItem('accent') || 'magenta';
   document.querySelector('#theme-toggle')?.addEventListener('click', () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;

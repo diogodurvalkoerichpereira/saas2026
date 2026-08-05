@@ -7,6 +7,7 @@ const root = document.documentElement;
 // Aplica o tema o quanto antes (o CSS já assume escuro por padrão via
 // :root:not([data-theme="light"]), então não há flash para o tema claro/verde).
 root.dataset.theme = localStorage.getItem(KEY) === 'light' ? 'light' : 'dark';
+root.dataset.accent = localStorage.getItem('accent') || 'magenta';
 
 function wire() {
   const button = document.querySelector('#theme-toggle');
