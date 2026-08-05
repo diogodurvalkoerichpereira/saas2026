@@ -1,0 +1,236 @@
+/* ==========================================================================
+   Tema escuro roxo/magenta. Carregado por último em todas as páginas.
+
+   ERP (index.html): reaproveita o sistema data-theme="dark" já existente —
+   as regras abaixo só valem quando o tema escuro está ativo, então o toggle
+   claro/escuro continua funcionando (claro = tema verde original do projeto).
+   O app.js passa a abrir em escuro por padrão.
+
+   Standalone (portal, loja, admin): standalone.css não tem dark mode, então
+   aqui o magenta é aplicado de forma incondicional.
+
+   Reversível: remover o <link> deste arquivo volta tudo ao original.
+   ========================================================================== */
+
+/* ===================== ERP · tema escuro magenta ========================= */
+:root[data-theme="dark"] {
+  --ink: #f4eef8;
+  --muted: #b3a2c2;
+  --line: rgba(196, 150, 220, .16);
+  --surface: #1b1022;
+  --brand: #e0559b;
+  --brand-dark: #b83a78;
+  --sidebar: #130a1b;
+  --shadow: 0 16px 40px rgba(0, 0, 0, .5);
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 50% 96%, rgba(205, 55, 122, .26), transparent 55%),
+    radial-gradient(circle at 84% 4%, rgba(140, 55, 190, .22), transparent 50%),
+    radial-gradient(circle at 8% 20%, rgba(95, 45, 150, .18), transparent 46%),
+    #0c0710;
+  color: var(--ink);
+}
+
+/* Login */
+:root[data-theme="dark"] .login-shell {
+  background:
+    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
+    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
+    #0c0710;
+}
+:root[data-theme="dark"] .login-card {
+  background: rgba(40, 22, 52, .72);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+
+/* Marca */
+:root[data-theme="dark"] .brand-mark,
+:root[data-theme="dark"] .avatar {
+  background: linear-gradient(135deg, #e0559b, #a23fd0);
+  color: #fff;
+}
+
+/* Sidebar */
+:root[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, #170c20, #100813);
+  border-right: 1px solid var(--line);
+}
+:root[data-theme="dark"] .sidebar-nav a,
+:root[data-theme="dark"] .side-group-toggle {
+  color: #cfbfe0;
+}
+:root[data-theme="dark"] .sidebar-nav a:hover,
+:root[data-theme="dark"] .sidebar-nav a.active,
+:root[data-theme="dark"] .side-group-toggle:hover,
+:root[data-theme="dark"] .side-group.active-group > .side-group-toggle {
+  background: rgba(224, 85, 155, .16);
+  color: #fff;
+}
+:root[data-theme="dark"] .sidebar-nav a.active {
+  box-shadow: inset 3px 0 var(--brand);
+}
+:root[data-theme="dark"] .sidebar-nav p,
+:root[data-theme="dark"] .side-group-label { color: #b7a6c8; }
+:root[data-theme="dark"] .nav-icon,
+:root[data-theme="dark"] .sidebar-nav a span,
+:root[data-theme="dark"] .side-group-toggle .nav-icon { color: #eeaacf; }
+:root[data-theme="dark"] .sidebar-nav a:hover .nav-icon,
+:root[data-theme="dark"] .sidebar-nav a.active .nav-icon,
+:root[data-theme="dark"] .side-group.active-group > .side-group-toggle .nav-icon { color: #ffc9e6; }
+:root[data-theme="dark"] .nav-caret { border-right-color: #b58fcf; border-bottom-color: #b58fcf; }
+:root[data-theme="dark"] .side-group-list { border-left-color: rgba(224, 85, 155, .22); }
+:root[data-theme="dark"] .sidebar-user { border-color: var(--line); }
+
+/* Topbar */
+:root[data-theme="dark"] .topbar { background: rgba(20, 11, 27, .92); border-bottom: 1px solid var(--line); }
+:root[data-theme="dark"] .icon-button { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
+:root[data-theme="dark"] .icon-button:hover { background: rgba(224, 85, 155, .22); color: #fff; }
+:root[data-theme="dark"] .connection i { background: #35d69b; }
+:root[data-theme="dark"] .bell-badge { background: var(--brand); color: #fff; }
+:root[data-theme="dark"] .bell-menu { background: var(--surface); }
+
+/* Campos */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .toolbar input,
+:root[data-theme="dark"] .toolbar select,
+:root[data-theme="dark"] .search { background: #170d20; border-color: rgba(196, 150, 220, .22); color: var(--ink); }
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] .field input:focus,
+:root[data-theme="dark"] .field select:focus,
+:root[data-theme="dark"] .field textarea:focus,
+:root[data-theme="dark"] .toolbar input:focus,
+:root[data-theme="dark"] .toolbar select:focus,
+:root[data-theme="dark"] .search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(224, 85, 155, .20); }
+
+/* Painéis, cards, toolbar */
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .metric-card { background: rgba(40, 22, 52, .72); border: 1px solid var(--line); color: var(--ink); }
+:root[data-theme="dark"] .toolbar { background: rgba(255, 255, 255, .02); }
+
+/* Faixas dos cards de indicadores para o universo magenta/roxo */
+:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+1) { --accent: #e0559b; }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+2) { --accent: #b95cf0; }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+3) { --accent: #f06bab; }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+4) { --accent: #c77dff; }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+5) { --accent: #ff8fc7; }
+:root[data-theme="dark"] .metric-grid .metric-card:hover { box-shadow: 0 16px 40px rgba(0, 0, 0, .55); }
+
+/* Tabelas */
+:root[data-theme="dark"] .data-table th { background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom-color: var(--line); }
+:root[data-theme="dark"] .data-table tbody tr:hover td,
+:root[data-theme="dark"] .data-table tbody tr:hover { background: rgba(224, 85, 155, .07); }
+:root[data-theme="dark"] .data-table a { color: var(--brand); }
+
+/* Botões */
+:root[data-theme="dark"] .button.primary { background: linear-gradient(135deg, #e0559b 0%, #c245b0 55%, #a23fd0 100%); box-shadow: 0 8px 22px rgba(200, 60, 140, .30); }
+:root[data-theme="dark"] .button.primary:hover { background: linear-gradient(135deg, #e766a6 0%, #c94fb8 55%, #ac4ada 100%); }
+:root[data-theme="dark"] .button.ghost { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
+:root[data-theme="dark"] .button.danger { background: rgba(255, 107, 107, .15); color: #ff9d9d; }
+
+/* Badges */
+:root[data-theme="dark"] .badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
+:root[data-theme="dark"] .badge.success { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
+:root[data-theme="dark"] .badge.danger { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
+:root[data-theme="dark"] .badge.warning { background: rgba(242, 177, 60, .16); color: #f5cd7e; }
+
+/* Abas, listas, hero */
+:root[data-theme="dark"] .split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
+:root[data-theme="dark"] .split-tabs a.active { background: var(--brand); color: #fff; }
+:root[data-theme="dark"] .detail-list div { background: #1c1126; }
+:root[data-theme="dark"] .site-hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); }
+:root[data-theme="dark"] .loading-state::before { border-color: rgba(224, 85, 155, .25); border-top-color: var(--brand); }
+
+/* Componentes que o dark original do projeto deixava claros */
+:root[data-theme="dark"] .integration-state,
+:root[data-theme="dark"] .ticket-thread article,
+:root[data-theme="dark"] .contract-preview,
+:root[data-theme="dark"] .check-list label,
+:root[data-theme="dark"] .quick-login-item,
+:root[data-theme="dark"] .upgrade-card,
+:root[data-theme="dark"] .quick-action,
+:root[data-theme="dark"] .perm-group > header,
+:root[data-theme="dark"] .upgrade-tag { background: #1c1126; border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .quick-login-item:hover,
+:root[data-theme="dark"] .quick-action:hover { background: rgba(224, 85, 155, .14); }
+:root[data-theme="dark"] .quick-action-icon { background: rgba(224, 85, 155, .16); color: #f0c3dd; }
+:root[data-theme="dark"] .integration-state.enabled { background: rgba(53, 214, 155, .10); border-color: rgba(53, 214, 155, .3); }
+:root[data-theme="dark"] .integration-state.disabled,
+:root[data-theme="dark"] .perm-note,
+:root[data-theme="dark"] .upgrade-scheduled { background: rgba(242, 177, 60, .10); border-color: rgba(242, 177, 60, .3); color: var(--ink); }
+
+/* Modal */
+:root[data-theme="dark"] .modal { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+:root[data-theme="dark"] .modal::backdrop { background: rgba(8, 4, 12, .70); }
+
+/* Toast */
+:root[data-theme="dark"] .toast { background: #2a1338; border: 1px solid rgba(224, 85, 155, .35); }
+:root[data-theme="dark"] .toast.error { background: #4a1420; }
+
+/* ============ Standalone (portal, loja, admin) · magenta fixo ============ */
+.auth-shell {
+  background:
+    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
+    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
+    #0c0710;
+}
+.auth-shell .auth-card,
+.shell .auth-card { background: rgba(40, 22, 52, .78); border: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
+
+.shell, .store-main { --brand: #e0559b; --dark: #130a1b; --muted: #b3a2c2; --line: rgba(196, 150, 220, .16); --surface: #1b1022; }
+.shell body, body:has(.shell), body:has(.store-header) { color: #f4eef8; }
+
+.side { background: linear-gradient(180deg, #170c20, #100813); border-right: 1px solid rgba(196, 150, 220, .16); }
+.side nav a { color: #cfbfe0; }
+.side nav a:hover, .side nav a.active { background: rgba(224, 85, 155, .16); color: #fff; }
+.side nav a.active { box-shadow: inset 3px 0 #e0559b; }
+.side .nav-icon { color: #eeaacf; }
+.side nav a:hover .nav-icon, .side nav a.active .nav-icon { color: #ffc9e6; }
+
+.topbar, .store-header { background: rgba(20, 11, 27, .92); border-bottom: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
+.topbar h1 { color: #f4eef8; }
+
+.card, .panel { background: rgba(40, 22, 52, .72); border: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
+.card small { color: #b3a2c2; }
+.card::before { background: var(--accent, #e0559b); }
+.grid .card:nth-of-type(4n+1) { --accent: #e0559b; }
+.grid .card:nth-of-type(4n+2) { --accent: #b95cf0; }
+.grid .card:nth-of-type(4n+3) { --accent: #f06bab; }
+.grid .card:nth-of-type(4n+4) { --accent: #c77dff; }
+
+.field input, .field select, .field textarea, .toolbar input, .toolbar select { background: #170d20; border-color: rgba(196, 150, 220, .22); color: #f4eef8; }
+input:focus, .field input:focus, .field select:focus, .field textarea:focus, .toolbar input:focus, .toolbar select:focus { border-color: #e0559b; box-shadow: 0 0 0 3px rgba(224, 85, 155, .18); }
+
+.table th { background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom: 1px solid rgba(196, 150, 220, .16); }
+.table td { border-top-color: rgba(196, 150, 220, .12); }
+.table tbody tr:hover { background: rgba(224, 85, 155, .07); }
+
+.button.primary { background: linear-gradient(135deg, #e0559b 0%, #c245b0 55%, #a23fd0 100%); box-shadow: 0 8px 22px rgba(200, 60, 140, .30); }
+.button.ghost { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
+.button.danger { background: rgba(255, 107, 107, .15); color: #ff9d9d; }
+
+.badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
+.badge.ok { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
+.badge.bad { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
+.split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
+.split-tabs a.active { background: #e0559b; color: #fff; }
+.img-preview { background: #170d20; }
+
+.hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); color: #fff; }
+.product .price { color: #e0559b; }
+.cart-drawer { background: #1b1022; color: #f4eef8; border-left: 1px solid rgba(196, 150, 220, .16); }
+.cart-line { border-color: rgba(196, 150, 220, .16); }
+.modal { background: #1b1022; color: #f4eef8; border: 1px solid rgba(196, 150, 220, .16); }
+.modal::backdrop { background: rgba(8, 4, 12, .70); }
+.toast { background: #2a1338; color: #fff; }
+.empty, .muted { color: #b3a2c2; }
+.auth-card .field, .auth-card label { color: #d9cbe6; }
+a { color: #e0559b; }
+
+/* Barra de rolagem discreta */
+* { scrollbar-color: rgba(224, 85, 155, .35) transparent; }
