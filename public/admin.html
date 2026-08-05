@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0c0710">
   <title>Administração SaaS · SaaS 2026</title>
   <link rel="stylesheet" href="/standalone.css">
   <link rel="stylesheet" href="/theme.css">
+  <script type="module" src="/js/theme-toggle.mjs"></script>
 </head>
 <body>
   <section class="auth-shell" id="admin-login">
@@ -32,7 +34,7 @@
       </nav>
       <footer><strong id="admin-name"></strong><button class="button ghost" id="admin-change-password">Alterar senha</button><button class="button ghost" id="admin-logout">Sair</button></footer>
     </aside>
-    <div class="workspace"><header class="topbar"><h1 id="admin-title">Visão geral</h1><span class="muted">Administração global</span></header><main class="content" id="admin-root"></main></div>
+    <div class="workspace"><header class="topbar"><h1 id="admin-title">Visão geral</h1><div style="display:flex;align-items:center;gap:12px"><span class="muted">Administração global</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Alternar tema claro/magenta" title="Alternar tema"><svg class="ui-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="ui-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div></header><main class="content" id="admin-root"></main></div>
   </div>
   <dialog class="modal" id="admin-modal"><form id="admin-modal-form"><header><h2 id="admin-modal-title"></h2><button class="button ghost" type="button" data-close>Fechar</button></header><div id="admin-modal-body"></div><p class="error" id="admin-modal-error"></p><footer><button class="button ghost" type="button" data-close>Cancelar</button><button class="button primary">Salvar</button></footer></form></dialog>
   <script type="module" src="/admin.js"></script>

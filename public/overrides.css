@@ -450,16 +450,7 @@
   display: none;
 }
 
-/* Tema escuro */
-:root[data-theme="dark"] {
-  --ink: #e7efeb;
-  --muted: #93a8a0;
-  --line: #2b3b35;
-  --surface: #16211d;
-  --brand: #57c596;
-  --brand-dark: #3aa87b;
-  --shadow: 0 12px 34px rgba(0, 0, 0, .5);
-}
+/* Tema escuro: tokens definidos em theme.css (identidade magenta única). */
 
 :root[data-theme="dark"] body {
   background: #0f1613;

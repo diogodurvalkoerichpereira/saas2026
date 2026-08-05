@@ -1,236 +1,216 @@
 /* ==========================================================================
-   Tema escuro roxo/magenta. Carregado por último em todas as páginas.
+   Identidade magenta única, em dois tons via seletor (Claro / Magenta).
+   Carregado por último em index (ERP) e portal/loja/admin (standalone).
 
-   ERP (index.html): reaproveita o sistema data-theme="dark" já existente —
-   as regras abaixo só valem quando o tema escuro está ativo, então o toggle
-   claro/escuro continua funcionando (claro = tema verde original do projeto).
-   O app.js passa a abrir em escuro por padrão.
+   Padrão = escuro (magenta), robusto mesmo sem JS: as regras escuras usam
+   :root:not([data-theme="light"]), então valem por padrão e no modo escuro;
+   :root[data-theme="light"] ativa o modo claro (superfícies claras, MESMA
+   marca magenta). O seletor (#theme-toggle) grava data-theme + localStorage
+   (app.js no ERP; js/theme-toggle.mjs nas demais).
 
-   Standalone (portal, loja, admin): standalone.css não tem dark mode, então
-   aqui o magenta é aplicado de forma incondicional.
-
-   Reversível: remover o <link> deste arquivo volta tudo ao original.
+   A marca nunca é verde; o verde só permanece na semântica de sucesso/check.
+   Reversível: remover o <link> deste arquivo.
    ========================================================================== */
 
-/* ===================== ERP · tema escuro magenta ========================= */
-:root[data-theme="dark"] {
-  --ink: #f4eef8;
-  --muted: #b3a2c2;
-  --line: rgba(196, 150, 220, .16);
-  --surface: #1b1022;
+/* ============================ Tokens por tema ============================ */
+:root:not([data-theme="light"]) {
   --brand: #e0559b;
   --brand-dark: #b83a78;
+  --accent-2: #b95cf0;
+  --ink: #f4eef8;
+  --muted: #b3a2c2;
+  --line: rgba(196, 150, 220, .18);
+  --surface: #1b1022;
   --sidebar: #130a1b;
+  --dark: #130a1b;
+  --danger: #ff6b6b;
+  --warning: #f2b13c;
+  --success: #35d69b;
   --shadow: 0 16px 40px rgba(0, 0, 0, .5);
 }
+:root[data-theme="light"] {
+  --brand: #c02d78;
+  --brand-dark: #9d2160;
+  --accent-2: #8b3fd0;
+  --ink: #241026;
+  --muted: #6b5a6f;
+  --line: #ecd9ef;
+  --surface: #ffffff;
+  --sidebar: #2a1030;
+  --dark: #2a1030;
+  --danger: #b42318;
+  --warning: #9a6700;
+  --success: #15704a;
+  --shadow: 0 12px 34px rgba(120, 30, 90, .10);
+}
 
-:root[data-theme="dark"] body {
+/* ============================ Fundo da página ============================ */
+:root:not([data-theme="light"]) body {
   background:
-    radial-gradient(circle at 50% 96%, rgba(205, 55, 122, .26), transparent 55%),
-    radial-gradient(circle at 84% 4%, rgba(140, 55, 190, .22), transparent 50%),
-    radial-gradient(circle at 8% 20%, rgba(95, 45, 150, .18), transparent 46%),
+    radial-gradient(circle at 50% 96%, rgba(205, 55, 122, .22), transparent 55%),
+    radial-gradient(circle at 84% 4%, rgba(140, 55, 190, .18), transparent 50%),
+    radial-gradient(circle at 8% 20%, rgba(95, 45, 150, .16), transparent 46%),
     #0c0710;
   color: var(--ink);
 }
-
-/* Login */
-:root[data-theme="dark"] .login-shell {
+:root[data-theme="light"] body {
   background:
-    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
-    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
-    #0c0710;
-}
-:root[data-theme="dark"] .login-card {
-  background: rgba(40, 22, 52, .72);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(14px);
+    radial-gradient(circle at 86% 4%, rgba(224, 85, 155, .10), transparent 42%),
+    radial-gradient(circle at 6% 94%, rgba(139, 63, 208, .08), transparent 44%),
+    #f7eff7;
+  color: var(--ink);
 }
 
-/* Marca */
-:root[data-theme="dark"] .brand-mark,
-:root[data-theme="dark"] .avatar {
-  background: linear-gradient(135deg, #e0559b, #a23fd0);
+/* ===================== Marca, links e acentos (magenta) ================== */
+.brand-mark, .avatar { background: linear-gradient(135deg, var(--brand), var(--accent-2)); color: #fff; }
+a { color: var(--brand); }
+.button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 8px 20px rgba(200, 60, 140, .24);
+}
+.button.primary:hover { filter: brightness(1.06); }
+.bell-badge { background: var(--brand); color: #fff; }
+
+/* Foco magenta nos campos (ambos os modos) */
+input:focus, .field input:focus, .field select:focus, .field textarea:focus,
+.toolbar input:focus, .toolbar select:focus, .search:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+  outline: none;
 }
 
-/* Sidebar */
-:root[data-theme="dark"] .sidebar {
-  background: linear-gradient(180deg, #170c20, #100813);
-  border-right: 1px solid var(--line);
-}
-:root[data-theme="dark"] .sidebar-nav a,
-:root[data-theme="dark"] .side-group-toggle {
-  color: #cfbfe0;
-}
-:root[data-theme="dark"] .sidebar-nav a:hover,
-:root[data-theme="dark"] .sidebar-nav a.active,
-:root[data-theme="dark"] .side-group-toggle:hover,
-:root[data-theme="dark"] .side-group.active-group > .side-group-toggle {
-  background: rgba(224, 85, 155, .16);
-  color: #fff;
-}
-:root[data-theme="dark"] .sidebar-nav a.active {
-  box-shadow: inset 3px 0 var(--brand);
-}
-:root[data-theme="dark"] .sidebar-nav p,
-:root[data-theme="dark"] .side-group-label { color: #b7a6c8; }
-:root[data-theme="dark"] .nav-icon,
-:root[data-theme="dark"] .sidebar-nav a span,
-:root[data-theme="dark"] .side-group-toggle .nav-icon { color: #eeaacf; }
-:root[data-theme="dark"] .sidebar-nav a:hover .nav-icon,
-:root[data-theme="dark"] .sidebar-nav a.active .nav-icon,
-:root[data-theme="dark"] .side-group.active-group > .side-group-toggle .nav-icon { color: #ffc9e6; }
-:root[data-theme="dark"] .nav-caret { border-right-color: #b58fcf; border-bottom-color: #b58fcf; }
-:root[data-theme="dark"] .side-group-list { border-left-color: rgba(224, 85, 155, .22); }
-:root[data-theme="dark"] .sidebar-user { border-color: var(--line); }
-
-/* Topbar */
-:root[data-theme="dark"] .topbar { background: rgba(20, 11, 27, .92); border-bottom: 1px solid var(--line); }
-:root[data-theme="dark"] .icon-button { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
-:root[data-theme="dark"] .icon-button:hover { background: rgba(224, 85, 155, .22); color: #fff; }
-:root[data-theme="dark"] .connection i { background: #35d69b; }
-:root[data-theme="dark"] .bell-badge { background: var(--brand); color: #fff; }
-:root[data-theme="dark"] .bell-menu { background: var(--surface); }
-
-/* Campos */
-:root[data-theme="dark"] input,
-:root[data-theme="dark"] .field input,
-:root[data-theme="dark"] .field select,
-:root[data-theme="dark"] .field textarea,
-:root[data-theme="dark"] .toolbar input,
-:root[data-theme="dark"] .toolbar select,
-:root[data-theme="dark"] .search { background: #170d20; border-color: rgba(196, 150, 220, .22); color: var(--ink); }
-:root[data-theme="dark"] input:focus,
-:root[data-theme="dark"] .field input:focus,
-:root[data-theme="dark"] .field select:focus,
-:root[data-theme="dark"] .field textarea:focus,
-:root[data-theme="dark"] .toolbar input:focus,
-:root[data-theme="dark"] .toolbar select:focus,
-:root[data-theme="dark"] .search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(224, 85, 155, .20); }
-
-/* Painéis, cards, toolbar */
-:root[data-theme="dark"] .panel,
-:root[data-theme="dark"] .metric-card { background: rgba(40, 22, 52, .72); border: 1px solid var(--line); color: var(--ink); }
-:root[data-theme="dark"] .toolbar { background: rgba(255, 255, 255, .02); }
-
-/* Faixas dos cards de indicadores para o universo magenta/roxo */
-:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+1) { --accent: #e0559b; }
-:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+2) { --accent: #b95cf0; }
-:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+3) { --accent: #f06bab; }
-:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+4) { --accent: #c77dff; }
-:root[data-theme="dark"] .metric-grid .metric-card:nth-of-type(5n+5) { --accent: #ff8fc7; }
-:root[data-theme="dark"] .metric-grid .metric-card:hover { box-shadow: 0 16px 40px rgba(0, 0, 0, .55); }
-
-/* Tabelas */
-:root[data-theme="dark"] .data-table th { background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom-color: var(--line); }
-:root[data-theme="dark"] .data-table tbody tr:hover td,
-:root[data-theme="dark"] .data-table tbody tr:hover { background: rgba(224, 85, 155, .07); }
-:root[data-theme="dark"] .data-table a { color: var(--brand); }
-
-/* Botões */
-:root[data-theme="dark"] .button.primary { background: linear-gradient(135deg, #e0559b 0%, #c245b0 55%, #a23fd0 100%); box-shadow: 0 8px 22px rgba(200, 60, 140, .30); }
-:root[data-theme="dark"] .button.primary:hover { background: linear-gradient(135deg, #e766a6 0%, #c94fb8 55%, #ac4ada 100%); }
-:root[data-theme="dark"] .button.ghost { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
-:root[data-theme="dark"] .button.danger { background: rgba(255, 107, 107, .15); color: #ff9d9d; }
-
-/* Badges */
-:root[data-theme="dark"] .badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
-:root[data-theme="dark"] .badge.success { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
-:root[data-theme="dark"] .badge.danger { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
-:root[data-theme="dark"] .badge.warning { background: rgba(242, 177, 60, .16); color: #f5cd7e; }
-
-/* Abas, listas, hero */
-:root[data-theme="dark"] .split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
-:root[data-theme="dark"] .split-tabs a.active { background: var(--brand); color: #fff; }
-:root[data-theme="dark"] .detail-list div { background: #1c1126; }
-:root[data-theme="dark"] .site-hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); }
-:root[data-theme="dark"] .loading-state::before { border-color: rgba(224, 85, 155, .25); border-top-color: var(--brand); }
-
-/* Componentes que o dark original do projeto deixava claros */
-:root[data-theme="dark"] .integration-state,
-:root[data-theme="dark"] .ticket-thread article,
-:root[data-theme="dark"] .contract-preview,
-:root[data-theme="dark"] .check-list label,
-:root[data-theme="dark"] .quick-login-item,
-:root[data-theme="dark"] .upgrade-card,
-:root[data-theme="dark"] .quick-action,
-:root[data-theme="dark"] .perm-group > header,
-:root[data-theme="dark"] .upgrade-tag { background: #1c1126; border-color: var(--line); color: var(--ink); }
-:root[data-theme="dark"] .quick-login-item:hover,
-:root[data-theme="dark"] .quick-action:hover { background: rgba(224, 85, 155, .14); }
-:root[data-theme="dark"] .quick-action-icon { background: rgba(224, 85, 155, .16); color: #f0c3dd; }
-:root[data-theme="dark"] .integration-state.enabled { background: rgba(53, 214, 155, .10); border-color: rgba(53, 214, 155, .3); }
-:root[data-theme="dark"] .integration-state.disabled,
-:root[data-theme="dark"] .perm-note,
-:root[data-theme="dark"] .upgrade-scheduled { background: rgba(242, 177, 60, .10); border-color: rgba(242, 177, 60, .3); color: var(--ink); }
-
-/* Modal */
-:root[data-theme="dark"] .modal { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
-:root[data-theme="dark"] .modal::backdrop { background: rgba(8, 4, 12, .70); }
-
-/* Toast */
-:root[data-theme="dark"] .toast { background: #2a1338; border: 1px solid rgba(224, 85, 155, .35); }
-:root[data-theme="dark"] .toast.error { background: #4a1420; }
-
-/* ============ Standalone (portal, loja, admin) · magenta fixo ============ */
-.auth-shell {
-  background:
-    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
-    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
-    #0c0710;
-}
-.auth-shell .auth-card,
-.shell .auth-card { background: rgba(40, 22, 52, .78); border: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
-
-.shell, .store-main { --brand: #e0559b; --dark: #130a1b; --muted: #b3a2c2; --line: rgba(196, 150, 220, .16); --surface: #1b1022; }
-.shell body, body:has(.shell), body:has(.store-header) { color: #f4eef8; }
-
-.side { background: linear-gradient(180deg, #170c20, #100813); border-right: 1px solid rgba(196, 150, 220, .16); }
-.side nav a { color: #cfbfe0; }
-.side nav a:hover, .side nav a.active { background: rgba(224, 85, 155, .16); color: #fff; }
-.side nav a.active { box-shadow: inset 3px 0 #e0559b; }
-.side .nav-icon { color: #eeaacf; }
-.side nav a:hover .nav-icon, .side nav a.active .nav-icon { color: #ffc9e6; }
-
-.topbar, .store-header { background: rgba(20, 11, 27, .92); border-bottom: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
-.topbar h1 { color: #f4eef8; }
-
-.card, .panel { background: rgba(40, 22, 52, .72); border: 1px solid rgba(196, 150, 220, .16); color: #f4eef8; }
-.card small { color: #b3a2c2; }
-.card::before { background: var(--accent, #e0559b); }
+/* Faixas dos cards de indicadores → família magenta/roxo (ambos os modos) */
+.metric-grid .metric-card:nth-of-type(5n+1) { --accent: #e0559b; }
+.metric-grid .metric-card:nth-of-type(5n+2) { --accent: #b95cf0; }
+.metric-grid .metric-card:nth-of-type(5n+3) { --accent: #f06bab; }
+.metric-grid .metric-card:nth-of-type(5n+4) { --accent: #c77dff; }
+.metric-grid .metric-card:nth-of-type(5n+5) { --accent: #ff8fc7; }
+.metric-grid .metric-card.warn { --accent: var(--warning); }
 .grid .card:nth-of-type(4n+1) { --accent: #e0559b; }
 .grid .card:nth-of-type(4n+2) { --accent: #b95cf0; }
 .grid .card:nth-of-type(4n+3) { --accent: #f06bab; }
 .grid .card:nth-of-type(4n+4) { --accent: #c77dff; }
 
-.field input, .field select, .field textarea, .toolbar input, .toolbar select { background: #170d20; border-color: rgba(196, 150, 220, .22); color: #f4eef8; }
-input:focus, .field input:focus, .field select:focus, .field textarea:focus, .toolbar input:focus, .toolbar select:focus { border-color: #e0559b; box-shadow: 0 0 0 3px rgba(224, 85, 155, .18); }
+/* Hero sempre magenta */
+.site-hero, .hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); color: #fff; }
 
-.table th { background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom: 1px solid rgba(196, 150, 220, .16); }
-.table td { border-top-color: rgba(196, 150, 220, .12); }
-.table tbody tr:hover { background: rgba(224, 85, 155, .07); }
+/* ===================== Sidebar (escura nos dois modos) =================== */
+.sidebar, .side { background: linear-gradient(180deg, #170c20, #100813); border-right: 1px solid var(--line); }
+.sidebar-nav a, .side nav a, .side-group-toggle { color: #cfbfe0; }
+.sidebar-nav a:hover, .sidebar-nav a.active,
+.side nav a:hover, .side nav a.active,
+.side-group-toggle:hover, .side-group.active-group > .side-group-toggle { background: rgba(224, 85, 155, .16); color: #fff; }
+.sidebar-nav a.active, .side nav a.active { box-shadow: inset 3px 0 var(--brand); }
+.sidebar-nav p, .side-group-label { color: #b7a6c8; }
+.nav-icon, .side .nav-icon, .sidebar-nav a span, .side-group-toggle .nav-icon { color: #eeaacf; }
+.sidebar-nav a:hover .nav-icon, .sidebar-nav a.active .nav-icon,
+.side nav a:hover .nav-icon, .side nav a.active .nav-icon,
+.side-group.active-group > .side-group-toggle .nav-icon { color: #ffc9e6; }
+.nav-caret { border-right-color: #b58fcf; border-bottom-color: #b58fcf; }
+.side-group-list { border-left-color: rgba(224, 85, 155, .22); }
 
-.button.primary { background: linear-gradient(135deg, #e0559b 0%, #c245b0 55%, #a23fd0 100%); box-shadow: 0 8px 22px rgba(200, 60, 140, .30); }
-.button.ghost { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
-.button.danger { background: rgba(255, 107, 107, .15); color: #ff9d9d; }
+/* ==================== Superfícies só do modo escuro ===================== */
+:root:not([data-theme="light"]) .login-shell,
+:root:not([data-theme="light"]) .auth-shell {
+  background:
+    radial-gradient(circle at 78% 18%, rgba(150, 55, 190, .40), transparent 45%),
+    radial-gradient(circle at 30% 88%, rgba(205, 55, 122, .38), transparent 50%),
+    #0c0710;
+}
+:root:not([data-theme="light"]) .login-card,
+:root:not([data-theme="light"]) .auth-card {
+  background: rgba(40, 22, 52, .72); border: 1px solid var(--line); color: var(--ink); backdrop-filter: blur(14px);
+}
+:root:not([data-theme="light"]) .topbar,
+:root:not([data-theme="light"]) .store-header { background: rgba(20, 11, 27, .92); border-bottom: 1px solid var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) .topbar h1 { color: var(--ink); }
+:root:not([data-theme="light"]) .icon-button { background: rgba(224, 85, 155, .12); color: #f0c3dd; }
+:root:not([data-theme="light"]) .icon-button:hover { background: rgba(224, 85, 155, .22); color: #fff; }
+:root:not([data-theme="light"]) .toolbar { background: rgba(255, 255, 255, .02); }
+:root:not([data-theme="light"]) .card,
+:root:not([data-theme="light"]) .panel { background: rgba(40, 22, 52, .72); border-color: var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) input,
+:root:not([data-theme="light"]) .field input, :root:not([data-theme="light"]) .field select, :root:not([data-theme="light"]) .field textarea,
+:root:not([data-theme="light"]) .toolbar input, :root:not([data-theme="light"]) .toolbar select, :root:not([data-theme="light"]) .search {
+  background: #170d20; border-color: rgba(196, 150, 220, .22); color: var(--ink);
+}
+:root:not([data-theme="light"]) .detail-list div { background: #1c1126; }
+:root:not([data-theme="light"]) .modal { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+:root:not([data-theme="light"]) .modal::backdrop { background: rgba(8, 4, 12, .70); }
+:root:not([data-theme="light"]) .cart-drawer { background: var(--surface); color: var(--ink); border-left: 1px solid var(--line); }
+:root:not([data-theme="light"]) .img-preview { background: #170d20; }
+:root:not([data-theme="light"]) .loading-state::before { border-color: rgba(224, 85, 155, .25); border-top-color: var(--brand); }
 
-.badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
-.badge.ok { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
-.badge.bad { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
-.split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
-.split-tabs a.active { background: #e0559b; color: #fff; }
-.img-preview { background: #170d20; }
+/* Componentes que o dark original deixava claros */
+:root:not([data-theme="light"]) .integration-state,
+:root:not([data-theme="light"]) .ticket-thread article,
+:root:not([data-theme="light"]) .contract-preview,
+:root:not([data-theme="light"]) .check-list label,
+:root:not([data-theme="light"]) .quick-login-item,
+:root:not([data-theme="light"]) .upgrade-card,
+:root:not([data-theme="light"]) .quick-action,
+:root:not([data-theme="light"]) .perm-group > header,
+:root:not([data-theme="light"]) .upgrade-tag { background: #1c1126; border-color: var(--line); color: var(--ink); }
+:root:not([data-theme="light"]) .quick-login-item:hover,
+:root:not([data-theme="light"]) .quick-action:hover { background: rgba(224, 85, 155, .14); }
+:root:not([data-theme="light"]) .quick-action-icon { background: rgba(224, 85, 155, .16); color: #f0c3dd; }
+:root:not([data-theme="light"]) .integration-state.enabled { background: rgba(53, 214, 155, .10); border-color: rgba(53, 214, 155, .3); }
+:root:not([data-theme="light"]) .integration-state.disabled,
+:root:not([data-theme="light"]) .perm-note,
+:root:not([data-theme="light"]) .upgrade-scheduled { background: rgba(242, 177, 60, .10); border-color: rgba(242, 177, 60, .3); color: var(--ink); }
 
-.hero { background: linear-gradient(135deg, #3a1140 0%, #7a1f63 50%, #b8306f 100%); color: #fff; }
-.product .price { color: #e0559b; }
-.cart-drawer { background: #1b1022; color: #f4eef8; border-left: 1px solid rgba(196, 150, 220, .16); }
-.cart-line { border-color: rgba(196, 150, 220, .16); }
-.modal { background: #1b1022; color: #f4eef8; border: 1px solid rgba(196, 150, 220, .16); }
-.modal::backdrop { background: rgba(8, 4, 12, .70); }
+/* ============================== Tabelas ================================= */
+:root[data-theme="light"] .data-table th, :root[data-theme="light"] .table th {
+  background: linear-gradient(180deg, #fbeef6, #f6e3f0); color: #8d2e6a; border-bottom: 2px solid var(--line);
+}
+:root:not([data-theme="light"]) .data-table th, :root:not([data-theme="light"]) .table th {
+  background: linear-gradient(180deg, #241533, #1c1129); color: #d3a8c6; border-bottom: 1px solid var(--line);
+}
+:root[data-theme="light"] .data-table tbody tr:hover td, :root[data-theme="light"] .table tbody tr:hover { background: #fbeef6; }
+:root:not([data-theme="light"]) .data-table tbody tr:hover td,
+:root:not([data-theme="light"]) .data-table tr:hover td,
+:root:not([data-theme="light"]) .table tbody tr:hover { background: rgba(224, 85, 155, .07); }
+:root:not([data-theme="light"]) .data-table td, :root:not([data-theme="light"]) .table td { border-top-color: var(--line); }
+.data-table a { color: var(--brand); }
+
+/* =============================== Badges ================================= */
+:root:not([data-theme="light"]) .badge { background: rgba(196, 150, 220, .14); color: #d9cbe6; }
+:root:not([data-theme="light"]) .badge.success, :root:not([data-theme="light"]) .badge.ok { background: rgba(53, 214, 155, .16); color: #6ff0c0; }
+:root:not([data-theme="light"]) .badge.danger, :root:not([data-theme="light"]) .badge.bad { background: rgba(255, 107, 107, .16); color: #ff9d9d; }
+:root:not([data-theme="light"]) .badge.warning { background: rgba(242, 177, 60, .16); color: #f5cd7e; }
+.split-tabs a.active { background: var(--brand); color: #fff; }
+:root:not([data-theme="light"]) .split-tabs a { background: rgba(224, 85, 155, .10); color: #d9cbe6; }
+
+/* =============================== Toast ================================== */
 .toast { background: #2a1338; color: #fff; }
-.empty, .muted { color: #b3a2c2; }
-.auth-card .field, .auth-card label { color: #d9cbe6; }
-a { color: #e0559b; }
+.toast.error { background: #8d281f; }
+
+/* ======================= Padronização de dimensões ====================== */
+/* Referência = ERP; alinha standalone (planos é alinhado no próprio arquivo). */
+.shell { grid-template-columns: 250px minmax(0, 1fr); }
+.side .nav-icon { width: 20px; height: 20px; }
+.card, .panel { border-radius: 16px; }
+.grid { gap: 14px; }
+.button:not(.small) { padding: 10px 15px; }
+.button.small { padding: 7px 10px; }
+.field input, .field select, .field textarea, .toolbar input, .toolbar select { border-radius: 9px; padding: 11px 12px; }
+.table { font-size: .85rem; }
+.table th, .table td { padding: 11px 13px; }
+
+/* ===================== Botão do seletor (standalone) ==================== */
+.theme-toggle {
+  display: grid; place-items: center; width: 38px; height: 38px;
+  border: 0; border-radius: 9px; cursor: pointer;
+  background: rgba(224, 85, 155, .12); color: #f0c3dd;
+}
+.theme-toggle:hover { background: rgba(224, 85, 155, .22); color: #fff; }
+:root[data-theme="light"] .theme-toggle { background: #f2e3f1; color: #9d2160; }
+.theme-toggle .ui-icon { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#theme-toggle .icon-sun { display: none; }
+:root:not([data-theme="light"]) #theme-toggle .icon-sun { display: block; }
+:root:not([data-theme="light"]) #theme-toggle .icon-moon { display: none; }
 
 /* Barra de rolagem discreta */
 * { scrollbar-color: rgba(224, 85, 155, .35) transparent; }
