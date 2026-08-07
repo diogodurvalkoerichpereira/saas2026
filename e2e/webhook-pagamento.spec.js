@@ -39,8 +39,32 @@ async function limpar(db, billingId) {
   await db.query('DELETE FROM receber_sas WHERE id = $1', [billingId]);
 }
 
+// A recusa por assinatura só é exercitada quando existe provedor E segredo configurados: sem eles a
+// rota responde antes, dizendo que não há o que fazer. O teste monta essa precondição e devolve a
+// configuração no fim — do contrário ele passaria "de graça" num ambiente sem pagamento ligado, que
+// é exatamente o cenário em que ele não prova nada.
+const { encrypt } = require('../src/lib/secrets');
+const SEGREDO = 'segredo-do-webhook-para-teste';
+
+async function configurarProvedor(db) {
+  const { rows } = await db.query('SELECT api_pagamento, access_token, webhook_pagamento FROM config WHERE empresa = 0');
+  const anterior = rows[0] || null;
+  await db.query(
+    "UPDATE config SET api_pagamento = 'Mercado Pago', access_token = $1, webhook_pagamento = $2 WHERE empresa = 0",
+    [encrypt('token-de-teste'), encrypt(SEGREDO)]
+  );
+  return anterior;
+}
+
+async function restaurarProvedor(db, anterior) {
+  if (!anterior) return;
+  await db.query('UPDATE config SET api_pagamento = $1, access_token = $2, webhook_pagamento = $3 WHERE empresa = 0',
+    [anterior.api_pagamento, anterior.access_token, anterior.webhook_pagamento]);
+}
+
 test('notificação sem assinatura válida não quita mensalidade nenhuma', async () => {
   const db = await conectar();
+  const anterior = await configurarProvedor(db);
   const cobranca = `pay_spec_${Date.now()}`;
   const billingId = await mensalidadeEmAberto(db, cobranca);
   const ctx = await request.newContext();
@@ -70,6 +94,7 @@ test('notificação sem assinatura válida não quita mensalidade nenhuma', asyn
   expect(rows[0].pago, 'nenhuma das tentativas pode ter quitado a mensalidade').toBe('Não');
 
   await limpar(db, billingId);
+  await restaurarProvedor(db, anterior);
   await db.end();
   await ctx.dispose();
 });
@@ -82,6 +107,8 @@ test('provedor desconhecido na URL é recusado', async () => {
 });
 
 test('o webhook não expõe se o segredo existe nem detalha o erro', async () => {
+  const db = await conectar();
+  const anterior = await configurarProvedor(db);
   const ctx = await request.newContext();
   const resposta = await ctx.post('/api/webhooks/payments/mercadopago', { data: { type: 'payment', data: { id: 'x' } } });
   const corpo = await resposta.json();
@@ -89,5 +116,7 @@ test('o webhook não expõe se o segredo existe nem detalha o erro', async () =>
   // ser o provedor.
   expect(Object.keys(corpo)).toEqual(['error']);
   expect(String(corpo.error).length).toBeLessThan(60);
+  await restaurarProvedor(db, anterior);
+  await db.end();
   await ctx.dispose();
 });

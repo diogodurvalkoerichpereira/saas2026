@@ -30,12 +30,12 @@ INSERT INTO site (empresa, titulo, subtitulo, botao1, botao2, botao3, item1, ite
                   link_rodape, logo_topo)
 VALUES (0,
         'Escolha o plano ideal para o seu negócio',
-        'ERP completo — vendas, financeiro, estoque e muito mais. Comece com 3 dias grátis, sem cartão. Cancele quando quiser.',
+        'ERP completo — vendas, financeiro, estoque e muito mais. Comece com 14 dias grátis, sem cartão. Cancele quando quiser.',
         'Ver planos', 'Tirar dúvidas', 'Acessar sistema',
-        '3 dias grátis', 'Sem fidelidade', 'Dados protegidos (LGPD)',
+        '14 dias grátis', 'Sem fidelidade', 'Dados protegidos (LGPD)',
         'Tudo que você precisa para gerir', 'Perguntas frequentes',
         'Pronto para começar?',
-        'Crie sua conta em menos de um minuto e teste o sistema completo por 3 dias, sem cartão de crédito.',
+        'Crie sua conta em menos de um minuto e teste o sistema completo por 14 dias, sem cartão de crédito.',
         'Começar agora', '#plans', 'Sim')
 ON CONFLICT (empresa) DO NOTHING;
 
@@ -43,7 +43,7 @@ ON CONFLICT (empresa) DO NOTHING;
 -- o telefone do WhatsApp e a meta descrição da landing. O legado criava esta linha sozinho na
 -- primeira execução (conexao.php); aqui ela nunca era criada e a marca ficava presa no HTML.
 INSERT INTO config (empresa, nome, meta_descricao, pagina_entrada)
-SELECT 0, 'SaaS 2026', 'ERP completo: vendas, financeiro, estoque, fiscal e mais. Comece com 3 dias grátis.', 'Login'
+SELECT 0, 'SaaS 2026', 'ERP completo: vendas, financeiro, estoque, fiscal e mais. Comece com 14 dias grátis.', 'Login'
  WHERE NOT EXISTS (SELECT 1 FROM config WHERE empresa = 0);
 
 -- Cards de recurso e perguntas iniciais da landing. Só entram se a empresa 0 ainda não tiver
@@ -64,7 +64,7 @@ INSERT INTO perguntas_site (empresa, posicao_pergunta, titulo_pergunta, descrica
 SELECT 0, v.pos, v.titulo, v.descricao
   FROM (VALUES
     (1, 'Preciso de cartão de crédito para testar?',
-        'Não. O teste de 3 dias começa assim que você cria a conta, sem informar cartão. A cobrança só existe se você decidir continuar.'),
+        'Não. O teste de 14 dias começa assim que você cria a conta, sem informar cartão. A cobrança só existe se você decidir continuar.'),
     (2, 'Posso trocar de plano depois?',
         'Pode, a qualquer momento, pela própria tela de Assinatura dentro do sistema. Na subida cobramos apenas a diferença proporcional aos dias restantes; na descida a troca vale a partir da próxima renovação, sem cobrança extra.'),
     (3, 'O que acontece com meus dados se eu cancelar?',

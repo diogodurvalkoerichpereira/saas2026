@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0c0710">
   <title>Planos e assinatura · SaaS 2026</title>
-  <meta name="description" content="Escolha o plano do SaaS 2026 e comece com 3 dias grátis. ERP completo: vendas, financeiro, estoque, fiscal e mais.">
+  <!-- Texto de reserva: o real vem de Configurações (config.meta_descricao) e é aplicado no load. -->
+  <meta name="description" content="Escolha o plano do SaaS 2026 e teste grátis. ERP completo: vendas, financeiro, estoque, fiscal e mais.">
   <style>
     /* Identidade magenta única, com seletor Claro/Magenta (padrão: escuro). */
     :root:not([data-theme="light"]) {
@@ -274,7 +275,7 @@
     <div class="sub-frame">
       <div class="sub-head"><h2>Finalizar assinatura</h2><button class="icon-close" type="button" data-close aria-label="Fechar">✕</button></div>
       <div class="sub-summary" id="sub-summary">
-        <div><div class="s-name" id="sub-plan-name"></div><div class="s-trial">3 dias grátis, depois cobra</div></div>
+        <div><div class="s-name" id="sub-plan-name"></div><div class="s-trial" id="sub-trial"></div></div>
         <div class="s-price" id="sub-plan-price"></div>
       </div>
       <form id="sub-form">

@@ -7,6 +7,7 @@ const { companyHasFeature } = require('../../middlewares/feature');
 const { CORE } = require('../../config/features');
 const { abrirCobranca, checkoutProvider } = require('../../services/checkout.service');
 const { metodoOptions } = require('../../integrations/payment.providers');
+const { TRIAL_DAYS, trialEndDate, trialLabel } = require('../../config/trial');
 const { provisionCompanyResources } = require('../../services/plan-provisioning');
 const { normalizeRecord } = require('../../lib/list-response');
 
@@ -165,7 +166,10 @@ router.get('/landing', async (_req, res, next) => {
       recursos: await listPublicResources(),
       // Sem provedor configurado o checkout não pergunta forma de pagamento — seria coletar dado
       // para uma cobrança que ninguém vai abrir. O nome do provedor não vai para o navegador.
-      pagamento: { habilitado: Boolean(await checkoutProvider()), metodos: metodoOptions }
+      pagamento: { habilitado: Boolean(await checkoutProvider()), metodos: metodoOptions },
+      // O período de teste vem do servidor para a página não repetir o número por conta própria —
+      // era assim que "3 dias" tinha se espalhado por seis lugares e podia divergir do real.
+      teste: { dias: TRIAL_DAYS, texto: trialLabel() }
     });
   } catch (error) { next(error); }
 });
@@ -213,10 +217,10 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
     if (dups[0]) throw Object.assign(new Error('E-mail ou telefone já cadastrado. Faça login para continuar.'), { status: 409 });
 
     const mensalidade = Number(plan.valor) || 0;
-    const dataTeste = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
-    // A cobrança vence no fim do teste, não hoje. A página promete "3 dias grátis, a cobrança
-    // acontece após o período de teste" — com vencimento hoje a primeira mensalidade já nascia
-    // vencida no dia seguinte, contradizendo a oferta.
+    const dataTeste = trialEndDate();
+    // A cobrança vence no fim do teste, não hoje. A página promete que a cobrança acontece após o
+    // período de teste — com vencimento hoje a primeira mensalidade já nascia vencida no dia
+    // seguinte, contradizendo a oferta.
     const vencimento = dataTeste;
     const tempPassword = randomBytes(9).toString('base64url');
     const senhaCrip = await bcrypt.hash(tempPassword, 12);
@@ -227,8 +231,8 @@ router.post('/subscribe', subscribeRateLimit, async (req, res, next) => {
     const [emp] = await conn.execute(
       `INSERT INTO empresas (nome, cpf, telefone, email, tipo_pessoa, data_cad, dias_teste, mensalidade, ativo, data_teste, plano, frequencia, dispositivos,
                              cep, endereco, numero, bairro, cidade, estado)
-       VALUES (?, ?, ?, ?, ?, CURRENT_DATE, 3, ?, 'Sim', ?, ?, 30, ?, ?, ?, ?, ?, ?, ?)`,
-      [data.nome, data.cpf, data.telefone, data.email, data.tipo_pessoa ?? 'Jurídica', mensalidade, dataTeste, plan.id, plan.dispositivos ?? null,
+       VALUES (?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, 'Sim', ?, ?, 30, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.nome, data.cpf, data.telefone, data.email, data.tipo_pessoa ?? 'Jurídica', TRIAL_DAYS, mensalidade, dataTeste, plan.id, plan.dispositivos ?? null,
        data.cep ?? null, data.endereco ?? null, data.numero ?? null, data.bairro ?? null, data.cidade ?? null, data.estado ?? null]
     );
     const companyId = emp.insertId;

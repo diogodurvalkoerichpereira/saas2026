@@ -29,7 +29,7 @@ function planCard(plan, destaque) {
     ${destaque ? '<span class="plan-ribbon">Mais completo</span>' : ''}
     <div class="plan-name">${esc(plan.nome)}</div>
     <div class="plan-price">${money(plan.valor)}<small> /mês</small></div>
-    <div class="plan-trial">3 dias grátis para testar</div>
+    <div class="plan-trial">${esc(teste.texto)} para testar</div>
     ${plan.itens && plan.itens.length ? `<ul class="plan-items">${plan.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
     <p class="plan-limits">${esc(limits)}</p>
     <div class="cta"><button class="btn ghost" data-plan="${plan.id}" data-nome="${esc(plan.nome)}" data-valor="${esc(plan.valor)}">Assinar ${esc(plan.nome)}</button></div>
@@ -39,6 +39,9 @@ function planCard(plan, destaque) {
 // Formas de pagamento aceitas, vindas do backend. Sem provedor configurado o bloco nem aparece:
 // perguntar "Pix ou boleto?" sem ter como abrir a cobrança é pedir dado à toa.
 let pagamentoConfig = { habilitado: false, metodos: [] };
+// Período de teste: vem do servidor, para a página nunca afirmar um prazo diferente do que o
+// cadastro realmente concede.
+let teste = { dias: 14, texto: '14 dias grátis' };
 
 function montarMetodos() {
   const bloco = document.querySelector('#sub-pagamento');
@@ -70,6 +73,7 @@ function openSubscribe(planId, nome, valor) {
   document.querySelector('#sub-plan-id').value = planId;
   planName.textContent = nome;
   planPrice.innerHTML = `${money(valor)}<small> /mês</small>`;
+  document.querySelector('#sub-trial').textContent = `${teste.texto}, depois cobra`;
   montarMetodos();
   modal.showModal();
 }
@@ -86,7 +90,7 @@ async function submitSubscribe(event) {
     successBox.hidden = false;
     successBox.innerHTML = `
       <h2 style="margin:0">Conta criada! 🎉</h2>
-      <p class="muted">Sua conta do plano <strong>${esc(result.plano.nome)}</strong> foi criada com 3 dias de teste grátis.</p>
+      <p class="muted">Sua conta do plano <strong>${esc(result.plano.nome)}</strong> foi criada com ${esc(teste.texto.replace(' grátis', ''))} de teste grátis.</p>
       <div class="cred-box">
         <div>Acesso: <code>${esc(result.email)}</code></div>
         <div>Senha temporária: <code>${esc(result.tempPassword)}</code></div>
@@ -260,6 +264,7 @@ async function load() {
     renderClosing(site);
     applyBrand(data.config || {});
     if (data.pagamento) pagamentoConfig = data.pagamento;
+    if (data.teste?.texto) teste = data.teste;
   } catch (error) {
     grid.innerHTML = `<p class="muted">Não foi possível carregar os planos: ${esc(error.message)}</p>`;
   }

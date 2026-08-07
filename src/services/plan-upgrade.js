@@ -138,7 +138,11 @@ async function requestUpgrade({ companyId, planId, userId, db = pool }) {
   }
   if (!(diferenca > 0)) throw Object.assign(new Error('Não há diferença a cobrar para este upgrade.'), { status: 409 });
 
-  const vencimento = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  // Prazo para pagar a cobrança de ajuste — NÃO é o teste grátis da assinatura (esse fica em
+  // src/config/trial.js). São três dias de propósito: o plano só troca quando esta conta é paga,
+  // então prazo longo deixa o cliente esperando o upgrade que ele já pediu.
+  const DIAS_PARA_PAGAR_UPGRADE = 3;
+  const vencimento = new Date(Date.now() + DIAS_PARA_PAGAR_UPGRADE * 86400000).toISOString().slice(0, 10);
   const [result] = await db.execute(
     `INSERT INTO receber_sas (descricao, cliente, valor, subtotal, vencimento, data_lanc, referencia, id_ref, pago, usuario_lanc, empresa)
      VALUES (?, ?, ?, ?, ?, CURRENT_DATE, 'Upgrade', ?, 'Não', ?, 0)`,

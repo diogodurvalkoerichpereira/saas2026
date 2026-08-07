@@ -76,17 +76,34 @@ test('boleto sem endereço é recusado com a explicação do campo que falta', a
   await ctx.dispose();
 });
 
-test('a primeira mensalidade vence no fim do teste, não no dia do cadastro', async () => {
+test('o teste grátis concedido é exatamente o que a página promete', async () => {
   const ctx = await request.newContext();
-  const { plans } = await (await ctx.get('/api/public/landing')).json();
-  const pago = plans.find((p) => Number(p.valor) > 0);
+  const landing = await (await ctx.get('/api/public/landing')).json();
+  const prometido = landing.teste.dias;
+  expect(prometido, 'o período de teste precisa vir do servidor').toBeGreaterThan(0);
+
+  const pago = landing.plans.find((p) => Number(p.valor) > 0);
   const resposta = await ctx.post('/api/public/subscribe', { data: { planId: pago.id, ...novoCadastro() } });
   expect(resposta.status()).toBe(201);
   const corpo = await resposta.json();
 
-  // A página promete "3 dias grátis, a cobrança acontece após o período de teste": com vencimento
-  // no dia do cadastro a mensalidade nasceria vencida no dia seguinte.
-  const hoje = new Date().toISOString().slice(0, 10);
-  expect(corpo.mensalidade.vencimento.slice(0, 10) > hoje, 'vencimento precisa ser depois de hoje').toBe(true);
+  // A cobrança vence no fim do teste, nunca no dia do cadastro — a página promete que a cobrança
+  // só acontece depois do período grátis, e com vencimento hoje a mensalidade nasceria vencida.
+  const hoje = new Date();
+  const vencimento = new Date(`${corpo.mensalidade.vencimento.slice(0, 10)}T12:00:00`);
+  const concedido = Math.round((vencimento - new Date(`${hoje.toISOString().slice(0, 10)}T12:00:00`)) / 86400000);
+  expect(concedido, `a página anuncia ${prometido} dias; o cadastro precisa conceder os mesmos`).toBe(prometido);
   await ctx.dispose();
+});
+
+test('a página não afirma um prazo de teste diferente do configurado', async ({ page }) => {
+  await page.goto('/planos.html');
+  await page.waitForSelector('.plan-card');
+  const { teste } = await page.evaluate(() => fetch('/api/public/landing').then((r) => r.json()));
+
+  // O número do teste ficava escrito à mão em seis lugares. Se voltar a ser cravado, esta
+  // asserção quebra assim que o prazo mudar.
+  await expect(page.locator('.plan-trial').first()).toHaveText(`${teste.texto} para testar`);
+  await page.locator('.plan-card').first().locator('[data-plan]').click();
+  await expect(page.locator('#sub-trial')).toHaveText(`${teste.texto}, depois cobra`);
 });

@@ -18,7 +18,7 @@ const cardDoPlano = (page, nome) => page.locator('.plan-card').filter({ has: pag
 // Devolve o conteúdo ao estado inicial para não contaminar os outros testes.
 const ORIGINAL = {
   titulo: 'Escolha o plano ideal para o seu negócio',
-  item1: '3 dias grátis',
+  item1: '14 dias grátis',
   titulo_perguntas: 'Perguntas frequentes'
 };
 
@@ -216,7 +216,7 @@ test('seção sem conteúdo não vira título solto na página', async ({ page }
 
   await ctx.put('/api/admin/site', {
     headers,
-    data: { titulo_rodape: 'Pronto para começar?', descricao_rodape: 'Crie sua conta em menos de um minuto e teste o sistema completo por 3 dias, sem cartão de crédito.', botao_rodape: 'Começar agora' }
+    data: { titulo_rodape: 'Pronto para começar?', descricao_rodape: 'Crie sua conta em menos de um minuto e teste o sistema completo por 14 dias, sem cartão de crédito.', botao_rodape: 'Começar agora' }
   });
   await page.reload();
   await expect(page.locator('#closing')).toBeVisible();
