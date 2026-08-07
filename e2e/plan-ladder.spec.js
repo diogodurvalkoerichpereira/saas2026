@@ -7,13 +7,17 @@ const { test, expect, request } = require('@playwright/test');
 // pagaria mais para PERDER capacidade, e o sistema ofereceria isso como melhoria. O teste falha na
 // hora em que alguém desmarcar um recurso no painel e criar esse degrau.
 
-// A escada cobre todo plano CONFIGURADO, publicado ou não. Um plano ainda inativo é um produto
-// prestes a entrar na vitrine — é justamente antes de publicar que o degrau precisa ser pego. Só
-// fica de fora quem não tem nenhum recurso marcado, que não é um produto, é um rascunho.
+// A escada cobre os planos ATIVOS e configurados — os que o cliente pode de fato contratar.
+//
+// Plano inativo fica de fora porque não aparece na vitrine nem na lista de upgrade (`listUpgrades`
+// filtra por ativo = 'Sim'), então ele não tem como criar a armadilha que esta regra protege:
+// pagar mais e receber menos. Incluí-los só produzia alarme falso em fixture antiga — o "Plano
+// Demonstração" do seed, aposentado e com recursos parciais, parado no meio da faixa de preço.
+// Publicar um plano incoerente continua sendo pego: no instante em que ele é ativado, entra aqui.
 async function montarEscada(ctx, headers) {
   const { items: planos } = await (await ctx.get('/api/admin/plans?pageSize=100', { headers })).json();
   const escada = [];
-  for (const plano of planos.sort((a, b) => Number(a.valor) - Number(b.valor))) {
+  for (const plano of planos.filter((p) => p.ativo === 'Sim').sort((a, b) => Number(a.valor) - Number(b.valor))) {
     const { items } = await (await ctx.get(`/api/admin/plans/${plano.id}/resources`, { headers })).json();
     const recursos = new Set(items.filter((r) => r.selecionado === 'Sim').map((r) => r.chave));
     if (recursos.size) escada.push({ plano, recursos });
